@@ -4,12 +4,15 @@
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial application, with hardware-friendly efficient design and high performance.
 
-YOLOv6-nano achieves 35.0 mAP on COCOval dataset with 1242 FPS on T4 using TensorRT FP16 for bs32 inference, and YOLOv6-s achieves 43.1 mAP on COCOval dataset with 520 FPS on T4 using TensorRT FP16 for bs32 inference.
+<img src="assets/picture.png" width="800">
 
-YOLOv6 is composed of following methods:
+YOLOv6-nano achieves 35.0 mAP on COCO val2017 dataset with 1242 FPS on T4 using TensorRT FP16 for bs32 inference, and YOLOv6-s achieves 43.1 mAP on COCO val2017 dataset with 520 FPS on T4 using TensorRT FP16 for bs32 inference.
+
+YOLOv6 is composed of the following methods:
 
 - Hardware-friendly Design for Backbone and Neck
-- Efficient Decoupled Head with SIoU loss
+- Efficient Decoupled Head with SIoU Loss
+
 
 ## Coming soon
 
@@ -95,6 +98,6 @@ python tools/export_onnx.py --weights yolov6s.pt --device 0
 | **YOLOv6-s**    | 640         | 43.1                     | 1.0                                   | 1.7                                   | 373                                      | 520                                       | 17.2            | 44.2           |
 
 
-- Comparison of the mAP and speed of different object detectors tested on COCO val2017 dataset.
-- Speed results are tested in our environment using official codebase and model if not found from the corresponding official release. 
-- Params and Flops of yolov6 are estimated on deploy model.
+- Comparisons of the mAP and speed of different object detectors are tested on COCO val2017 dataset.
+- Speed results are tested in our environment using official codebase and model, if results can not be found from the corresponding official release. 
+- Params and flops of yolov6 are estimated on deployed model.
