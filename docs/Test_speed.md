@@ -31,7 +31,7 @@ To  get inference speed with TensorRT in FP16 mode on T4, you can follow the ste
 First, export pytorch model as onnx format using the  following command:
 
 ```shell
-python tools/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32] 
+python deploy/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32] 
 ```
 
 Second,  generate an inference  trt engine and test speed using `trtexec`:
