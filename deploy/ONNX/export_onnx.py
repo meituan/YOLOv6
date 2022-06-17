@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# https://github.com/ultralytics/yolov5/blob/master/export.py
 import argparse
 import time
 import sys
@@ -8,7 +7,6 @@ import os
 import torch
 import torch.nn as nn
 import onnx
-import subprocess
 
 ROOT = os.getcwd()                                
 if str(ROOT) not in sys.path:
@@ -76,17 +74,6 @@ if __name__ == '__main__':
         LOGGER.info(f'ONNX export success, saved as {export_file}')
     except Exception as e:
         LOGGER.info(f'ONNX export failure: {e}')
-
-    # OpenVINO export
-    try:
-        LOGGER.info('\nStarting to export OpenVINO...')
-        import_file = args.weights.replace('.pt', '.onnx')
-        export_dir = str(import_file).replace('.onnx', '_openvino')
-        cmd = f"mo --input_model {import_file} --output_dir {export_dir} --data_type {'FP16' if args.half else 'FP32'}"
-        subprocess.check_output(cmd.split())
-        LOGGER.info(f'OpenVINO export success, saved as {export_dir}')
-    except Exception as e:
-        LOGGER.info(f'OpenVINO export failure: {e}')
 
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))

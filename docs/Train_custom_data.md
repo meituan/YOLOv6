@@ -125,6 +125,6 @@ python tools/infer.py --weights output_dir/name/weights/best_ckpt.pt --source im
 Export as ONNX Format
 
 ```shell
-python deploy/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --device 0
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --device 0
 ```
 

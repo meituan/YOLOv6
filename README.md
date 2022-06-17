@@ -17,7 +17,7 @@ YOLOv6 is composed of the following methods:
 ## Coming soon
 
 - [ ] YOLOv6 m/l/x model.
-- [ ] Deployment for OPENVINO/MNN/TNN/NCNN...
+- [ ] Deployment for MNN/TNN/NCNN/CoreML...
 
 
 ## Quick Start
@@ -73,13 +73,8 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 
 ### Deployment
 
-Export as ONNX Format
-
-```shell
-python deploy/export_onnx.py --weights yolov6s.pt --device 0
-                                       yolov6n.pt
-```
-
+*  [ONNX](./deploy/ONNX)
+*  [OpenVINO](./deploy/OpenVINO)
 
 ### Tutorials
 
