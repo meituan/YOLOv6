@@ -76,8 +76,8 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 Export as ONNX Format
 
 ```shell
-python tools/export_onnx.py --weights yolov6s.pt --device 0
-                                      yolov6n.pt
+python deploy/export_onnx.py --weights yolov6s.pt --device 0
+                                       yolov6n.pt
 ```
 
 
