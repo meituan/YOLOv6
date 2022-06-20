@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import math
-import torch
 import torch.nn as nn
 from yolov6.layers.common import *
 from yolov6.utils.torch_utils import initialize_weights
