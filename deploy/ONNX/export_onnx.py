@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# https://github.com/ultralytics/yolov5/blob/master/export.py
 import argparse
 import time
 import sys
@@ -58,16 +57,6 @@ if __name__ == '__main__':
             m.inplace = args.inplace
        
     y = model(img)  # dry run
-
-    # TorchScript export
-    try:
-        LOGGER.info('\nStarting to export TorchScript...')
-        export_file = args.weights.replace('.pt', '.torchscript.pt')  # filename
-        ts = torch.jit.trace(model, img)
-        ts.save(export_file)
-        LOGGER.info(f'TorchScript export success, saved as {export_file}')
-    except Exception as e:
-        LOGGER.info(f'TorchScript export failure: {e}')
 
     # ONNX export
     try:

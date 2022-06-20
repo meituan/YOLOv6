@@ -17,7 +17,7 @@ YOLOv6 is composed of the following methods:
 ## Coming soon
 
 - [ ] YOLOv6 m/l/x model.
-- [ ] Deployment for OPENVINO/MNN/TNN/NCNN...
+- [ ] Deployment for MNN/TNN/NCNN/CoreML...
 
 
 ## Quick Start
@@ -58,7 +58,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 ```
 
 - conf: select config file to specify network/optimizer/hyperparameters
-- data: prepare COCO dataset and specify dataset paths in data.yaml
+- data: prepare [COCO](http://cocodataset.org) dataset and specify dataset paths in data.yaml
 
 
 ### Evaluation
@@ -73,13 +73,8 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 
 ### Deployment
 
-Export as ONNX Format
-
-```shell
-python tools/export_onnx.py --weights yolov6s.pt --device 0
-                                      yolov6n.pt
-```
-
+*  [ONNX](./deploy/ONNX)
+*  [OpenVINO](./deploy/OpenVINO)
 
 ### Tutorials
 
@@ -91,13 +86,14 @@ python tools/export_onnx.py --weights yolov6s.pt --device 0
 ## Benchmark
 
 
-| Model           | Size        | mAP<sup>val<br/>0.5:0.95 | Speed<sup>V100<br/>fp16 b32 <br/>(ms) | Speed<sup>V100<br/>fp32 b32 <br/>(ms) | Speed<sup>T4 <br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4 <br/>trt fp16 b32 <br/>(fps) | Params<br/> (M) | Flops<br/> (G) |
+| Model           | Size        | mAP<sup>val<br/>0.5:0.95 | Speed<sup>V100<br/>fp16 b32 <br/>(ms) | Speed<sup>V100<br/>fp32 b32 <br/>(ms) | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | Flops<br/><sup> (G) |
 | :-------------- | ----------- | :----------------------- | :------------------------------------ | :------------------------------------ | ---------------------------------------- | ----------------------------------------- | --------------- | -------------- |
 | **YOLOv6-n**    | 416<br/>640 | 30.8<br/>35.0            | 0.3<br/>0.5                           | 0.4<br/>0.7                           | 1100<br/>788                             | 2716<br/>1242                             | 4.3<br/>4.3     | 4.7<br/>11.1   |
 | **YOLOv6-tiny** | 640         | 41.3                     | 0.9                                   | 1.5                                   | 425                                      | 602                                       | 15.0            | 36.7           |
 | **YOLOv6-s**    | 640         | 43.1                     | 1.0                                   | 1.7                                   | 373                                      | 520                                       | 17.2            | 44.2           |
 
 
-- Comparisons of the mAP and speed of different object detectors are tested on COCO val2017 dataset.
-- Speed results are tested in our environment using official codebase and model, if results can not be found from the corresponding official release. 
-- Params and flops of yolov6 are estimated on deployed model.
+- Comparisons of the mAP and speed of different object detectors are tested on [COCO val2017](https://cocodataset.org/#download) dataset.
+- Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
+- Params and Flops of YOLOv6 are estimated on deployed model.
+- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.

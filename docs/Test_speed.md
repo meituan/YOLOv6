@@ -2,9 +2,9 @@
 
 This guidence explains how to reproduce speed results of YOLOv6. For fair comparision, the speed results do not contain the time cost of data pre-processing and NMS post-processing.
 
-## 0. Prepare model and 
+## 0. Prepare model
 
-Download the models you want to test in model zoo.
+Download the models you want to test from the latest release.
 
 ## 1. Prepare testing environment
 
@@ -31,7 +31,7 @@ To  get inference speed with TensorRT in FP16 mode on T4, you can follow the ste
 First, export pytorch model as onnx format using the  following command:
 
 ```shell
-python tools/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32] 
+python deploy/ONNX/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32] 
 ```
 
 Second,  generate an inference  trt engine and test speed using `trtexec`:
