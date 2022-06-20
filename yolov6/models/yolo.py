@@ -14,7 +14,7 @@ class Model(nn.Module):
         super().__init__()
         # Build network
         num_layers = config.model.head.num_layers
-        self.head, self.backbone, self.neck = build_network(config, channels, num_classes, anchors, num_layers)
+        self.backbone, self.neck, self.head = build_network(config, channels, num_classes, anchors, num_layers)
 
         # Init Detect head
         begin_indices = config.model.head.begin_indices
@@ -71,7 +71,7 @@ def build_network(config, channels, num_classes, anchors, num_layers):
 
     head = EffiDeHead(num_classes, anchors, num_layers, head_layers=head_layers)
 
-    return head, backbone, neck
+    return backbone, neck, head
 
 
 def build_model(cfg, num_classes, device):
