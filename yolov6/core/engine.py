@@ -124,12 +124,12 @@ class Trainer():
 
     def eval_model(self):
         results = eval.run(self.data_dict,
-                            batch_size=self.batch_size // self.world_size * 2,
-                            img_size=self.img_size,
-                            model=self.ema.ema,
-                            dataloader=self.val_loader,
-                            save_dir=self.save_dir,
-                            task='train')
+                           batch_size=self.batch_size // self.world_size * 2,
+                           img_size=self.img_size,
+                           model=self.ema.ema,
+                           dataloader=self.val_loader,
+                           save_dir=self.save_dir,
+                           task='train')
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
         self.evaluate_results = results[:2]    
@@ -204,16 +204,16 @@ class Trainer():
         grid_size = max(int(max(cfg.model.head.strides)), 32)
         # create train dataloader
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
-                                              hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
-                                              workers=args.workers, shuffle=True, check_images=args.check_images, 
-                                              check_labels=args.check_labels, class_names=class_names, task='train')[0]
+                                         hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
+                                         workers=args.workers, shuffle=True, check_images=args.check_images, 
+                                         check_labels=args.check_labels, class_names=class_names, task='train')[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
-                                        hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
-                                        workers=args.workers, check_images=args.check_images,
-                                        check_labels=args.check_labels, class_names=class_names, task='val')[0]
+                                           hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
+                                           workers=args.workers, check_images=args.check_images,
+                                           check_labels=args.check_labels, class_names=class_names, task='val')[0]
 
         return train_loader, val_loader
 
@@ -227,7 +227,7 @@ class Trainer():
     def get_model(args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
-        if weights: # finetune if pretrained model is set
+        if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
         LOGGER.info('Model: {}'.format(model))
@@ -247,7 +247,7 @@ class Trainer():
             model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
 
         return model
-        
+
     @staticmethod
     def get_optimizer(args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
@@ -260,19 +260,3 @@ class Trainer():
         epochs = args.epochs
         lr_scheduler, lf = build_lr_scheduler(cfg, optimizer, epochs)
         return lr_scheduler, lf
-
-    
-
-        
-
-
-    
-
-
-
-
-
-
-
-
-

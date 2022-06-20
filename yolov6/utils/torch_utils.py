@@ -81,6 +81,7 @@ def fuse_conv_and_bn(conv, bn):
 
     return fusedconv
 
+
 def fuse_model(model):
     from yolov6.layers.common import Conv
 
@@ -90,6 +91,7 @@ def fuse_model(model):
             delattr(m, "bn")  # remove batchnorm
             m.forward = m.forward_fuse  # update forward
     return model
+
 
 def get_model_info(model, img_size=640):
     """Get model Params and GFlops.
