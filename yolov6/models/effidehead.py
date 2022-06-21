@@ -5,7 +5,7 @@ from yolov6.layers.common import *
 
 
 class EffiDeHead(nn.Module):
-
+    '''Efficient Decoupled Head'''
     def __init__(self, num_classes=80, anchors=1, num_layers=3, inplace=True, head_layers=None):  # detection layer
         super().__init__()
         assert head_layers is not None

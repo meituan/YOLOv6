@@ -13,12 +13,15 @@ from yolov6.utils.figure_iou import IOUloss, pairwise_bbox_iou
 
 
 class ComputeLoss:
-    def __init__(self, 
+    '''Loss computation func.
+    This func contains SimOTA and siou loss.
+    '''
+    def __init__(self,
                  reg_weight=5.0,
                  iou_weight=3.0,
                  cls_weight=1.0,
                  center_radius=2.5,
-                 eps=1e-7, 
+                 eps=1e-7,
                  in_channels=[256, 512, 1024],
                  strides=[8, 16, 32],
                  n_anchors=1,
@@ -308,7 +311,7 @@ class ComputeLoss:
             pred_ious_this_matching,
             matched_gt_inds,
         ) = self.dynamic_k_matching(cost, pair_wise_ious, gt_classes, num_gt, fg_mask)
-        
+
         del pair_wise_cls_loss, cost, pair_wise_ious, pair_wise_ious_loss
 
         return (
@@ -318,7 +321,7 @@ class ComputeLoss:
             matched_gt_inds,
             num_fg,
         )
-    
+
     def get_in_boxes_info(
         self,
         gt_bboxes_per_image,
@@ -344,7 +347,7 @@ class ComputeLoss:
             (gt_bboxes_per_image[:, 0:2] + 0.5 * gt_bboxes_per_image[:, 2:4])
             .unsqueeze(1)
             .repeat(1, total_num_anchors, 1)
-        ) # [n_gt, 2] -> [n_gt, n_anchor, 2]
+        )  # [n_gt, 2] -> [n_gt, n_anchor, 2]
 
         b_lt = xy_centers_per_image - gt_bboxes_per_image_lt
         b_rb = gt_bboxes_per_image_rb - xy_centers_per_image
@@ -352,7 +355,7 @@ class ComputeLoss:
 
         is_in_boxes = bbox_deltas.min(dim=-1).values > 0.0
         is_in_boxes_all = is_in_boxes.sum(dim=0) > 0
-        
+
         # in fixed center
         gt_bboxes_per_image_lt = (gt_bboxes_per_image[:, 0:2]).unsqueeze(1).repeat(
             1, total_num_anchors, 1
@@ -383,13 +386,13 @@ class ComputeLoss:
         dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1)
         dynamic_ks = dynamic_ks.tolist()
          
-        for gt_idx in range(num_gt):          
+        for gt_idx in range(num_gt):
             _, pos_idx = torch.topk(
                 cost[gt_idx], k=dynamic_ks[gt_idx], largest=False
-            ) 
+            )
             matching_matrix[gt_idx][pos_idx] = 1
         del topk_ious, dynamic_ks, pos_idx
-            
+
         anchor_matching_gt = matching_matrix.sum(0)
         if (anchor_matching_gt > 1).sum() > 0:
             _, cost_argmin = torch.min(cost[:, anchor_matching_gt > 1], dim=0)
@@ -404,7 +407,5 @@ class ComputeLoss:
         pred_ious_this_matching = (matching_matrix * pair_wise_ious).sum(0)[
             fg_mask_inboxes
         ]
-        
+
         return num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds
-    
-    

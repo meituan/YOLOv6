@@ -3,7 +3,10 @@ from yolov6.layers.common import RepVGGBlock, RepBlock, SimSPPF
 
 
 class EfficientRep(nn.Module):
-    '''EfficientRep Backbone'''
+    '''EfficientRep Backbone
+    EfficientRep is handcrafted by hardware-aware neural network design.
+    With rep-style struct, EfficientRep is friendly to high-computation hardware(e.g. GPU).
+    '''
 
     def __init__(
         self,

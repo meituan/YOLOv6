@@ -4,8 +4,9 @@ from yolov6.layers.common import RepBlock, SimConv, Transpose
 
 
 class RepPANNeck(nn.Module):
-    """RepPANNeck
-    RepPANNeck module. EfficientRep is the default backbone of this model.
+    """RepPANNeck Module
+    EfficientRep is the default backbone of this model.
+    RepPANNeck has the balance of feature fusion ability and hardware efficiency.
     """
 
     def __init__(
