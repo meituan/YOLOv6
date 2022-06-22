@@ -3,9 +3,10 @@
 import argparse
 import os
 import os.path as osp
+import sys
+
 import torch
 import torch.distributed as dist
-import sys
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
@@ -13,8 +14,8 @@ if str(ROOT) not in sys.path:
 
 from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
-from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
+from yolov6.utils.events import LOGGER, save_yaml
 
 
 def get_args_parser(add_help=True):

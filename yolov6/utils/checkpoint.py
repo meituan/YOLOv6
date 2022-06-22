@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
-import shutil
-import torch
 import os.path as osp
+import shutil
+
+import torch
+
 from yolov6.utils.events import LOGGER
 from yolov6.utils.torch_utils import fuse_model
+
 
 def load_state_dict(weights, model, map_location=None):
     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
