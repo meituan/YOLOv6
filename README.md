@@ -18,6 +18,7 @@ YOLOv6 is composed of the following methods:
 
 - [ ] YOLOv6 m/l/x model.
 - [ ] Deployment for MNN/TNN/NCNN/CoreML...
+- [ ] Quantization tools
 
 
 ## Quick Start
