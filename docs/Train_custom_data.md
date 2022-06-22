@@ -41,7 +41,7 @@ path/to/data/labels/val/im1.txt
 path/to/data/labels/test/im2.txt
 ```
 
-**Step 4** Create dataset.yaml in `$YOLOv6_DIR/data`.
+**Step 4** Create `dataset.yaml` in `$YOLOv6_DIR/data`.
 
 ```yaml
 train: path/to/data/images/train # train images
