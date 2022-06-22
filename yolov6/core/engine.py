@@ -61,7 +61,7 @@ class Trainer:
             for self.epoch in range(self.start_epoch, self.max_epoch):
                 self.train_in_loop()
                     
-        except Exception:
+        except Exception as _:
             LOGGER.error('ERROR in training loop or eval/save model.')
             raise   
         finally:
@@ -74,12 +74,12 @@ class Trainer:
             for self.step, self.batch_data in self.pbar:
                 self.train_in_steps()
                 self.print_details()     
-        except Exception:
+        except Exception as _:
             LOGGER.error('ERROR in training steps.')
             raise
         try:
             self.eval_and_save()
-        except Exception:
+        except Exception as _:
             LOGGER.error('ERROR in evaluate and save model.')
             raise
 
