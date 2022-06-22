@@ -23,7 +23,7 @@ from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_opti
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 
 
-class Trainer():
+class Trainer:
     def __init__(self, args, cfg, device):
         self.args = args
         self.cfg = cfg

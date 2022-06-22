@@ -18,7 +18,7 @@ from yolov6.data.data_augment import letterbox
 from yolov6.utils.nms import non_max_suppression
 
 
-class Inferer():
+class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
         import glob
         from yolov6.data.datasets import IMG_FORMATS
