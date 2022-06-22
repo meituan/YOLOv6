@@ -9,7 +9,7 @@ import torch
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  
+    sys.path.append(str(ROOT))
 
 from yolov6.utils.events import LOGGER
 from yolov6.core.inferer import Inferer
@@ -34,7 +34,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels.')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences.')
     parser.add_argument('--half', action='store_true', help='whether to use FP16 half-precision inference.')
-    
+
     args = parser.parse_args()
     LOGGER.info(args)
     return args
@@ -59,7 +59,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         half=False,
         ):
     """ Inference process
-    
+
     This function is the main process of inference, supporting image files or dirs containing images.
 
     Args:

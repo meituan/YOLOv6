@@ -28,7 +28,7 @@ class Trainer:
         self.args = args
         self.cfg = cfg
         self.device = device
-        
+
         self.rank = args.rank
         self.local_rank = args.local_rank
         self.world_size = args.world_size
@@ -60,10 +60,10 @@ class Trainer:
             self.train_before_loop()
             for self.epoch in range(self.start_epoch, self.max_epoch):
                 self.train_in_loop()
-                    
-        except Exception:
+
+        except Exception as _:
             LOGGER.error('ERROR in training loop or eval/save model.')
-            raise   
+            raise
         finally:
             self.train_after_loop()
 
@@ -73,13 +73,13 @@ class Trainer:
             self.prepare_for_steps()
             for self.step, self.batch_data in self.pbar:
                 self.train_in_steps()
-                self.print_details()     
-        except Exception:
+                self.print_details()
+        except Exception as _:
             LOGGER.error('ERROR in training steps.')
             raise
         try:
             self.eval_and_save()
-        except Exception:
+        except Exception as _:
             LOGGER.error('ERROR in evaluate and save model.')
             raise
 
@@ -87,15 +87,15 @@ class Trainer:
     def train_in_steps(self):
         images, targets = self.prepro_data(self.batch_data, self.device)
         # forward
-        with amp.autocast(enabled=self.device != 'cpu'): 
-            preds = self.model(images) 
+        with amp.autocast(enabled=self.device != 'cpu'):
+            preds = self.model(images)
             total_loss, loss_items = self.compute_loss(preds, targets)
             if self.rank != -1:
                 total_loss *= self.world_size
         # backward
         self.scaler.scale(total_loss).backward()
         self.loss_items = loss_items
-        self.update_optimizer()       
+        self.update_optimizer()
 
     def eval_and_save(self):
         epoch_sub = self.max_epoch - self.epoch
@@ -115,7 +115,7 @@ class Trainer:
                     'optimizer': self.optimizer.state_dict(),
                     'epoch': self.epoch,
                     }
-            
+
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
             save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
             del ckpt
@@ -132,8 +132,8 @@ class Trainer:
                            task='train')
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
-        self.evaluate_results = results[:2]    
-       
+        self.evaluate_results = results[:2]
+
     def train_before_loop(self):
         LOGGER.info('Training start...')
         self.start_time = time.time()
@@ -151,22 +151,22 @@ class Trainer:
             self.scheduler.step()
         self.model.train()
         if self.rank != -1:
-            self.train_loader.sampler.set_epoch(self.epoch) 
+            self.train_loader.sampler.set_epoch(self.epoch)
         self.mean_loss = torch.zeros(4, device=self.device)
         self.optimizer.zero_grad()
-        
+
         LOGGER.info(('\n' + '%10s' * 5) % ('Epoch', 'iou_loss', 'l1_loss', 'obj_loss', 'cls_loss'))
         self.pbar = enumerate(self.train_loader)
         if self.main_process:
             self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-        
+
     # Print loss after each steps
     def print_details(self):
         if self.main_process:
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
             self.pbar.set_description(('%10s' + '%10.4g' * 4) % (f'{self.epoch}/{self.max_epoch - 1}', \
                                                                 *(self.mean_loss)))
-                                                
+
     # Empty cache if training finished
     def train_after_loop(self):
         if self.main_process:
@@ -205,7 +205,7 @@ class Trainer:
         # create train dataloader
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                          hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
-                                         workers=args.workers, shuffle=True, check_images=args.check_images, 
+                                         workers=args.workers, shuffle=True, check_images=args.check_images,
                                          check_labels=args.check_labels, class_names=class_names, task='train')[0]
         # create val dataloader
         val_loader = None
@@ -243,7 +243,7 @@ class Trainer:
 
         # If DDP mode
         ddp_mode = device.type != 'cpu' and args.rank != -1
-        if ddp_mode:    
+        if ddp_mode:
             model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
 
         return model

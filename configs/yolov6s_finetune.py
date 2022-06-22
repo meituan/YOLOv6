@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6s',
     pretrained='./weights/yolov6s.pt',
-    depth_multiple=0.33,  
+    depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
         type='EfficientRep',
@@ -24,7 +24,7 @@ model = dict(
         strides=[8, 16, 32],
         iou_type='siou'
     )
-)   
+)
 
 solver = dict(
     optim='SGD',
@@ -35,9 +35,9 @@ solver = dict(
     weight_decay=0.00036,
     warmup_epochs=2.0,
     warmup_momentum=0.5,
-    warmup_bias_lr=0.05 
+    warmup_bias_lr=0.05
 )
- 
+
 data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,

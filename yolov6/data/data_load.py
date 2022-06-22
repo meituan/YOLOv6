@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# This code is based on 
+# This code is based on
 # https://github.com/ultralytics/yolov5/blob/master/utils/dataloaders.py
 
 import os
@@ -19,7 +19,7 @@ def create_dataloader(path, img_size, batch_size, stride, hyp=None, augment=Fals
     if rect and shuffle:
         LOGGER.warning('WARNING: --rect is incompatible with DataLoader shuffle, setting shuffle=False')
         shuffle = False
-    with torch_distributed_zero_first(rank): 
+    with torch_distributed_zero_first(rank):
         dataset = TrainValDataset(path, img_size, batch_size,
                                   augment=augment,
                                   hyp=hyp,

@@ -18,6 +18,7 @@ YOLOv6 is composed of the following methods:
 
 - [ ] YOLOv6 m/l/x model.
 - [ ] Deployment for MNN/TNN/NCNN/CoreML...
+- [ ] Quantization tools
 
 
 ## Quick Start
@@ -27,10 +28,10 @@ YOLOv6 is composed of the following methods:
 ```shell
 git clone https://github.com/meituan/YOLOv6
 cd YOLOv6
-pip install -r requirements.txt  
+pip install -r requirements.txt
 ```
 
-### Inference 
+### Inference
 
 First, download a pretrained model from the YOLOv6 release
 
@@ -38,12 +39,12 @@ Second, run inference with `tools/infer.py`
 
 ```shell
 python tools/infer.py --weights yolov6s.pt --source [img.jpg / imgdir]
-                                yolov6n.pt  
+                                yolov6n.pt
 ```
 
 ### Training
 
-Single GPU 
+Single GPU
 
 ```shell
 python tools/train.py --batch 256 --conf configs/yolov6s.py --data data/coco.yaml --device 0
