@@ -7,7 +7,7 @@ import torch
 import torch.distributed as dist
 import sys
 
-ROOT = os.getcwd()                                                        
+ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
@@ -20,12 +20,12 @@ from yolov6.utils.envs import get_envs, select_device, set_random_seed
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
     parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='dataset path')
-    parser.add_argument('--conf-file', default='./configs/yolov6s.py', type=str, help='experiment description file') 
+    parser.add_argument('--conf-file', default='./configs/yolov6s.py', type=str, help='experiment description file')
     parser.add_argument('--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
-    parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')  
+    parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--noval', action='store_true', help='only evaluate in final epoch')
     parser.add_argument('--check-images', action='store_true', help='check images when initializing datasets')
     parser.add_argument('--check-labels', action='store_true', help='check label files when initializing datasets')
@@ -34,7 +34,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--dist_url', type=str, default="tcp://127.0.0.1:8888")
     parser.add_argument('--gpu_count', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
- 
+
     return parser
 
 
@@ -71,11 +71,11 @@ def main(args):
         LOGGER.info('Initializing process group... ')
         dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo", \
                 init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size)
-    
+
     # Start
     trainer = Trainer(args, cfg, device)
     trainer.train()
-    
+
     # End
     if args.world_size > 1 and args.rank == 0:
         LOGGER.info('Destroying process group... ')

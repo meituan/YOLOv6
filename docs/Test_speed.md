@@ -8,7 +8,7 @@ Download the models you want to test from the latest release.
 
 ## 1. Prepare testing environment
 
-Refer to README, install packages corresponding to CUDA, CUDNN and TensorRT version. 
+Refer to README, install packages corresponding to CUDA, CUDNN and TensorRT version.
 
 Here, we use Torch1.8.0 inference on V100 and TensorRT 7.2 on T4.
 
@@ -31,7 +31,7 @@ To  get inference speed with TensorRT in FP16 mode on T4, you can follow the ste
 First, export pytorch model as onnx format using the  following command:
 
 ```shell
-python deploy/ONNX/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32] 
+python deploy/ONNX/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 32]
 ```
 
 Second,  generate an inference  trt engine and test speed using `trtexec`:
@@ -39,4 +39,3 @@ Second,  generate an inference  trt engine and test speed using `trtexec`:
 ```
 trtexec --onnx=yolov6n.onnx --workspace=1024 --avgRuns=1000 --inputIOFormats=fp16:chw --outputIOFormats=fp16:chw
 ```
-

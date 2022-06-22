@@ -31,7 +31,7 @@ class ConfigDict(Dict):
 
 
 class Config(object):
-    
+
     @staticmethod
     def _file2dict(filename):
         filename = str(filename)
@@ -56,7 +56,7 @@ class Config(object):
             cfg_text += f.read()
 
         return cfg_dict, cfg_text
-    
+
     @staticmethod
     def fromfile(filename):
         cfg_dict, cfg_text = Config._file2dict(filename)
@@ -99,4 +99,3 @@ class Config(object):
         if isinstance(value, dict):
             value = ConfigDict(value)
         self._cfg_dict.__setattr__(name, value)
-       

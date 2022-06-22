@@ -25,9 +25,9 @@ def load_checkpoint(weights, map_location=None, inplace=True, fuse=True):
     model = ckpt['ema' if ckpt.get('ema') else 'model'].float()
     if fuse:
         LOGGER.info("\nFusing model...")
-        model = fuse_model(model).eval() 
+        model = fuse_model(model).eval()
     else:
-        model = model.eval()       
+        model = model.eval()
     return model
 
 
@@ -40,7 +40,7 @@ def save_checkpoint(ckpt, is_best, save_dir, model_name=""):
     if is_best:
         best_filename = osp.join(save_dir, 'best_ckpt.pt')
         shutil.copyfile(filename, best_filename)
-        
+
 
 def strip_optimizer(ckpt_dir):
     for s in ['best', 'last']:
@@ -57,6 +57,3 @@ def strip_optimizer(ckpt_dir):
         for p in ckpt['model'].parameters():
             p.requires_grad = False
         torch.save(ckpt, ckpt_path)
-        
-
-

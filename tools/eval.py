@@ -5,7 +5,7 @@ import os
 import sys
 import torch
 
-ROOT = os.getcwd()                                                           
+ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
@@ -52,24 +52,24 @@ def run(data,
     evaluation of inference speed of model.pt.
 
     """
-    
+
      # task
     Evaler.check_task(task)
     if not os.path.exists(save_dir):
-        os.makedirs(save_dir) 
+        os.makedirs(save_dir)
 
     # reload thres/device/half/data according task
     conf_thres, iou_thres = Evaler.reload_thres(conf_thres, iou_thres, task)
     device = Evaler.reload_device(device, model, task)
     half = device.type != 'cpu' and half
     data = Evaler.reload_dataset(data) if isinstance(data, str) else data
-       
+
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
-    
+
     # eval
     model.eval()
     pred_result = val.predict_model(model, dataloader, task)
@@ -83,4 +83,4 @@ def main(args):
 
 if __name__ == "__main__":
     args = get_args_parser()
-    main(args) 
+    main(args)
