@@ -77,11 +77,11 @@ class EffiDeHead(nn.Module):
                 if self.inplace:
                     y[..., 0:2] = (y[..., 0:2] + self.grid[i]) * self.stride[i]  # xy
                     y[..., 2:4] = torch.exp(y[..., 2:4]) * self.stride[i] # wh
-                else:  
+                else:
                     xy = (y[..., 0:2] + self.grid[i]) * self.stride[i]  # xy
                     wh = torch.exp(y[..., 2:4]) * self.stride[i]  # wh
                     y = torch.cat((xy, wh, y[..., 4:]), -1)
-                z.append(y.view(bs, -1, self.num_outputs))    
+                z.append(y.view(bs, -1, self.num_outputs))
         return x if self.training else torch.cat(z, 1)
 
 

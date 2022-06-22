@@ -13,7 +13,7 @@ class SiLU(nn.Module):
     '''Activation of SiLU'''
     @staticmethod
     def forward(x):
-        return x * torch.sigmoid(x)   
+        return x * torch.sigmoid(x)
 
 
 class Conv(nn.Module):
@@ -252,7 +252,7 @@ class RepVGGBlock(nn.Module):
         self.deploy = True
 
 
-class DetectBackend(nn.Module):   
+class DetectBackend(nn.Module):
     def __init__(self, weights='yolov6s.pt', device=None, dnn=True):
 
         super().__init__()

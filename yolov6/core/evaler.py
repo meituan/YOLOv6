@@ -49,7 +49,7 @@ class Evaler:
             self.stride = int(model.stride.max())
             if self.device.type != 'cpu':
                 model(torch.zeros(1, 3, self.img_size, self.img_size).to(self.device).type_as(next(model.parameters())))
-            # switch to deploy    
+            # switch to deploy
             from yolov6.layers.common import RepVGGBlock
             for layer in model.modules():
                 if isinstance(layer, RepVGGBlock):
@@ -61,18 +61,18 @@ class Evaler:
 
     def init_data(self, dataloader, task):
         '''Initialize dataloader.
-        
+
         Returns a dataloader for task val or speed.
         '''
         self.is_coco = isinstance(self.data.get('val'), str) and 'coco' in self.data['val']  # COCO dataset
         self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
         if task != 'train':
             pad = 0.0 if task == 'speed' else 0.5
-            dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'], 
-                                           self.img_size, self.batch_size, self.stride, pad=pad, rect=True, 
+            dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
+                                           self.img_size, self.batch_size, self.stride, pad=pad, rect=True,
                                            class_names=self.data['names'], task=task)[0]
         return dataloader
-            
+
     def predict_model(self, model, dataloader, task):
         '''Model prediction
         Predicts the whole dataset and gets the prediced results and inference time.
@@ -87,7 +87,7 @@ class Evaler:
             imgs = imgs.half() if self.half else imgs.float()
             imgs /= 255
             self.speed_result[1] += time_sync() - t1  # pre-process time
-            
+
             # Inference
             t2 = time_sync()
             outputs = model(imgs)
@@ -98,11 +98,11 @@ class Evaler:
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
-            
+
             # save result
             pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
         return pred_results
-    
+
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate current model
         For task speed, this function only evaluates the speed of model and output inference time.
@@ -125,14 +125,14 @@ class Evaler:
             LOGGER.info(f'Saving {pred_json}...')
             with open(pred_json, 'w') as f:
                 json.dump(pred_results, f)
-            
+
             anno = COCO(anno_json)
             pred = anno.loadRes(pred_json)
             cocoEval = COCOeval(anno, pred, 'bbox')
             if self.is_coco:
-                imgIds = [int(os.path.basename(x).split(".")[0]) 
+                imgIds = [int(os.path.basename(x).split(".")[0])
                             for x in dataloader.dataset.img_paths]
-                cocoEval.params.imgIds = imgIds 
+                cocoEval.params.imgIds = imgIds
             cocoEval.evaluate()
             cocoEval.accumulate()
             cocoEval.summarize()
@@ -140,7 +140,7 @@ class Evaler:
             # Return results
             model.float()  # for training
             if task != 'train':
-                LOGGER.info(f"Results saved to {self.save_dir}") 
+                LOGGER.info(f"Results saved to {self.save_dir}")
             return (map50, map)
         return (0.0, 0.0)
 
@@ -148,7 +148,7 @@ class Evaler:
         '''Evaluate the speed of model.'''
         if task != 'train':
             n_samples = self.speed_result[0].item()
-            pre_time, inf_time, nms_time = 1000 * self.speed_result[1:].cpu().numpy() / n_samples 
+            pre_time, inf_time, nms_time = 1000 * self.speed_result[1:].cpu().numpy() / n_samples
             for n, v in zip(["pre-process", "inference", "NMS"],[pre_time, inf_time, nms_time]):
                 LOGGER.info("Average {} time: {:.2f} ms".format(n, v))
 
@@ -182,7 +182,7 @@ class Evaler:
             coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
             coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
         return coords
-    
+
     def convert_to_coco_format(self, outputs, imgs, paths, shapes, ids):
         pred_results = []
         for i, pred in enumerate(outputs):
@@ -207,12 +207,12 @@ class Evaler:
                 }
                 pred_results.append(pred_data)
         return pred_results
-    
+
     @staticmethod
     def check_task(task):
         if task not in ['train','val','speed']:
             raise Exception("task argument error: only support 'train' / 'val' / 'speed' task.")
-    
+
     @staticmethod
     def reload_thres(conf_thres, iou_thres, task):
         '''Sets conf and iou thres for task val/speed'''
@@ -223,7 +223,7 @@ class Evaler:
                 conf_thres = 0.25
                 iou_thres = 0.45
         return conf_thres, iou_thres
-    
+
     @staticmethod
     def reload_device(device, model, task):
         # device = 'cpu' or '0' or '0,1,2,3'
@@ -238,8 +238,8 @@ class Evaler:
             cuda = device != 'cpu' and torch.cuda.is_available()
             device = torch.device('cuda:0' if cuda else 'cpu')
         return device
-    
-    @staticmethod 
+
+    @staticmethod
     def reload_dataset(data):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
@@ -248,12 +248,12 @@ class Evaler:
             raise Exception('Dataset not found.')
         return data
 
-    @staticmethod   
+    @staticmethod
     def coco80_to_coco91_class():  # converts 80-index (val2014) to 91-index (paper)
     # https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
-        x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 
-            21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 
-            41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 
-            59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 
+        x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20,
+            21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+            41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+            59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
             80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
         return x

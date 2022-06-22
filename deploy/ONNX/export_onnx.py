@@ -3,12 +3,12 @@
 import argparse
 import time
 import sys
-import os  
+import os
 import torch
 import torch.nn as nn
 import onnx
 
-ROOT = os.getcwd()                                
+ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
@@ -21,9 +21,9 @@ from yolov6.utils.checkpoint import load_checkpoint
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='./yolov6s.pt', help='weights path')  
+    parser.add_argument('--weights', type=str, default='./yolov6s.pt', help='weights path')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
-    parser.add_argument('--batch-size', type=int, default=1, help='batch size')  
+    parser.add_argument('--batch-size', type=int, default=1, help='batch size')
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -34,9 +34,9 @@ if __name__ == '__main__':
 
     # Check device
     cuda = args.device != 'cpu' and torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu') 
+    device = torch.device('cuda:0' if cuda else 'cpu')
     assert not (device.type == 'cpu' and args.half), '--half only compatible with GPU export, i.e. use --device 0'
-    # Load PyTorch model    
+    # Load PyTorch model
     model = load_checkpoint(args.weights, map_location=device, inplace=True, fuse=True)  # load FP32 model
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, EffiDeHead):
             m.inplace = args.inplace
-       
+
     y = model(img)  # dry run
 
     # ONNX export

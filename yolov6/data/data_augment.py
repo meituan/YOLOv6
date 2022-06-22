@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# This code is based on 
+# This code is based on
 # https://github.com/ultralytics/yolov5/blob/master/utils/dataloaders.py
 
 import math
@@ -73,7 +73,7 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1, eps=1e-16):  #
 
 def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
                        new_shape=(640,640)):
-    
+
     n = len(labels)
     height,width = new_shape
 
@@ -125,7 +125,7 @@ def get_transform_matrix(img_shape,new_shape,degrees,scale,shear,translate):
     # Shear
     S = np.eye(3)
     S[0, 1] = math.tan(random.uniform(-shear, shear) * math.pi / 180)  # x shear (deg)
-    S[1, 0] = math.tan(random.uniform(-shear, shear) * math.pi / 180)  # y shear (deg) 
+    S[1, 0] = math.tan(random.uniform(-shear, shear) * math.pi / 180)  # y shear (deg)
 
     # Translation
     T = np.eye(3)
@@ -140,7 +140,7 @@ def get_transform_matrix(img_shape,new_shape,degrees,scale,shear,translate):
 def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
 
     assert len(imgs)==4, "Mosaic augmentaion of current version only supports 4 images."
-    
+
     labels4 = []
     s = img_size
     yc, xc = (int(random.uniform(s//2, 3*s//2)) for _ in range(2))  # mosaic center x, y
@@ -181,7 +181,7 @@ def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
     # Concat/clip labels
     labels4 = np.concatenate(labels4, 0)
     for x in (labels4[:, 1:]):
-        np.clip(x, 0, 2 * s, out=x) 
+        np.clip(x, 0, 2 * s, out=x)
 
     # Augment
     img4, labels4 = random_affine(img4, labels4,
