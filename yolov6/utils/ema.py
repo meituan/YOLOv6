@@ -4,8 +4,10 @@
 # https://github.com/ultralytics/yolov5/blob/master/utils/torch_utils.py
 import math
 from copy import deepcopy
+
 import torch
 import torch.nn as nn
+
 
 class ModelEMA:
     """ Model Exponential Moving Average from https://github.com/rwightman/pytorch-image-models

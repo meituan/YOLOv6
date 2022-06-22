@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
+import os.path as osp
 import time
 from copy import deepcopy
-import os.path as osp
-
-from tqdm import tqdm
 
 import numpy as np
 import torch
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 import tools.eval as eval
 from yolov6.data.data_load import create_dataloader
-from yolov6.models.yolo import build_model
 from yolov6.models.loss import ComputeLoss
-from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
+from yolov6.models.yolo import build_model
+from yolov6.solver.build import build_lr_scheduler, build_optimizer
+from yolov6.utils.checkpoint import (load_state_dict, save_checkpoint,
+                                     strip_optimizer)
 from yolov6.utils.ema import ModelEMA, de_parallel
-from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
-from yolov6.solver.build import build_optimizer, build_lr_scheduler
+from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 
 
 class Trainer:

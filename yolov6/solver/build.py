@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os
 import math
+import os
 
 import torch
 import torch.nn as nn
+
 
 def build_optimizer(cfg, model):
     """ Build optimizer from cfg file."""
