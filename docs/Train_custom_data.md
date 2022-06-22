@@ -22,8 +22,8 @@ One image corresponds to one label file, and the label format example is present
 ```
 
 - Each row represents one object.
-- Class id starts from 0.
-- Boundingbox coordinates must be in normalized xywh format (from 0 - 1). If your boxes are in pixels, divide `center_x` and `bbox_width` by image width, and `center_y` and `bbox_height` by image height.
+- Class id starts from `0`.
+- Boundingbox coordinates must be in normalized `xywh` format (from 0 - 1). If your boxes are in pixels, divide `center_x` and `bbox_width` by image width, and `center_y` and `bbox_height` by image height.
 
 **Step 3** Organize directories.
 
@@ -41,7 +41,7 @@ path/to/data/labels/val/im1.txt
 path/to/data/labels/test/im2.txt
 ```
 
-**Step 4** Create dataset.yaml in $YOLOv6_DIR/data.
+**Step 4** Create `dataset.yaml` in `$YOLOv6_DIR/data`.
 
 ```yaml
 train: path/to/data/images/train # train images
@@ -61,7 +61,7 @@ names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', '
 We use a config file to specify the network structure and training setting, including  optimizer and data augmentation hyperparameters.
 
 If you create a new config file, please put it under the configs directory.
-Or just use the provided config file in $YOLOV6_HOME/configs/*_finetune.py.
+Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`.
 
 ```python
 ## YOLOv6s Model config file
