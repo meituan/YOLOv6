@@ -5,7 +5,10 @@ from yolov6.layers.common import *
 
 
 class Detect(nn.Module):
-    '''Efficient Decoupled Head'''
+    '''Efficient Decoupled Head
+    With hardware-aware degisn, the decoupled head is optimized with
+    hybridchannels methods.
+    '''
     def __init__(self, num_classes=80, anchors=1, num_layers=3, inplace=True, head_layers=None):  # detection layer
         super().__init__()
         assert head_layers is not None
