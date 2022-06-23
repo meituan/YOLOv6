@@ -6,7 +6,7 @@ from yolov6.layers.common import *
 from yolov6.utils.torch_utils import initialize_weights
 from yolov6.models.efficientrep import EfficientRep
 from yolov6.models.reppan import RepPANNeck
-from yolov6.models.effidehead import EffiDeHead, build_effidehead_layer
+from yolov6.models.effidehead import Detect, build_effidehead_layer
 
 
 class Model(nn.Module):
@@ -14,15 +14,15 @@ class Model(nn.Module):
         super().__init__()
         # Build network
         num_layers = config.model.head.num_layers
-        self.backbone, self.neck, self.head = build_network(config, channels, num_classes, anchors, num_layers)
+        self.backbone, self.neck, self.detect = build_network(config, channels, num_classes, anchors, num_layers)
 
         # Init Detect head
         begin_indices = config.model.head.begin_indices
         out_indices_head = config.model.head.out_indices
-        self.stride = self.head.stride
-        self.head.i = begin_indices
-        self.head.f = out_indices_head
-        self.head.initialize_biases()
+        self.stride = self.detect.stride
+        self.detect.i = begin_indices
+        self.detect.f = out_indices_head
+        self.detect.initialize_biases()
 
         # Init weights
         initialize_weights(self)
@@ -30,13 +30,13 @@ class Model(nn.Module):
     def forward(self, x):
         x = self.backbone(x)
         x = self.neck(x)
-        x = self.head(x)
+        x = self.detect(x)
         return x
 
     def _apply(self, fn):
         self = super()._apply(fn)
-        self.head.stride = fn(self.head.stride)
-        self.head.grid = list(map(fn, self.head.grid))
+        self.detect.stride = fn(self.detect.stride)
+        self.detect.grid = list(map(fn, self.detect.grid))
         return self
 
 
@@ -69,7 +69,7 @@ def build_network(config, channels, num_classes, anchors, num_layers):
 
     head_layers = build_effidehead_layer(channels_list, num_anchors, num_classes)
 
-    head = EffiDeHead(num_classes, anchors, num_layers, head_layers=head_layers)
+    head = Detect(num_classes, anchors, num_layers, head_layers=head_layers)
 
     return backbone, neck, head
 
