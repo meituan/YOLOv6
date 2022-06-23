@@ -1,7 +1,7 @@
 # YOLOv6s model
 model = dict(
     type='YOLOv6s',
-    pretrained='./weights/yolov6s.pt',
+    pretrained='weights/yolo6s.pt',
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
@@ -15,7 +15,7 @@ model = dict(
         out_channels=[256, 128, 128, 256, 256, 512],
         ),
     head=dict(
-        type='YOLOv6sHead',
+        type='EffiDeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
         begin_indices=24,
