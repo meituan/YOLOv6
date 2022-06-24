@@ -2,7 +2,7 @@
 
 ## Introduction
 
-YOLOv6 is a single-stage object detection framework dedicated to industrial application, with hardware-friendly efficient design and high performance.
+YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
 
 <img src="assets/picture.png" width="800">
 
