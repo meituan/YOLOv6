@@ -15,7 +15,7 @@ model = dict(
         out_channels=[256, 128, 128, 256, 256, 512],
         ),
     head=dict(
-        type='YOLOv6tHead',
+        type='EffiDeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
         begin_indices=24,

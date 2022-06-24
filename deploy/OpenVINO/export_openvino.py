@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import argparse
-import os
-import subprocess
-import sys
 import time
-
-import onnx
+import sys
+import os
 import torch
 import torch.nn as nn
+import onnx
+import subprocess
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from yolov6.layers.common import *
-from yolov6.models.effidehead import EffiDeHead
 from yolov6.models.yolo import *
-from yolov6.utils.checkpoint import load_checkpoint
+from yolov6.models.effidehead import Detect
+from yolov6.layers.common import *
 from yolov6.utils.events import LOGGER
+from yolov6.utils.checkpoint import load_checkpoint
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         if isinstance(m, Conv):  # assign export-friendly activations
             if isinstance(m.act, nn.SiLU):
                 m.act = SiLU()
-        elif isinstance(m, EffiDeHead):
+        elif isinstance(m, Detect):
             m.inplace = args.inplace
 
     y = model(img)  # dry run

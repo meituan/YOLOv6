@@ -61,7 +61,6 @@ class Evaler:
 
     def init_data(self, dataloader, task):
         '''Initialize dataloader.
-
         Returns a dataloader for task val or speed.
         '''
         self.is_coco = isinstance(self.data.get('val'), str) and 'coco' in self.data['val']  # COCO dataset
@@ -104,10 +103,10 @@ class Evaler:
         return pred_results
 
     def eval_model(self, pred_results, model, dataloader, task):
-        '''Evaluate current model
-        For task speed, this function only evaluates the speed of model and output inference time.
-        For task val, this function evalutates the speed and also evaluates mAP by pycocotools, and then
-        returns inference time and mAP value.
+        '''Evaluate models
+        For task speed, this function only evaluates the speed of model and outputs inference time.
+        For task val, this function evalutates the speed and mAP by pycocotools, and returns 
+        inference time and mAP value.
         '''
         LOGGER.info(f'\nEvaluating speed.')
         self.eval_speed(task)
@@ -145,7 +144,7 @@ class Evaler:
         return (0.0, 0.0)
 
     def eval_speed(self, task):
-        '''Evaluate the speed of model.'''
+        '''Evaluate model inference speed.'''
         if task != 'train':
             n_samples = self.speed_result[0].item()
             pre_time, inf_time, nms_time = 1000 * self.speed_result[1:].cpu().numpy() / n_samples
@@ -215,7 +214,7 @@ class Evaler:
 
     @staticmethod
     def reload_thres(conf_thres, iou_thres, task):
-        '''Sets conf and iou thres for task val/speed'''
+        '''Sets conf and iou threshold for task val/speed'''
         if task != 'train':
             if task == 'val':
                 conf_thres = 0.001
