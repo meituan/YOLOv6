@@ -1,4 +1,4 @@
-# MT-YOLOv6（YOLOv6）[About Naming YOLOv6](./docs/About_naming_yolov6.md)
+# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
 
 ## Introduction
 
