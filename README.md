@@ -1,8 +1,8 @@
-# YOLOv6
+# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
 
 ## Introduction
 
-YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.[About Naming YOLOv6](./docs/About_naming_yolov6.md)
+YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
 
 <img src="assets/picture.png" width="800">
 
