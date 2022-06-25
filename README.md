@@ -97,4 +97,10 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 - Comparisons of the mAP and speed of different object detectors are tested on [COCO val2017](https://cocodataset.org/#download) dataset.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
 - Params and Flops of YOLOv6 are estimated on deployed model.
-- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.
+- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.  
+  
+ ## Third-party resources  
+ * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
+ * YOLOv6 ONNXRuntime/MNN/TNN C++ demo: [YOLOv6-ONNXRuntime](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth) 
+ * YOLOv6 TensorRT Python demo: [yolov6-tensorrt-python](https://github.com/Linaom1214/tensorrt-python/blob/main/yolov6/trt.py) from [Linaom1214](https://github.com/Linaom1214)
+  
