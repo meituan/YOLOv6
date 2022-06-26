@@ -33,12 +33,12 @@ pip install -r requirements.txt
 
 ### Inference
 
-First, download a pretrained model from the YOLOv6 release
+First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.1.0)
 
 Second, run inference with `tools/infer.py`
 
 ```shell
-python tools/infer.py --weights yolov6s.pt --source [img.jpg / imgdir]
+python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir
                                 yolov6n.pt
 ```
 
