@@ -47,7 +47,7 @@ python tools/infer.py --weights yolov6s.pt --source [img.jpg / imgdir]
 Single GPU
 
 ```shell
-python tools/train.py --batch 256 --conf configs/yolov6s.py --data data/coco.yaml --device 0
+python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
                                          configs/yolov6n.py
 ```
 
