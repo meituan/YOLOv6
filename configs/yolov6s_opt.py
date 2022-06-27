@@ -1,7 +1,7 @@
 # YOLOv6s model
 model = dict(
     type='YOLOv6s',
-    pretrained=None,
+    pretrained='runs/train/exp/weights/last_ckpt.pt',
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
@@ -53,4 +53,4 @@ data_aug = dict(
 )
 
 # Choose Rep-block by the training Mode, choices=["repvgg", "hyper-search", "repopt"]
-training_mode='hyper_search'
+training_mode='repopt'

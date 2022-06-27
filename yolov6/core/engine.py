@@ -21,7 +21,7 @@ from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
-
+from yolov6.utils.RepOptimizer import extract_scales
 
 class Trainer:
     def __init__(self, args, cfg, device):
@@ -227,9 +227,17 @@ class Trainer:
     def get_model(args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
-        if weights:  # finetune if pretrained model is set
-            LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
-            model = load_state_dict(weights, model, map_location=device)
+        if cfg.training_mode == 'repopt':
+            if not weights:
+                import warnings
+                warnings.warn("Training RepOpt Architecture without Searched Hyper Scales")
+            else:
+                ckpt = torch.load(weights, map_location=map_location)
+                scales = extract_scales(weights)
+        else:
+            if weights:  # finetune if pretrained model is set
+                LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
+                model = load_state_dict(weights, model, map_location=device)
         LOGGER.info('Model: {}'.format(model))
         return model
 
