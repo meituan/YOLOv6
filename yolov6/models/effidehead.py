@@ -9,7 +9,7 @@ class Detect(nn.Module):
     With hardware-aware degisn, the decoupled head is optimized with
     hybridchannels methods.
     '''
-    def __init__(self, num_classes=80, anchors=1, num_layers=3, inplace=True, head_layers=None):  # detection layer
+    def __init__(self, num_classes=80, anchors=1, num_layers=3, inplace=True, tensorrt=False, head_layers=None):  # detection layer
         super().__init__()
         assert head_layers is not None
         self.nc = num_classes  # number of classes
@@ -23,6 +23,7 @@ class Detect(nn.Module):
         self.grid = [torch.zeros(1)] * num_layers
         self.prior_prob = 1e-2
         self.inplace = inplace
+        self.tensorrt = tensorrt
         stride = [8, 16, 32]  # strides computed during build
         self.stride = torch.tensor(stride)
 
@@ -71,6 +72,11 @@ class Detect(nn.Module):
                 x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
             else:
                 y = torch.cat([reg_output, obj_output.sigmoid(), cls_output.sigmoid()], 1)
+
+                if(self.tensorrt):  # <---- add by yeah
+                    z.append(y)
+                    continue
+
                 bs, _, ny, nx = y.shape
                 y = y.view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
                 if self.grid[i].shape[2:4] != y.shape[2:4]:
@@ -85,6 +91,9 @@ class Detect(nn.Module):
                     wh = torch.exp(y[..., 2:4]) * self.stride[i]  # wh
                     y = torch.cat((xy, wh, y[..., 4:]), -1)
                 z.append(y.view(bs, -1, self.no))
+
+        if(self.tensorrt): return z         # <--- add by yeah
+
         return x if self.training else torch.cat(z, 1)
 
 

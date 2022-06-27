@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
+    parser.add_argument('--tensorrt', action='store_true', help='set Detect() tensorrt=True')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0, 1, 2, 3 or cpu')
     args = parser.parse_args()
     args.img_size *= 2 if len(args.img_size) == 1 else 1  # expand
@@ -55,6 +56,7 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
+            m.tensorrt = args.tensorrt
 
     y = model(img)  # dry run
 
@@ -62,12 +64,22 @@ if __name__ == '__main__':
     try:
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
-        torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
+        if(args.tensorrt):
+            LOGGER.info('\n export ONNX file for tensorrt engine...')
+            torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
-                          input_names=['image_arrays'],
-                          output_names=['outputs'],
+                          input_names=['images'],
+                          output_names=['yololayer_002', 'yololayer_001', 'yololayer_000'],
+                        #   output_names=['outputs'],
                          )
+        else:
+            torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
+                            training=torch.onnx.TrainingMode.EVAL,
+                            do_constant_folding=True,
+                            input_names=['image_arrays'],
+                            output_names=['outputs'],
+                            )
 
         # Checks
         onnx_model = onnx.load(export_file)  # load onnx model
