@@ -21,7 +21,7 @@ from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
-from yolov6.utils.RepOptimizer import extract_scales
+from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 
 class Trainer:
     def __init__(self, args, cfg, device):
@@ -40,7 +40,11 @@ class Trainer:
         self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
         model = self.get_model(args, cfg, self.num_classes, device)
-        self.optimizer = self.get_optimizer(args, cfg, model)
+        if cfg.training_mode == 'repopt':
+            scales = self.load_scale_from_pretrained_models(cfg, device)
+            self.optimizer = RepVGGOptimizer(model, scales, args, cfg)
+        else:
+            self.optimizer = self.get_optimizer(args, cfg, model)
         self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer)
         self.ema = ModelEMA(model) if self.main_process else None
         self.model = self.parallel_model(args, model, device)
@@ -227,19 +231,25 @@ class Trainer:
     def get_model(args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
-        if cfg.training_mode == 'repopt':
-            if not weights:
-                import warnings
-                warnings.warn("Training RepOpt Architecture without Searched Hyper Scales")
-            else:
-                ckpt = torch.load(weights, map_location=map_location)
-                scales = extract_scales(weights)
-        else:
+        if cfg.training_mode == 'repvgg' and weights:
             if weights:  # finetune if pretrained model is set
                 LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
                 model = load_state_dict(weights, model, map_location=device)
         LOGGER.info('Model: {}'.format(model))
         return model
+
+    @staticmethod
+    def load_scale_from_pretrained_models(cfg, device):
+        weights = cfg.model.pretrained
+        scales = None
+        if not weights:
+            import warnings
+            warnings.warn("Training RepOpt Architecture without Searched Hyper Scales")
+        else:
+            ckpt = torch.load(weights, map_location=device)
+            scales = extract_scales(ckpt)
+        return scales
+
 
     @staticmethod
     def parallel_model(args, model, device):

@@ -3,22 +3,28 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from ..layers.common import RealVGGBlock, LinearAddBlock
+from torch.optim.sgd import SGD
 
-def extract_blocks_into_list(model):
-    stages = [model.stage0, model.stage1, model.stage2, model.stage3, model.stage4]
-    blocks = []
-    for stage in stages:
-        if isinstance(stage, RealVGGBlock) or isinstance(stage, LinearAddBlock):
-            blocks.append(stage)
+def extract_blocks_into_list(model, blocks):
+    # stages = [model.stage0, model.stage1, model.stage2, model.stage3, model.stage4]
+    # blocks = []
+    # for stage in stages:
+    #     if isinstance(stage, RealVGGBlock) or isinstance(stage, LinearAddBlock):
+    #         blocks.append(stage)
+    #     else:
+    #         assert isinstance(stage, nn.Sequential)
+    #         for block in stage.children():
+    #             assert isinstance(block, RealVGGBlock) or isinstance(block, LinearAddBlock)
+    #             blocks.append(block)
+    for module in model.children():
+        if isinstance(module, LinearAddBlock) or isinstance(module, RealVGGBlock):
+            blocks.append(module)
         else:
-            assert isinstance(stage, nn.Sequential)
-            for block in stage.children():
-                assert isinstance(block, RealVGGBlock) or isinstance(block, LinearAddBlock)
-                blocks.append(block)
-    return blocks
+            extract_blocks_into_list(module, blocks)
 
 def extract_scales(model):
-    blocks = extract_blocks_into_list(model)
+    blocks = []
+    extract_blocks_into_list(model['model'], blocks)
     scales = []
     for b in blocks:
         assert isinstance(b, LinearAddBlock)
@@ -60,25 +66,49 @@ def set_weight_decay(model, skip_list=(), skip_keywords=(), echo=False):
     return [{'params': has_decay},
             {'params': no_decay, 'weight_decay': 0.}]
 
+def get_optimizer_param(args, cfg, model):
+    """ Build optimizer from cfg file."""
+    accumulate = max(1, round(64 / args.batch_size))
+    cfg.solver.weight_decay *= args.batch_size * accumulate / 64
+
+    g_bnw, g_w, g_b = [], [], []
+    for v in model.modules():
+        if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):
+            g_b.append(v.bias)
+        if isinstance(v, nn.BatchNorm2d):
+            g_bnw.append(v.weight)
+        elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
+            g_w.append(v.weight)
+    # assert cfg.solver.optim == 'SGD' or 'Adam', 'ERROR: unknown optimizer, use SGD defaulted'
+    # if cfg.solver.optim == 'SGD':
+    #     optimizer = torch.optim.SGD(g_bnw, lr=cfg.solver.lr0, momentum=cfg.solver.momentum, nesterov=True)
+    # elif cfg.solver.optim == 'Adam':
+    #     optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
+
+    return [{'params': g_bnw},
+            {'params': g_w, 'weight_decay': cfg.solver.weight_decay},
+            {'params': g_b}]
 
 class RepVGGOptimizer(SGD):
     #   scales is a list, scales[i] is a triple (scale_identity.weight, scale_1x1.weight, scale_conv.weight) or a two-tuple (scale_1x1.weight, scale_conv.weight) (if the block has no scale_identity)
-    def __init__(self, model, scales, num_blocks, width_multiplier,
-                 lr, momentum=0, dampening=0,
-                 weight_decay=0, nesterov=False,
+    def __init__(self, model, scales,
+                 args, cfg, momentum=0, dampening=0,
+                 weight_decay=0, nesterov=True,
                  reinit=True, use_identity_scales_for_reinit=True,
                  cpu_mode=False):
-        defaults = dict(lr=lr, momentum=momentum, dampening=dampening, weight_decay=weight_decay, nesterov=nesterov)
-        if nesterov and (momentum <= 0 or dampening != 0):
+
+        defaults = dict(lr=cfg.solver.lr0, momentum=cfg.solver.momentum, dampening=dampening, weight_decay=weight_decay, nesterov=nesterov)
+        if nesterov and (cfg.solver.momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-        parameters = set_weight_decay(model)
+        # parameters = set_weight_decay(model)
+        parameters = get_optimizer_param(args, cfg, model)
         super(SGD, self).__init__(parameters, defaults)
-        self.num_blocks = num_blocks
-        self.width_multiplier = width_multiplier
         self.num_layers = len(scales)
 
-        blocks = extract_blocks_into_list(model)
+        blocks = []
+        extract_blocks_into_list(model, blocks)
         convs = [b.conv for b in blocks]
+        assert len(scales) == len(convs)
 
         if reinit:
             for m in model.modules():
@@ -97,14 +127,14 @@ class RepVGGOptimizer(SGD):
         for scales, conv3x3 in zip(scales_by_idx, conv3x3_by_idx):
             in_channels = conv3x3.in_channels
             out_channels = conv3x3.out_channels
-            kernel_1x1 = nn.Conv2d(in_channels, out_channels, 1)
+            kernel_1x1 = nn.Conv2d(in_channels, out_channels, 1, device=conv3x3.weight.device)
             if len(scales) == 2:
                 conv3x3.weight.data = conv3x3.weight * scales[1].view(-1, 1, 1, 1) \
                                       + F.pad(kernel_1x1.weight, [1, 1, 1, 1]) * scales[0].view(-1, 1, 1, 1)
             else:
                 assert len(scales) == 3
                 assert in_channels == out_channels
-                identity = torch.from_numpy(np.eye(out_channels, dtype=np.float32).reshape(out_channels, out_channels, 1, 1))
+                identity = torch.from_numpy(np.eye(out_channels, dtype=np.float32).reshape(out_channels, out_channels, 1, 1)).to(conv3x3.weight.device)
                 conv3x3.weight.data = conv3x3.weight * scales[2].view(-1, 1, 1, 1) + F.pad(kernel_1x1.weight, [1, 1, 1, 1]) * scales[1].view(-1, 1, 1, 1)
                 if use_identity_scales:     # You may initialize the imaginary CSLA block with the trained identity_scale values. Makes almost no difference.
                     identity_scale_weight = scales[0]
@@ -118,11 +148,11 @@ class RepVGGOptimizer(SGD):
         for scales, conv3x3 in zip(scales_by_idx, conv3x3_by_idx):
             para = conv3x3.weight
             if len(scales) == 2:
-                mask = torch.ones_like(para) * (scales[1] ** 2).view(-1, 1, 1, 1)
-                mask[:, :, 1:2, 1:2] += torch.ones(para.shape[0], para.shape[1], 1, 1) * (scales[0] ** 2).view(-1, 1, 1, 1)
+                mask = torch.ones_like(para, device=scales[0].device) * (scales[1] ** 2).view(-1, 1, 1, 1)
+                mask[:, :, 1:2, 1:2] += torch.ones(para.shape[0], para.shape[1], 1, 1, device=scales[0].device) * (scales[0] ** 2).view(-1, 1, 1, 1)
             else:
-                mask = torch.ones_like(para) * (scales[2] ** 2).view(-1, 1, 1, 1)
-                mask[:, :, 1:2, 1:2] += torch.ones(para.shape[0], para.shape[1], 1, 1) * (scales[1] ** 2).view(-1, 1, 1, 1)
+                mask = torch.ones_like(para, device=scales[0].device) * (scales[2] ** 2).view(-1, 1, 1, 1)
+                mask[:, :, 1:2, 1:2] += torch.ones(para.shape[0], para.shape[1], 1, 1, device=scales[0].device) * (scales[1] ** 2).view(-1, 1, 1, 1)
                 ids = np.arange(para.shape[1])
                 assert para.shape[1] == para.shape[0]
                 mask[ids, ids, 1:2, 1:2] += 1.0
