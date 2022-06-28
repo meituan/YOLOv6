@@ -102,3 +102,4 @@ venv.bak/
 
 # Pytorch
 *.pth
+.idea/
