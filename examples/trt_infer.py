@@ -22,8 +22,8 @@ names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', '
 colors = {name:[random.randint(0, 255) for _ in range(3)] for i,name in enumerate(names)}
 
 
-w = '../weights/yolov6s.engine'
-image_path  = '../data/images/image1.jpg'
+w = './yolov6s_nms_fp16.engine'
+image_path  = './image1.jpg'
 device = torch.device('cuda:0')
 
 # Infer TensorRT Engine
@@ -73,6 +73,11 @@ nums = bindings['num_dets'].data
 boxes = bindings['det_boxes'].data
 scores = bindings['det_scores'].data
 classes = bindings['det_classes'].data
+
+print(nums)
+print(boxes)
+print(scores)
+print(classes)
 
 num = int(nums[0][0])
 box_img = boxes[0, :num].round().int()
