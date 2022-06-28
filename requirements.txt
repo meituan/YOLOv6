@@ -11,5 +11,6 @@ tqdm>=4.41.0
 addict>=2.4.0
 tensorboard>=2.7.0
 pycocotools>=2.0
+dvc>=2.9.3
 onnx>=1.10.0  # ONNX export
 thop  # FLOPs computation
