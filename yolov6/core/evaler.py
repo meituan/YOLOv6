@@ -105,7 +105,7 @@ class Evaler:
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
         For task speed, this function only evaluates the speed of model and outputs inference time.
-        For task val, this function evalutates the speed and mAP by pycocotools, and returns 
+        For task val, this function evaluates the speed and mAP by pycocotools, and returns 
         inference time and mAP value.
         '''
         LOGGER.info(f'\nEvaluating speed.')
