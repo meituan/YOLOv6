@@ -80,7 +80,7 @@ class TRT_NMS(torch.autograd.Function):
 
 class ONNX_ORT(nn.Module):
 
-    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.35, device=None, max_wh=640):
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.35, max_wh=640, device=None):
         super().__init__()
         self.device = device if device else torch.device("cpu")
         self.max_obj = torch.tensor([max_obj]).to(device)
@@ -111,8 +111,9 @@ class ONNX_ORT(nn.Module):
 
 class ONNX_TRT(nn.Module):
 
-    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.35, device=None):
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.35, max_wh=None ,device=None):
         super().__init__()
+        assert max_wh is None
         self.device = device if device else torch.device('cpu')
         self.background_class = -1,
         self.box_coding = 0,
@@ -140,15 +141,15 @@ class ONNX_TRT(nn.Module):
 
 class End2End(nn.Module):
 
-    def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.35, max_wh=4096, device=None):
+    def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.35, max_wh=None, device=None):
         super().__init__()
         device = device if device else torch.device('cpu')
         self.model = model.to(device)
-        # self.end2end = ONNX_ORT(max_obj, iou_thres, score_thres, device, max_wh)
-        self.end2end = ONNX_TRT(max_obj=100, iou_thres=0.45, score_thres=0.35, device=device)
+        self.patch_model = ONNX_TRT if max_wh is None else ONNX_ORT
+        self.end2end = self.patch_model(max_obj, iou_thres, score_thres, max_wh, device)
         self.end2end.eval()
 
     def forward(self, x):
         x = self.model(x)
-        out = self.end2end(x)
-        return out
+        x = self.end2end(x)
+        return x

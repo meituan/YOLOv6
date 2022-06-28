@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
+    parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='conf threshold for NMS')
@@ -61,7 +62,7 @@ if __name__ == '__main__':
             m.inplace = args.inplace
     if args.end2end:
         from yolov6.models.end2end import End2End
-        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres, score_thres=args.conf_thres, max_wh=4096, device=device)
+        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres, score_thres=args.conf_thres, max_wh=args.max_wh, device=device)
 
     y = model(img)  # dry run
 
@@ -69,11 +70,11 @@ if __name__ == '__main__':
     try:
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
-        torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
+        torch.onnx.export(model, img, export_file, verbose=False, opset_version=13 if args.end2end else 12,
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
                           input_names=['image_arrays'],
-                          output_names=['outputs'],
+                          output_names=['num_dets','det_boxes','det_scores','det_classes'] if args.end2end and not args.max_wh else ['outputs'],
                          )
 
         # Checks
@@ -85,3 +86,7 @@ if __name__ == '__main__':
 
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
+    if args.end2end:
+        if not args.max_wh:
+            LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
+            LOGGER.info(f'\ntrtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
