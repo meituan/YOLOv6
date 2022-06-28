@@ -46,7 +46,7 @@ def run(data,
         ):
     """ Run the evaluation process
 
-    This function is the main process of evalutaion, supporting image file and dir containing images.
+    This function is the main process of evaluataion, supporting image file and dir containing images.
     It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
     Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
     evaluation of inference speed of model.pt.
