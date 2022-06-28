@@ -194,6 +194,10 @@ class TrainValDataset(Dataset):
         for i, l in enumerate(label):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
+    def img2label_paths(self,img_paths):
+        # Define label paths as a function of image paths
+        sa, sb = f'{os.sep}images{os.sep}', f'{os.sep}labels{os.sep}'  # /images/, /labels/ substrings
+        return [sb.join(x.rsplit(sa, 1)).rsplit('.', 1)[0] + '.txt' for x in img_paths]
 
     def get_imgs_labels(self, img_dir):
 
@@ -249,10 +253,7 @@ class TrainValDataset(Dataset):
                     img_info
                 ), "No information in record files, please add option --check_images."
         img_paths = list(img_info.keys())
-        label_paths = [
-            osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
-            for p in img_paths
-        ]
+        label_paths = self.img2label_paths(img_paths)
         if (
             self.check_labels or "labels" not in img_info[img_paths[0]]
         ):  # key 'labels' not saved in img_info

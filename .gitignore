@@ -15,6 +15,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
+.idea/
 .eggs/
 parts/
 sdist/
