@@ -13,3 +13,4 @@ trtexec --onnx=./yolov6s_nms.onnx --saveEngine=./yolov6s_nms_fp16.engine --fp16
 # result test
 wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/tripleMu/image1.jpg
 python3 trt_infer.py
+trtexec --loadEngine=./yolov6s_nms_fp16.engine --verbose --useCudaGraph --noDataTransfers --shapes=image_arrays:1x3x640x640
