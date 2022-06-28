@@ -93,10 +93,11 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
 
     # Inference
     inferer = Inferer(source, weights, device, yaml, img_size, half)
-    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf)
+    res = inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf)
 
     if save_txt or save_img:
         LOGGER.info(f"Results saved to {save_dir}")
+    return res
 
 
 def main(args):

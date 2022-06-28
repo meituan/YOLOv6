@@ -45,14 +45,17 @@ class Inferer:
         if self.device.type != 'cpu':
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
 
-        # Load data
-        if os.path.isdir(source):
-            img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
-        elif os.path.isfile(source):
-            img_paths = [source]  # files
+        if type(source) is not str:
+            self.img_paths = [source]  # files
         else:
-            raise Exception(f'Invalid path: {source}')
-        self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
+            # Load data
+            if os.path.isdir(source):
+                img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
+            elif os.path.isfile(source):
+                img_paths = [source]  # files
+            else:
+                raise Exception(f'Invalid path: {source}')
+            self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''
@@ -66,8 +69,9 @@ class Inferer:
             pred_results = self.model(img)
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
 
-            save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.basename(img_path).split('.')[0])
+            if type(img_path) is not np.ndarray:
+                save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
+                txt_path = osp.join(save_dir, 'labels', osp.basename(img_path).split('.')[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src
@@ -83,8 +87,9 @@ class Inferer:
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
-                        with open(txt_path + '.txt', 'a') as f:
-                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                        if type(img_path) is not np.ndarray:
+                            with open(txt_path + '.txt', 'a') as f:
+                                f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     if save_img:
                         class_num = int(cls)  # integer class
@@ -95,17 +100,19 @@ class Inferer:
                 img_src = np.asarray(img_ori)
 
                 # Save results (image with detections)
-                if save_img:
+                if save_img and type(img_path) is not np.ndarray:
                     cv2.imwrite(save_path, img_src)
+                return img_src
 
     @staticmethod
-    def precess_image(path, img_size, stride, half):
+    def precess_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
-        try:
-            img_src = cv2.imread(path)
-            assert img_src is not None, f'Invalid image: {path}'
-        except Exception as e:
-            LOGGER.Warning(e)
+        if type(img_src) is str:
+            try:
+                img_src = cv2.imread(img_src)
+                assert img_src is not None, f'Invalid image: {path}'
+            except Exception as e:
+                LOGGER.Warning(e)
         image = letterbox(img_src, img_size, stride=stride)[0]
 
         # Convert
