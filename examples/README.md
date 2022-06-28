@@ -1,7 +1,10 @@
 # NOTICE ！！！
 This PR only support TensorRT ≥ 8.0.0
+
 Please update your TensorRT into the newest version
+
 Trtexec tools is in /the/path/you/uncompress/TensorRT-8.X.X.X/bin/
+
 Or /usr/src/tensorrt/bin if you install with deb file
 
 Download the pretrain weight of yolov6s model into weights/ 
