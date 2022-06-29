@@ -1,7 +1,7 @@
 # YOLOv6s model
 model = dict(
     type='YOLOv6s',
-    pretrained='assets/last_ckpt.pt',
+    pretrained='../yolov6_assert/last_ckpt_e100.pt',
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
