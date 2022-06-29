@@ -139,7 +139,7 @@ class RepVGGBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3,
                  stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
         super(RepVGGBlock, self).__init__()
-        """ Intialization of the class.
+        """ Initialization of the class.
         Args:
             in_channels (int): Number of channels in the input image
             out_channels (int): Number of channels produced by the convolution

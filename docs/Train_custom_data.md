@@ -1,6 +1,6 @@
 # Train Custom Data
 
-This guidence explains how to train your own custom data with YOLOv6 ( take fine-tuning YOLOv6-s model for example).
+This guidence explains how to train your own custom data with YOLOv6 (take fine-tuning YOLOv6-s model for example).
 
 ## 0. Before you start
 
