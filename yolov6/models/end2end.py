@@ -40,10 +40,10 @@ class TRT_NMS(torch.autograd.Function):
         score_threshold=0.25,
     ):
         batch_size, num_boxes, num_classes = scores.shape
-        num_det = torch.randint(0, max_output_boxes, (batch_size, 1))
+        num_det = torch.randint(0, max_output_boxes, (batch_size, 1), dtype=torch.int32)
         det_boxes = torch.randn(batch_size, max_output_boxes, 4)
         det_scores = torch.randn(batch_size, max_output_boxes)
-        det_classes = torch.randint(0, num_classes, (batch_size, max_output_boxes))
+        det_classes = torch.randint(0, num_classes, (batch_size, max_output_boxes), dtype=torch.int32)
 
         return num_det, det_boxes, det_scores, det_classes
 
@@ -70,10 +70,6 @@ class TRT_NMS(torch.autograd.Function):
                      score_threshold_f=score_threshold,
                      outputs=4)
         nums, boxes, scores, classes = out
-        nums.type().with_dtype(torch.int32)
-        boxes.type().with_dtype(torch.float32)
-        scores.type().with_dtype(torch.float32)
-        classes.type().with_dtype(torch.int32)
         return nums,boxes,scores,classes
 
 
