@@ -12,12 +12,12 @@ from pytorch_quantization import quant_modules
 
 # Call this function before defining the model
 def tensorrt_official_qat():
-    # Quantization Aware Training is based on Straight Through Estimator (STE) derivative approximation. 
-    # It is some time known as “quantization aware training”. 
+    # Quantization Aware Training is based on Straight Through Estimator (STE) derivative approximation.
+    # It is some time known as “quantization aware training”.
 
-    # PyTorch-Quantization is a toolkit for training and evaluating PyTorch models with simulated quantization. 
-    # Quantization can be added to the model automatically, or manually, allowing the model to be tuned for accuracy and performance. 
-    # Quantization is compatible with NVIDIAs high performance integer kernels which leverage integer Tensor Cores. 
+    # PyTorch-Quantization is a toolkit for training and evaluating PyTorch models with simulated quantization.
+    # Quantization can be added to the model automatically, or manually, allowing the model to be tuned for accuracy and performance.
+    # Quantization is compatible with NVIDIAs high performance integer kernels which leverage integer Tensor Cores.
     # The quantized model can be exported to ONNX and imported by TensorRT 8.0 and later.
     # https://github.com/NVIDIA/TensorRT/blob/main/tools/pytorch-quantization/examples/finetune_quant_resnet50.ipynb
 

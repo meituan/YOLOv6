@@ -15,6 +15,7 @@ from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
+from yolov6.utils.general import increment_name
 
 
 def get_args_parser(add_help=True):
@@ -25,10 +26,13 @@ def get_args_parser(add_help=True):
     parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
-    parser.add_argument('--device', default='0', type=str, help='cuda devices, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--noval', action='store_true', help='only evaluate at final epoch')
-    parser.add_argument('--check-images', action='store_true', help='check images while initializing datasets')
-    parser.add_argument('--check-labels', action='store_true', help='check label files while initializing datasets')
+    parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--eval-interval', default=20, help='evaluate at every interval epochs')
+    parser.add_argument('--eval-final-only', action='store_true', help='only evaluate at the final epoch')
+    parser.add_argument('--heavy-eval-range', default=50,
+                        help='evaluating every epoch for last such epochs (can be jointly used with --eval-interval)')
+    parser.add_argument('--check-images', action='store_true', help='check images when initializing datasets')
+    parser.add_argument('--check-labels', action='store_true', help='check label files when initializing datasets')
     parser.add_argument('--output-dir', default='./runs/train', type=str, help='path to save outputs')
     parser.add_argument('--name', default='exp', type=str, help='experiment name, saved to output_dir/name')
     parser.add_argument('--dist_url', type=str, default="default url: tcp://127.0.0.1:8888")
@@ -43,7 +47,7 @@ def check_and_init(args):
     '''check config files and device, and initialize '''
 
     # check files
-    args.save_dir = osp.join(args.output_dir, args.name)
+    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
     os.makedirs(args.save_dir, exist_ok=True)
     cfg = Config.fromfile(args.conf_file)
 

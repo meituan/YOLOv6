@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 import argparse
 import os
+import os.path as osp
 import sys
 import torch
 
@@ -11,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from yolov6.core.evaler import Evaler
 from yolov6.utils.events import LOGGER
+from yolov6.utils.general import increment_name
 
 
 def get_args_parser(add_help=True):
@@ -24,7 +26,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--task', default='val', help='val, or speed')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--half', default=False, action='store_true', help='whether to use fp16 infer')
-    parser.add_argument('--save_dir', type=str, default='runs/val/exp', help='evaluation save dir')
+    parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
+    parser.add_argument('--name', type=str, default='exp', help='save evaluation results to save_dir/name')
     args = parser.parse_args()
     LOGGER.info(args)
     return args
@@ -43,10 +46,11 @@ def run(data,
         model=None,
         dataloader=None,
         save_dir='',
+        name = ''
         ):
     """ Run the evaluation process
 
-    This function is the main process of evalutaion, supporting image file and dir containing images.
+    This function is the main process of evaluataion, supporting image file and dir containing images.
     It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
     Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
     evaluation of inference speed of model.pt.
@@ -55,8 +59,8 @@ def run(data,
 
      # task
     Evaler.check_task(task)
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    save_dir = str(increment_name(osp.join(save_dir, name)))
+    os.makedirs(save_dir, exist_ok=True)
 
     # reload thres/device/half/data according task
     conf_thres, iou_thres = Evaler.reload_thres(conf_thres, iou_thres, task)

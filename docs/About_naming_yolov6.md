@@ -7,6 +7,3 @@ As for the project, we'll continue to improve and maintain it, contributing more
 P.S. We are contacting the authors of YOLO series about the naming of YOLOv6.
 
 Thanks for your attention！
-
-
-

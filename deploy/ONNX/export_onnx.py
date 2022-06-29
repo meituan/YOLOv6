@@ -65,7 +65,7 @@ if __name__ == '__main__':
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
         with BytesIO() as f:
-            torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
+            torch.onnx.export(model, img, f, verbose=False, opset_version=12,
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['image_arrays'],
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                 assert check, 'assert check failed'
             except Exception as e:
                 LOGGER.info(f'Simplifier failure: {e}')
-        onnx.save(onnx_model, f)
+        onnx.save(onnx_model, export_file)
         LOGGER.info(f'ONNX export success, saved as {export_file}')
     except Exception as e:
         LOGGER.info(f'ONNX export failure: {e}')
