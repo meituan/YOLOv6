@@ -6,6 +6,7 @@ import math
 import torch
 import torch.nn as nn
 
+
 def build_optimizer(cfg, model):
     """ Build optimizer from cfg file."""
     g_bnw, g_w, g_b = [], [], []
