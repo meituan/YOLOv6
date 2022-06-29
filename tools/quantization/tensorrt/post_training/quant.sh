@@ -2,7 +2,7 @@
 # ex: ../yolov6.onnx
 ONNX_MODEL=$1
 
-# Path to dataset to use for calibration. 
+# Path to dataset to use for calibration.
 #   **Not necessary if you already have a calibration cache from a previous run.
 CALIBRATION_DATA=$2
 

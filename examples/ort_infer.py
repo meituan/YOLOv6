@@ -57,4 +57,3 @@ for i,(batch,x0,y0,x1,y1,clas,score) in enumerate(outputs):
     cv2.putText(image_copy,name,(int(x0.round()), int(y0.round())-2),cv2.FONT_HERSHEY_SIMPLEX,0.75,[225, 255, 255],thickness=2)
 
 Image.fromarray(image_copy).show()
-

@@ -92,6 +92,3 @@ for i, (box, score, clss) in enumerate(zip(box_img, score_img, clss_img)):
 
 
 Image.fromarray(image_copy).show()
-
-
-
