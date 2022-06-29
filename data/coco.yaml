@@ -5,6 +5,8 @@ test: ../coco/images/test2017
 anno_path: ../coco/annotations/instances_val2017.json
 # number of classes
 nc: 80
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: True
 
 # class names
 names: [ 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
