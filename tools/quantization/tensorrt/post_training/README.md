@@ -1,11 +1,11 @@
 # ONNX -> TensorRT INT8
-These scripts were last tested using the 
+These scripts were last tested using the
 [NGC TensorRT Container Version 20.06-py3](https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt).
 You can see the corresponding framework versions for this container [here](https://docs.nvidia.com/deeplearning/sdk/tensorrt-container-release-notes/rel_20.06.html#rel_20.06).
 
 ## Quickstart
 
-> **NOTE**: This INT8 example is only valid for **fixed-shape** ONNX models at the moment. 
+> **NOTE**: This INT8 example is only valid for **fixed-shape** ONNX models at the moment.
 >
 INT8 Calibration on **dynamic-shape** models is now supported, however this example has not been updated
 to reflect that yet. For more details on INT8 Calibration for **dynamic-shape** models, please
@@ -21,7 +21,7 @@ See `./onnx_to_tensorrt.py -h` for full list of command line arguments.
                       --fp16 \
                       --int8 \
                       --calibration-cache="caches/yolov6.cache" \
-                      -o resnet50.int8.engine 
+                      -o resnet50.int8.engine
 ```
 
 See the [INT8 Calibration](#int8-calibration) section below for details on calibration
@@ -41,12 +41,12 @@ In the [Quickstart](#quickstart) section above, we made use of a pre-existing ca
 However, to calibrate using different data or a different model, you can do so with the `--calibration-data` argument.
 
 * This requires that you've mounted a dataset, such as Imagenet, to use for calibration.
-    * Add something like `-v /imagenet:/imagenet` to your Docker command in Step (1) 
+    * Add something like `-v /imagenet:/imagenet` to your Docker command in Step (1)
       to mount a dataset found locally at `/imagenet`.
-* You can specify your own `preprocess_func` by defining it inside of `ImageCalibrator.py` 
+* You can specify your own `preprocess_func` by defining it inside of `ImageCalibrator.py`
 
 ```bash
-# Path to dataset to use for calibration. 
+# Path to dataset to use for calibration.
 #   **Not necessary if you already have a calibration cache from a previous run.
 CALIBRATION_DATA="/imagenet"
 
@@ -80,4 +80,4 @@ python3 onnx_to_tensorrt.py --fp16 --int8 -v \
 ### Pre-processing
 
 In order to calibrate your model correctly, you should `pre-process` your data the same way
-that you would during inference. 
+that you would during inference.
