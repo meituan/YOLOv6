@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import math
+
 import torch.nn as nn
+
 from yolov6.layers.common import *
-from yolov6.utils.torch_utils import initialize_weights
 from yolov6.models.efficientrep import EfficientRep
-from yolov6.models.reppan import RepPANNeck
 from yolov6.models.effidehead import Detect, build_effidehead_layer
+from yolov6.models.reppan import RepPANNeck
+from yolov6.utils.torch_utils import initialize_weights
 
 
 class Model(nn.Module):

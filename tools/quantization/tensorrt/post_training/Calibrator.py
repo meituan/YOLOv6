@@ -17,18 +17,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
 import glob
-import random
 import logging
-import cv2
+import os
+import random
+import sys
 
+import cv2
 import numpy as np
-from PIL import Image
-import tensorrt as trt
-import pycuda.driver as cuda
 import pycuda.autoinit
+import pycuda.driver as cuda
+import tensorrt as trt
+from PIL import Image
 
 logging.basicConfig(level=logging.DEBUG,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

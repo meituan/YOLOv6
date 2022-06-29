@@ -5,10 +5,11 @@
 # https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/models/yolo_head.py
 # Copyright (c) Megvii, Inc. and its affiliates.
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
+
 from yolov6.utils.figure_iou import IOUloss, pairwise_bbox_iou
 
 

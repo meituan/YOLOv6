@@ -1,5 +1,6 @@
 from torch import nn
-from yolov6.layers.common import RepVGGBlock, RepBlock, SimSPPF
+
+from yolov6.layers.common import RepBlock, RepVGGBlock, SimSPPF
 
 
 class EfficientRep(nn.Module):

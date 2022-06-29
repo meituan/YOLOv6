@@ -2,13 +2,12 @@
 # -*- coding:utf-8 -*-
 
 import glob
+import hashlib
+import json
 import os
 import os.path as osp
 import random
-import json
 import time
-import hashlib
-
 from multiprocessing.pool import Pool
 
 import cv2
@@ -18,14 +17,10 @@ from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from .data_augment import (
-    augment_hsv,
-    letterbox,
-    mixup,
-    random_affine,
-    mosaic_augmentation,
-)
 from yolov6.utils.events import LOGGER
+
+from .data_augment import (augment_hsv, letterbox, mixup, mosaic_augmentation,
+                           random_affine)
 
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]

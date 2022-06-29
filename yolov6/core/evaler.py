@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os
-from tqdm import tqdm
-import numpy as np
 import json
-import torch
-import yaml
+import os
 from pathlib import Path
 
+import numpy as np
+import torch
+import yaml
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from tqdm import tqdm
 
 from yolov6.data.data_load import create_dataloader
+from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.events import LOGGER, NCOLS
 from yolov6.utils.nms import non_max_suppression
-from yolov6.utils.checkpoint import load_checkpoint
-from yolov6.utils.torch_utils import time_sync, get_model_info
+from yolov6.utils.torch_utils import get_model_info, time_sync
 
 '''
 
@@ -105,7 +105,7 @@ class Evaler:
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
         For task speed, this function only evaluates the speed of model and outputs inference time.
-        For task val, this function evaluates the speed and mAP by pycocotools, and returns 
+        For task val, this function evaluates the speed and mAP by pycocotools, and returns
         inference time and mAP value.
         '''
         LOGGER.info(f'\nEvaluating speed.')
