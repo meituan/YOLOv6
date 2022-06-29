@@ -15,6 +15,7 @@ from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
+from yolov6.utils.general import increment_name
 
 
 def get_args_parser(add_help=True):
@@ -45,7 +46,7 @@ def check_and_init(args):
     '''check config files and device, and initialize '''
 
     # check files
-    args.save_dir = osp.join(args.output_dir, args.name)
+    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
     os.makedirs(args.save_dir, exist_ok=True)
     cfg = Config.fromfile(args.conf_file)
 
