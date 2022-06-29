@@ -28,7 +28,6 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
-    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
@@ -109,4 +108,4 @@ if __name__ == '__main__':
     if args.end2end:
         if args.max_wh is None:
             LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
-            LOGGER.info(f'\ntrtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
+            LOGGER.info(f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
