@@ -48,7 +48,7 @@ Single GPU
 
 ```shell
 python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
-                                         configs/yolov6n.py
+                                        configs/yolov6n.py
 ```
 
 Multi GPUs (DDP mode recommended)
@@ -67,8 +67,8 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 Reproduce mAP on COCO val2017 dataset
 
 ```shell
-python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --task val
-                                                                 yolov6n.pt
+python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val
+                                                                yolov6n.pt
 ```
 
 
@@ -81,7 +81,6 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
-
 
 
 ## Benchmark
