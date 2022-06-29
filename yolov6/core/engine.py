@@ -49,8 +49,10 @@ class Trainer:
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
 
         self.start_epoch = 0
+
+        # resume ckpt from user-defined path
         if args.resume:
-            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exist'
+            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exists'
             self.ckpt = torch.load(args.resume, map_location='cpu')
             self.start_epoch = self.ckpt['epoch'] + 1
             
@@ -153,11 +155,11 @@ class Trainer:
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
         if hasattr(self, "ckpt"):
-            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            self.model.load_state_dict(csd, strict=False)  # load
-            self.optimizer.load_state_dict(self.ckpt['optimizer'])
+            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint's state_dict as FP32
+            self.model.load_state_dict(resume_state_dict, strict=True)  # load model state dict
+            self.optimizer.load_state_dict(self.ckpt['optimizer']) # load optimizer
             self.start_epoch = self.ckpt['epoch'] + 1
-            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
+            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict()) # load ema state dict
             self.ema.updates = self.ckpt['updates']
 
     def prepare_for_steps(self):
