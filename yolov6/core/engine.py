@@ -98,9 +98,9 @@ class Trainer:
         self.update_optimizer()
 
     def eval_and_save(self):
-        epoch_sub = self.max_epoch - self.epoch
-        val_period = 20 if epoch_sub > 100 else 1 # to fasten training time, evaluate in every 20 epochs for the early stage.
-        is_val_epoch = (not self.args.noval or (epoch_sub == 1)) and (self.epoch % val_period == 0)
+        remaining_epochs = self.max_epoch - self.epoch
+        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 1
+        is_val_epoch = (not self.args.eval_final_only or (remaining_epochs == 1)) and (self.epoch % eval_interval == 0)
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
             if is_val_epoch:
