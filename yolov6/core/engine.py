@@ -19,7 +19,7 @@ from yolov6.models.yolo import build_model
 from yolov6.models.loss import ComputeLoss
 from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 from yolov6.utils.ema import ModelEMA, de_parallel
-from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
+from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer, intersect_dicts
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 
 
@@ -28,6 +28,10 @@ class Trainer:
         self.args = args
         self.cfg = cfg
         self.device = device
+
+        if args.resume:
+            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exist'
+            self.ckpt = torch.load(args.resume, map_location='cpu')
 
         self.rank = args.rank
         self.local_rank = args.local_rank
@@ -49,10 +53,13 @@ class Trainer:
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
 
         self.start_epoch = 0
+        if args.resume:
+            self.start_epoch = self.ckpt['epoch'] + 1
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
+
 
     # Training Process
     def train(self):
@@ -146,6 +153,10 @@ class Trainer:
         self.evaluate_results = (0, 0) # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
+        if hasattr(self, "ckpt"):
+            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
+            self.ema.updates = self.ckpt['updates']
+
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
@@ -223,13 +234,16 @@ class Trainer:
         targets = batch_data[1].to(device)
         return images, targets
 
-    @staticmethod
-    def get_model(args, cfg, nc, device):
+    def get_model(self, args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
+        if args.resume:       
+            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            csd = intersect_dicts(csd, model.state_dict())  # intersect
+            model.load_state_dict(csd, strict=False)  # load
         LOGGER.info('Model: {}'.format(model))
         return model
 
@@ -248,11 +262,12 @@ class Trainer:
 
         return model
 
-    @staticmethod
-    def get_optimizer(args, cfg, model):
+    def get_optimizer(self, args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
         optimizer = build_optimizer(cfg, model)
+        if args.resume:
+            optimizer.load_state_dict(self.ckpt['optimizer'])
         return optimizer
 
     @staticmethod
