@@ -7,6 +7,7 @@ import os.path as osp
 import random
 import json
 import time
+import hashlib
 
 from multiprocessing.pool import Pool
 
@@ -16,7 +17,6 @@ import torch
 from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from pathlib import Path
 
 from .data_augment import (
     augment_hsv,
@@ -51,7 +51,7 @@ class TrainValDataset(Dataset):
         stride=32,
         pad=0.0,
         rank=-1,
-        class_names=None,
+        data_dict=None,
         task="train",
     ):
         assert task.lower() in ("train", "val", "speed"), f"Not supported task: {task}"
@@ -59,6 +59,7 @@ class TrainValDataset(Dataset):
         self.__dict__.update(locals())
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
+        self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -201,18 +202,28 @@ class TrainValDataset(Dataset):
         valid_img_record = osp.join(
             osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
         )
-        img_info = {}
         NUM_THREADS = min(8, os.cpu_count())
-        # check images
-        if (
-            self.check_images or not osp.exists(valid_img_record)
-        ) and self.main_process:
-            img_paths = glob.glob(osp.join(img_dir, "*"), recursive=True)
-            img_paths = sorted(
-                p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS
-            )
-            assert img_paths, f"No images found in {img_dir}."
 
+        img_paths = glob.glob(osp.join(img_dir, "*"), recursive=True)
+        img_paths = sorted(
+            p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS
+        )
+        assert img_paths, f"No images found in {img_dir}."
+
+        img_hash = self.get_hash(img_paths)
+        if osp.exists(valid_img_record):
+            with open(valid_img_record, "r") as f:
+                cache_info = json.load(f)
+                if "image_hash" in cache_info and cache_info["image_hash"] == img_hash:
+                    img_info = cache_info["information"]
+                else:
+                    self.check_images = True
+        else:
+            self.check_images = True
+
+        # check images
+        if self.check_images and self.main_process:
+            img_info = {}
             nc, msgs = 0, []  # number corrupt, messages
             LOGGER.info(
                 f"{self.task}: Checking formats of images with {NUM_THREADS} process(es): "
@@ -233,29 +244,28 @@ class TrainValDataset(Dataset):
             if msgs:
                 LOGGER.info("\n".join(msgs))
 
+            cache_info = {"information": img_info, "image_hash": img_hash}
             # save valid image paths.
             with open(valid_img_record, "w") as f:
-                json.dump(img_info, f)
+                json.dump(cache_info, f)
 
         # check and load anns
         label_dir = osp.join(
             osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
         )
         assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
-        if not img_info:
-            with open(valid_img_record, "r") as f:
-                img_info = json.load(f)
-                assert (
-                    img_info
-                ), "No information in record files, please add option --check_images."
+
         img_paths = list(img_info.keys())
-        label_paths = [
+        label_paths = sorted(
             osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
             for p in img_paths
-        ]
-        if (
-            self.check_labels or "labels" not in img_info[img_paths[0]]
-        ):  # key 'labels' not saved in img_info
+        )
+        label_hash = self.get_hash(label_paths)
+        if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
+            self.check_labels = True
+
+        if self.check_labels:
+            cache_info["label_hash"] = label_hash
             nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number corrupt, messages
             LOGGER.info(
                 f"{self.task}: Checking formats of labels with {NUM_THREADS} process(es): "
@@ -289,27 +299,27 @@ class TrainValDataset(Dataset):
             if self.main_process:
                 pbar.close()
                 with open(valid_img_record, "w") as f:
-                    json.dump(img_info, f)
+                    json.dump(cache_info, f)
             if msgs:
                 LOGGER.info("\n".join(msgs))
             if nf == 0:
                 LOGGER.warning(
                     f"WARNING: No labels found in {osp.dirname(self.img_paths[0])}. "
                 )
-        else:
-            with open(valid_img_record) as f:
-                img_info = json.load(f)
+
         if self.task.lower() == "val":
-            assert (
-                self.class_names
-            ), "Class names is required when converting labels to coco format for evaluating."
-            save_dir = osp.join(osp.dirname(osp.dirname(img_dir)), "annotations")
-            if not osp.exists(save_dir):
-                os.mkdir(save_dir)
-            save_path = osp.join(
-                save_dir, "instances_" + osp.basename(img_dir) + ".json"
-            )
-            if not osp.exists(save_path):
+            if self.data_dict.get("is_coco", False): # use original json file when evaluating on coco dataset.
+                assert osp.exists(self.data_dict["anno_path"]), "Eval on coco dataset must provide valid path of the annotation file in config file: data/coco.yaml"
+            else:
+                assert (
+                    self.class_names
+                ), "Class names is required when converting labels to coco format for evaluating."
+                save_dir = osp.join(osp.dirname(osp.dirname(img_dir)), "annotations")
+                if not osp.exists(save_dir):
+                    os.mkdir(save_dir)
+                save_path = osp.join(
+                    save_dir, "instances_" + osp.basename(img_dir) + ".json"
+                )
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
                 )
@@ -489,8 +499,8 @@ class TrainValDataset(Dataset):
         LOGGER.info(f"Convert to COCO format")
         for i, (img_path, info) in enumerate(tqdm(img_info.items())):
             labels = info["labels"] if info["labels"] else []
-            path = Path(img_path)
-            img_id = int(path.stem) if path.stem.isnumeric() else path.stem
+            img_id = osp.splitext(osp.basename(img_path))[0]
+            img_id = int(img_id) if img_id.isnumeric() else img_id
             img_w, img_h = info["shape"]
             dataset["images"].append(
                 {
@@ -531,3 +541,10 @@ class TrainValDataset(Dataset):
             LOGGER.info(
                 f"Convert to COCO format finished. Resutls saved in {save_path}"
             )
+
+    @staticmethod
+    def get_hash(paths):
+        """Get the hash value of paths"""
+        assert isinstance(paths, list), "Only support list currently."
+        h = hashlib.md5("".join(paths).encode())
+        return h.hexdigest()
