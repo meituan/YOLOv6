@@ -26,7 +26,10 @@ def get_args_parser(add_help=True):
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--noval', action='store_true', help='only evaluate in final epoch')
+    parser.add_argument('--eval-interval', default=20, help='evaluate at every interval epochs')
+    parser.add_argument('--eval-final-only', action='store_true', help='only evaluate at the final epoch')
+    parser.add_argument('--heavy-eval-range', default=50,
+                        help='evaluating every epoch for last such epochs (can be jointly used with --eval-interval)')
     parser.add_argument('--check-images', action='store_true', help='check images when initializing datasets')
     parser.add_argument('--check-labels', action='store_true', help='check label files when initializing datasets')
     parser.add_argument('--output-dir', default='./runs/train', type=str, help='path to save outputs')
