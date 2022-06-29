@@ -29,10 +29,6 @@ class Trainer:
         self.cfg = cfg
         self.device = device
 
-        if args.resume:
-            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exist'
-            self.ckpt = torch.load(args.resume, map_location='cpu')
-
         self.rank = args.rank
         self.local_rank = args.local_rank
         self.world_size = args.world_size
@@ -54,14 +50,17 @@ class Trainer:
 
         self.start_epoch = 0
         if args.resume:
+            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exist'
+            self.ckpt = torch.load(args.resume, map_location='cpu')
             self.start_epoch = self.ckpt['epoch'] + 1
+            
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
 
-
     # Training Process
+
     def train(self):
         try:
             self.train_before_loop()
@@ -183,7 +182,7 @@ class Trainer:
         if self.main_process:
             LOGGER.info(f'\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours.')
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
-            strip_optimizer(save_ckpt_dir)  # strip optimizers for saved pt model
+            strip_optimizer(save_ckpt_dir, self.epoch)  # strip optimizers for saved pt model
         if self.device != 'cpu':
             torch.cuda.empty_cache()
 
@@ -240,10 +239,10 @@ class Trainer:
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
-        if args.resume:       
-            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            csd = intersect_dicts(csd, model.state_dict())  # intersect
-            model.load_state_dict(csd, strict=False)  # load
+        if args.resume:
+            '''resume from the checkpoint'''
+            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            model.load_state_dict(resume_state_dict, strict=True)  # load
         LOGGER.info('Model: {}'.format(model))
         return model
 

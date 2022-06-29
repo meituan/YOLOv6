@@ -34,7 +34,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--dist_url', type=str, default="tcp://127.0.0.1:8888")
     parser.add_argument('--gpu_count', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
-    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
+    parser.add_argument('--resume', type=str, default=None, help='resume the corresponding ckpt')
 
     return parser
 
