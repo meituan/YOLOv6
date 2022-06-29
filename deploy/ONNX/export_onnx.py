@@ -80,11 +80,12 @@ if __name__ == '__main__':
         # Checks
         onnx_model = onnx.load(export_file)  # load onnx model
         onnx.checker.check_model(onnx_model)  # check onnx model
-        shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4, args.batch_size, args.topk_all, args.batch_size, args.topk_all]
-        for i in onnx_model.graph.output:
-            for j in i.type.tensor_type.shape.dim:
-                j.dim_param = str(shapes.pop(0))
-        onnx.save(onnx_model, export_file)
+        if args.end2end and not args.max_wh:
+            shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4, args.batch_size, args.topk_all, args.batch_size, args.topk_all]
+            for i in onnx_model.graph.output:
+                for j in i.type.tensor_type.shape.dim:
+                    j.dim_param = str(shapes.pop(0))
+            onnx.save(onnx_model, export_file)
         LOGGER.info(f'ONNX export success, saved as {export_file}')
     except Exception as e:
         LOGGER.info(f'ONNX export failure: {e}')
