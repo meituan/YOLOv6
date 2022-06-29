@@ -19,7 +19,7 @@ from yolov6.models.yolo import build_model
 from yolov6.models.loss import ComputeLoss
 from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 from yolov6.utils.ema import ModelEMA, de_parallel
-from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer, intersect_dicts
+from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 
 
@@ -153,6 +153,10 @@ class Trainer:
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
         if hasattr(self, "ckpt"):
+            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            self.model.load_state_dict(csd, strict=False)  # load
+            self.optimizer.load_state_dict(self.ckpt['optimizer'])
+            self.start_epoch = self.ckpt['epoch'] + 1
             self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
             self.ema.updates = self.ckpt['updates']
 
@@ -239,10 +243,6 @@ class Trainer:
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
-        if args.resume:
-            '''resume from the checkpoint'''
-            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            model.load_state_dict(resume_state_dict, strict=True)  # load
         LOGGER.info('Model: {}'.format(model))
         return model
 
@@ -265,8 +265,6 @@ class Trainer:
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
         optimizer = build_optimizer(cfg, model)
-        if args.resume:
-            optimizer.load_state_dict(self.ckpt['optimizer'])
         return optimizer
 
     @staticmethod
