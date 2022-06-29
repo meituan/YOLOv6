@@ -74,17 +74,24 @@ if __name__ == '__main__':
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
         with BytesIO() as f:
-            torch.onnx.export(model, img, f, verbose=False, opset_version=12,
+            torch.onnx.export(model, img, export_file, verbose=False, opset_version=12,
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['image_arrays'],
-                              output_names=['outputs'],
-                             )
+                              output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
+                              if args.end2end and args.max_wh is None else ['outputs'],)
             f.seek(0)
             # Checks
             onnx_model = onnx.load(f)  # load onnx model
             onnx.checker.check_model(onnx_model)  # check onnx model
-        if args.simplify:
+            # Fix output shape
+            if args.end2end and args.max_wh is None:
+                shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
+                          args.batch_size, args.topk_all, args.batch_size, args.topk_all]
+                for i in onnx_model.graph.output:
+                    for j in i.type.tensor_type.shape.dim:
+                        j.dim_param = str(shapes.pop(0))
+        if args.simplify and not args.end2end:
             try:
                 import onnxsim
                 LOGGER.info('\nStarting to simplify ONNX...')
@@ -93,22 +100,6 @@ if __name__ == '__main__':
             except Exception as e:
                 LOGGER.info(f'Simplifier failure: {e}')
         onnx.save(onnx_model, export_file)
-        torch.onnx.export(model, img, export_file, verbose=False, opset_version=13 if args.end2end else 12,
-                          training=torch.onnx.TrainingMode.EVAL,
-                          do_constant_folding=True,
-                          input_names=['image_arrays'],
-                          output_names=['num_dets','det_boxes','det_scores','det_classes'] if args.end2end and not args.max_wh else ['outputs'],
-                         )
-
-        # Checks
-        onnx_model = onnx.load(export_file)  # load onnx model
-        onnx.checker.check_model(onnx_model)  # check onnx model
-        if args.end2end and not args.max_wh:
-            shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4, args.batch_size, args.topk_all, args.batch_size, args.topk_all]
-            for i in onnx_model.graph.output:
-                for j in i.type.tensor_type.shape.dim:
-                    j.dim_param = str(shapes.pop(0))
-            onnx.save(onnx_model, export_file)
         LOGGER.info(f'ONNX export success, saved as {export_file}')
     except Exception as e:
         LOGGER.info(f'ONNX export failure: {e}')
@@ -116,6 +107,6 @@ if __name__ == '__main__':
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
     if args.end2end:
-        if not args.max_wh:
+        if args.max_wh is None:
             LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
             LOGGER.info(f'\ntrtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
