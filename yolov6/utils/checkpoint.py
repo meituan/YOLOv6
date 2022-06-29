@@ -43,7 +43,7 @@ def save_checkpoint(ckpt, is_best, save_dir, model_name=""):
         shutil.copyfile(filename, best_filename)
 
 
-def strip_optimizer(ckpt_dir):
+def strip_optimizer(ckpt_dir, epoch):
     for s in ['best', 'last']:
         ckpt_path = osp.join(ckpt_dir, '{}_ckpt.pt'.format(s))
         if not osp.exists(ckpt_path):
@@ -53,7 +53,7 @@ def strip_optimizer(ckpt_dir):
             ckpt['model'] = ckpt['ema']  # replace model with ema
         for k in ['optimizer', 'ema', 'updates']:  # keys
             ckpt[k] = None
-        ckpt['epoch'] = -1
+        ckpt['epoch'] = epoch
         ckpt['model'].half()  # to FP16
         for p in ckpt['model'].parameters():
             p.requires_grad = False
