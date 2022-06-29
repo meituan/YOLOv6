@@ -1,6 +1,6 @@
 # Test speed
 
-This guidence explains how to reproduce speed results of YOLOv6. For fair comparision, the speed results do not contain the time cost of data pre-processing and NMS post-processing.
+This guidence explains how to reproduce speed results of YOLOv6. For fair comparison, the speed results do not contain the time cost of data pre-processing and NMS post-processing.
 
 ## 0. Prepare model
 
