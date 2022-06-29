@@ -23,6 +23,12 @@ YOLOv6 is composed of the following methods:
 
 ## Quick Start
 
+### Streamlit
+
+<p align="center">
+  <a href="https://yolov6.dagshubusercontent.com/"><img src="https://streamlit.io/favicon.svg" alt="streamlit" width=200></a>
+</p>
+
 ### Install
 
 ```shell
