@@ -17,6 +17,7 @@ from yolov6.models.effidehead import Detect
 from yolov6.layers.common import *
 from yolov6.utils.events import LOGGER
 from yolov6.utils.checkpoint import load_checkpoint
+from io import BytesIO
 
 
 if __name__ == '__main__':
@@ -26,6 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
+    parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
+    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
@@ -70,6 +73,26 @@ if __name__ == '__main__':
     try:
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
+        with BytesIO() as f:
+            torch.onnx.export(model, img, f, verbose=False, opset_version=12,
+                              training=torch.onnx.TrainingMode.EVAL,
+                              do_constant_folding=True,
+                              input_names=['image_arrays'],
+                              output_names=['outputs'],
+                             )
+            f.seek(0)
+            # Checks
+            onnx_model = onnx.load(f)  # load onnx model
+            onnx.checker.check_model(onnx_model)  # check onnx model
+        if args.simplify:
+            try:
+                import onnxsim
+                LOGGER.info('\nStarting to simplify ONNX...')
+                onnx_model, check = onnxsim.simplify(onnx_model)
+                assert check, 'assert check failed'
+            except Exception as e:
+                LOGGER.info(f'Simplifier failure: {e}')
+        onnx.save(onnx_model, export_file)
         torch.onnx.export(model, img, export_file, verbose=False, opset_version=13 if args.end2end else 12,
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
