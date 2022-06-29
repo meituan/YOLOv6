@@ -195,6 +195,11 @@ class TrainValDataset(Dataset):
         for i, l in enumerate(label):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
+    def img2label_paths(self,img_paths):
+        # Define label paths as a function of image paths
+        sa, sb = f'{os.sep}images{os.sep}', f'{os.sep}labels{os.sep}'  # /images/, /labels/ substrings
+        return [sb.join(x.rsplit(sa, 1)).rsplit('.', 1)[0] + '.txt' for x in img_paths]
+
 
     def get_imgs_labels(self, img_dir):
 
@@ -256,10 +261,7 @@ class TrainValDataset(Dataset):
         assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
 
         img_paths = list(img_info.keys())
-        label_paths = sorted(
-            osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
-            for p in img_paths
-        )
+        label_paths = self.img2label_paths(img_paths)
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
             self.check_labels = True
