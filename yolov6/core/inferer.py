@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import math
 import os
 import os.path as osp
-import math
 
-from tqdm import tqdm
-
-import numpy as np
 import cv2
+import numpy as np
 import torch
 from PIL import ImageFont
+from tqdm import tqdm
 
-from yolov6.utils.events import LOGGER, load_yaml
-
-from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
+from yolov6.layers.common import DetectBackend
+from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.utils.nms import non_max_suppression
 
 
 class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
         import glob
+
         from yolov6.data.datasets import IMG_FORMATS
 
         self.__dict__.update(locals())

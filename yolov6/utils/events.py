@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
-import yaml
 import logging
+import os
 import shutil
+
+import yaml
 
 
 def set_logging(name=None):

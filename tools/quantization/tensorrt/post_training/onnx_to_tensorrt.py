@@ -19,14 +19,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+import glob
+import logging
+import math
 import os
 import sys
-import glob
-import math
-import logging
-import argparse
 
 import tensorrt as trt
+
 #sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 TRT_LOGGER = trt.Logger()
@@ -205,7 +206,8 @@ def main():
             logger.warning("INT8 not supported on this platform.")
 
         if args.int8:
-                from Calibrator import ImageCalibrator, get_int8_calibrator # local module
+                from Calibrator import ImageCalibrator  # local module
+                from Calibrator import get_int8_calibrator
                 config.int8_calibrator = get_int8_calibrator(args.calibration_cache,
                                                              args.calibration_data,
                                                              args.max_calibration_size,

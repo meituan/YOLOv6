@@ -5,11 +5,11 @@
 
 import os
 import time
-import numpy as np
+
 import cv2
+import numpy as np
 import torch
 import torchvision
-
 
 # Settings
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
