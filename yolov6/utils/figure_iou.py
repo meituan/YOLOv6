@@ -13,7 +13,7 @@ class IOUloss:
             box_format: (string), must be one of 'xywh' or 'xyxy'.
             iou_type: (string), can be one of 'ciou', 'diou', 'giou' or 'siou'
             reduction: (string), specifies the reduction to apply to the output, must be one of 'none', 'mean','sum'.
-            eps: (float), a value to avoid devide by zero error.
+            eps: (float), a value to avoid divide by zero error.
         """
         self.box_format = box_format
         self.iou_type = iou_type.lower()

@@ -3,7 +3,7 @@
 #
 # Modified by Meituan
 # 2022.6.24
-# 
+#
 
 # Copyright 2019 NVIDIA Corporation
 #
@@ -61,7 +61,7 @@ def check_network(network):
     if not network.num_outputs:
         logger.warning("No output nodes found, marking last layer's outputs as network outputs. Correct this if wrong.")
         mark_outputs(network)
-    
+
     inputs = [network.get_input(i) for i in range(network.num_inputs)]
     outputs = [network.get_output(i) for i in range(network.num_outputs)]
     max_len = max([len(inp.name) for inp in inputs] + [len(out.name) for out in outputs])
@@ -79,13 +79,13 @@ def get_batch_sizes(max_batch_size):
     for i in range(int(max_exponent)+1):
         batch_size = 2**i
         yield batch_size
-    
+
     if max_batch_size != batch_size:
         yield max_batch_size
 
 
 # TODO: This only covers dynamic shape for batch size, not dynamic shape for other dimensions
-def create_optimization_profiles(builder, inputs, batch_sizes=[1,8,16,32,64]): 
+def create_optimization_profiles(builder, inputs, batch_sizes=[1,8,16,32,64]):
     # Check if all inputs are fixed explicit batch to create a single profile and avoid duplicates
     if all([inp.shape[0] > -1 for inp in inputs]):
         profile = builder.create_optimization_profile()
@@ -93,14 +93,14 @@ def create_optimization_profiles(builder, inputs, batch_sizes=[1,8,16,32,64]):
             fbs, shape = inp.shape[0], inp.shape[1:]
             profile.set_shape(inp.name, min=(fbs, *shape), opt=(fbs, *shape), max=(fbs, *shape))
             return [profile]
-    
+
     # Otherwise for mixed fixed+dynamic explicit batch inputs, create several profiles
     profiles = {}
     for bs in batch_sizes:
         if not profiles.get(bs):
             profiles[bs] = builder.create_optimization_profile()
 
-        for inp in inputs: 
+        for inp in inputs:
             shape = inp.shape[1:]
             # Check if fixed explicit batch
             if inp.shape[0] > -1:
@@ -131,7 +131,7 @@ def main():
     parser.add_argument("--max-calibration-size", help="(INT8 ONLY) The max number of data to calibrate on from --calibration-data.", type=int, default=2048)
     parser.add_argument("-s", "--simple", action="store_true", help="Use SimpleCalibrator with random data instead of ImagenetCalibrator for INT8 calibration.")
     args, _ = parser.parse_known_args()
-    
+
     print(args)
 
     # Adjust logging verbosity
@@ -166,7 +166,7 @@ def main():
          builder.create_network(network_flags) as network, \
          builder.create_builder_config() as config, \
          trt.OnnxParser(network, TRT_LOGGER) as parser:
-            
+
         config.max_workspace_size = 2**30 # 1GiB
 
         # Set Builder Config Flags

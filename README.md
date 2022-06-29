@@ -1,4 +1,4 @@
-# YOLOv6
+# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
 
 ## Introduction
 
@@ -33,12 +33,12 @@ pip install -r requirements.txt
 
 ### Inference
 
-First, download a pretrained model from the YOLOv6 release
+First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.1.0)
 
 Second, run inference with `tools/infer.py`
 
 ```shell
-python tools/infer.py --weights yolov6s.pt --source [img.jpg / imgdir]
+python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir
                                 yolov6n.pt
 ```
 
@@ -47,7 +47,7 @@ python tools/infer.py --weights yolov6s.pt --source [img.jpg / imgdir]
 Single GPU
 
 ```shell
-python tools/train.py --batch 256 --conf configs/yolov6s.py --data data/coco.yaml --device 0
+python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
                                          configs/yolov6n.py
 ```
 

@@ -12,4 +12,5 @@ addict>=2.4.0
 tensorboard>=2.7.0
 pycocotools>=2.0
 onnx>=1.10.0  # ONNX export
+onnx-simplifier>=0.3.6 # ONNX simplifier
 thop  # FLOPs computation

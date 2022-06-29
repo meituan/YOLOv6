@@ -63,13 +63,13 @@ class Evaler:
         '''Initialize dataloader.
         Returns a dataloader for task val or speed.
         '''
-        self.is_coco = isinstance(self.data.get('val'), str) and 'coco' in self.data['val']  # COCO dataset
+        self.is_coco = self.data.get("is_coco", False)
         self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
         if task != 'train':
             pad = 0.0 if task == 'speed' else 0.5
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
-                                           self.img_size, self.batch_size, self.stride, pad=pad, rect=True,
-                                           class_names=self.data['names'], task=task)[0]
+                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad, rect=True,
+                                           data_dict=self.data, task=task)[0]
         return dataloader
 
     def predict_model(self, model, dataloader, task):
@@ -105,7 +105,7 @@ class Evaler:
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
         For task speed, this function only evaluates the speed of model and outputs inference time.
-        For task val, this function evalutates the speed and mAP by pycocotools, and returns 
+        For task val, this function evaluates the speed and mAP by pycocotools, and returns 
         inference time and mAP value.
         '''
         LOGGER.info(f'\nEvaluating speed.')
