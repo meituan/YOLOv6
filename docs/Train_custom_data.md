@@ -27,34 +27,48 @@ One image corresponds to one label file, and the label format example is present
 
 **Step 3** Organize directories.
 
-Organize your train and val images and label files according to the example below.
+Organize your directory of custom dataset as follows:
 
 ```shell
-# image directory
-path/to/data/images/train/im0.jpg
-path/to/data/images/val/im1.jpg
-path/to/data/images/test/im2.jpg
-
-# label directory
-path/to/data/labels/train/im0.txt
-path/to/data/labels/val/im1.txt
-path/to/data/labels/test/im2.txt
+custom_dataset
+├── images
+│   ├── train
+│   │   ├── train0.jpg
+│   │   └── train1.jpg
+│   ├── val
+│   │   ├── val0.jpg
+│   │   └── val1.jpg
+│   └── test
+│       ├── test0.jpg
+│       └── test1.jpg
+└── labels
+    ├── train
+    │   ├── train0.txt
+    │   └── train1.txt
+    ├── val
+    │   ├── val0.txt
+    │   └── val1.txt
+    └── test
+        ├── test0.txt
+        └── test1.txt
 ```
 
 **Step 4** Create `dataset.yaml` in `$YOLOv6_DIR/data`.
 
 ```yaml
-train: path/to/data/images/train # train images
-val: path/to/data/images/val # val images
-test: path/to/data/images/test # test images (optional)
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+train: ../custom_dataset/images/train # train images
+val: ../custom_dataset/images/val # val images
+test: ../custom_dataset/images/test # test images (optional)
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
 
 # Classes
 nc: 20  # number of classes
 names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
         'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']  # class names
-
 ```
-
 
 ## 2. Create a config file
 
