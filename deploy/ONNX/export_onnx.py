@@ -28,6 +28,11 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
+    parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
+    parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
+    parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
+    parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.25, help='conf threshold for NMS')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     args = parser.parse_args()
     args.img_size *= 2 if len(args.img_size) == 1 else 1  # expand
@@ -57,6 +62,10 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
+    if args.end2end:
+        from yolov6.models.end2end import End2End
+        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,
+                        score_thres=args.conf_thres, max_wh=args.max_wh, device=device)
 
     y = model(img)  # dry run
 
@@ -69,12 +78,19 @@ if __name__ == '__main__':
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['image_arrays'],
-                              output_names=['outputs'],
-                             )
+                              output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
+                              if args.end2end and args.max_wh is None else ['outputs'],)
             f.seek(0)
             # Checks
             onnx_model = onnx.load(f)  # load onnx model
             onnx.checker.check_model(onnx_model)  # check onnx model
+            # Fix output shape
+            if args.end2end and args.max_wh is None:
+                shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
+                          args.batch_size, args.topk_all, args.batch_size, args.topk_all]
+                for i in onnx_model.graph.output:
+                    for j in i.type.tensor_type.shape.dim:
+                        j.dim_param = str(shapes.pop(0))
         if args.simplify:
             try:
                 import onnxsim
@@ -90,3 +106,8 @@ if __name__ == '__main__':
 
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
+    if args.end2end:
+        if args.max_wh is None:
+            LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
+            LOGGER.info(f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
+
