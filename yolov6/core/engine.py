@@ -21,7 +21,6 @@ from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
-RANK = int(os.getenv('RANK', -1))
 
 class Trainer:
     def __init__(self, args, cfg, device):
@@ -29,7 +28,7 @@ class Trainer:
         self.cfg = cfg
         self.device = device
 
-        if args.resume and RANK in {-1, 0}:
+        if args.resume:
             self.ckpt = torch.load(args.resume, map_location='cpu')
 
         self.rank = args.rank
@@ -151,13 +150,12 @@ class Trainer:
         self.evaluate_results = (0, 0) # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
-        if hasattr(self, "ckpt") and RANK in {-1, 0}:
-            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            self.model.load_state_dict(csd, strict=False)  # load
+        if hasattr(self, "ckpt"):
             self.optimizer.load_state_dict(self.ckpt['optimizer'])
             self.start_epoch = self.ckpt['epoch'] + 1
-            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
-            self.ema.updates = self.ckpt['updates']
+            if self.ema:
+                self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
+                self.ema.updates = self.ckpt['updates']
 
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
@@ -242,6 +240,9 @@ class Trainer:
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
+        if hasattr(self, "ckpt"):
+            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            model.load_state_dict(csd, strict=True)  # load
         LOGGER.info('Model: {}'.format(model))
         return model
 
