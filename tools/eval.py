@@ -59,8 +59,11 @@ def run(data,
 
      # task
     Evaler.check_task(task)
-    save_dir = str(increment_name(osp.join(save_dir, name)))
-    os.makedirs(save_dir, exist_ok=True)
+    if task == 'train':
+        save_dir = save_dir
+    else:
+        save_dir = str(increment_name(osp.join(save_dir, name)))
+        os.makedirs(save_dir, exist_ok=True)
 
     # reload thres/device/half/data according task
     conf_thres, iou_thres = Evaler.reload_thres(conf_thres, iou_thres, task)
