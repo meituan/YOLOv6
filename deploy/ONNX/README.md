@@ -87,7 +87,6 @@ The onnx outputs are as shown :
 
 ```det_classes``` means the category of every topk(100) objects .
 
-```nums``` means the category of every topk(100) objects.
 
 You can export TensorRT engine use [trtexec](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#trtexec-ovr) tools.
 #### Usage
