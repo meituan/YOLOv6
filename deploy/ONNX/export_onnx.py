@@ -110,4 +110,3 @@ if __name__ == '__main__':
         if args.max_wh is None:
             LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
             LOGGER.info(f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
-
