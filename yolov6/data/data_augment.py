@@ -9,6 +9,7 @@ import random
 import cv2
 import numpy as np
 
+
 def augment_hsv(im, hgain=0.5, sgain=0.5, vgain=0.5):
     # HSV color-space augmentation
     if hgain or sgain or vgain:
@@ -23,7 +24,6 @@ def augment_hsv(im, hgain=0.5, sgain=0.5, vgain=0.5):
 
         im_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val)))
         cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, dst=im)  # no return needed
-
 
 
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32):
@@ -72,12 +72,12 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1, eps=1e-16):  #
 
 
 def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
-                       new_shape=(640,640)):
+                  new_shape=(640, 640)):
 
     n = len(labels)
-    height,width = new_shape
+    height, width = new_shape
 
-    M,s = get_transform_matrix(img.shape[:2],(height,width),degrees,scale,shear,translate)
+    M, s = get_transform_matrix(img.shape[:2], (height, width), degrees, scale, shear, translate)
     if (M != np.eye(3)).any():  # image changed
         img = cv2.warpAffine(img, M[:2], dsize=(width, height), borderValue=(114, 114, 114))
 
@@ -107,8 +107,8 @@ def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
     return img, labels
 
 
-def get_transform_matrix(img_shape,new_shape,degrees,scale,shear,translate):
-    new_height,new_width = new_shape
+def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate):
+    new_height, new_width = new_shape
     # Center
     C = np.eye(3)
     C[0, 2] = -img_shape[1] / 2  # x translation (pixels)
@@ -134,19 +134,19 @@ def get_transform_matrix(img_shape,new_shape,degrees,scale,shear,translate):
 
     # Combined rotation matrix
     M = T @ S @ R @ C  # order of operations (right to left) is IMPORTANT
-    return M,s
+    return M, s
 
 
 def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
 
-    assert len(imgs)==4, "Mosaic augmentaion of current version only supports 4 images."
+    assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
 
     labels4 = []
     s = img_size
     yc, xc = (int(random.uniform(s//2, 3*s//2)) for _ in range(2))  # mosaic center x, y
     for i in range(len(imgs)):
         # Load image
-        img, h, w = imgs[i],hs[i],ws[i]
+        img, h, w = imgs[i], hs[i], ws[i]
         # place img in img4
         if i == 0:  # top left
             img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
@@ -167,14 +167,14 @@ def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
         padh = y1a - y1b
 
         # Labels
-        labels_per_img= labels[i].copy()
+        labels_per_img = labels[i].copy()
         if labels_per_img.size:
-            boxes = np.copy(labels_per_img[:,1:])
+            boxes = np.copy(labels_per_img[:, 1:])
             boxes[:, 0] = w * (labels_per_img[:, 1] - labels_per_img[:, 3] / 2) + padw  # top left x
             boxes[:, 1] = h * (labels_per_img[:, 2] - labels_per_img[:, 4] / 2) + padh  # top left y
             boxes[:, 2] = w * (labels_per_img[:, 1] + labels_per_img[:, 3] / 2) + padw  # bottom right x
             boxes[:, 3] = h * (labels_per_img[:, 2] + labels_per_img[:, 4] / 2) + padh  # bottom right y
-            labels_per_img[:,1:] = boxes
+            labels_per_img[:, 1:] = boxes
 
         labels4.append(labels_per_img)
 
@@ -185,9 +185,9 @@ def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
 
     # Augment
     img4, labels4 = random_affine(img4, labels4,
-                                       degrees=hyp['degrees'],
-                                       translate=hyp['translate'],
-                                       scale=hyp['scale'],
-                                       shear=hyp['shear'])
+                                  degrees=hyp['degrees'],
+                                  translate=hyp['translate'],
+                                  scale=hyp['scale'],
+                                  shear=hyp['shear'])
 
     return img4, labels4

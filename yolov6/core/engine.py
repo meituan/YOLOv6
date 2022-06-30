@@ -53,12 +53,20 @@ class Trainer:
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
 
         self.start_epoch = 0
+
+        # resume ckpt from user-defined path
+        if args.resume:
+            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exists'
+            self.ckpt = torch.load(args.resume, map_location='cpu')
+            self.start_epoch = self.ckpt['epoch'] + 1
+            
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
 
     # Training Process
+
     def train(self):
         try:
             self.train_before_loop()
@@ -102,9 +110,9 @@ class Trainer:
         self.update_optimizer()
 
     def eval_and_save(self):
-        epoch_sub = self.max_epoch - self.epoch
-        val_period = 20 if epoch_sub > 100 else 1 # to fasten training time, evaluate in every 20 epochs for the early stage.
-        is_val_epoch = (not self.args.noval or (epoch_sub == 1)) and (self.epoch % val_period == 0)
+        remaining_epochs = self.max_epoch - self.epoch
+        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 1
+        is_val_epoch = (not self.args.eval_final_only or (remaining_epochs == 1)) and (self.epoch % eval_interval == 0)
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
             if is_val_epoch:
@@ -150,6 +158,14 @@ class Trainer:
         self.evaluate_results = (0, 0) # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
+        if hasattr(self, "ckpt"):
+            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint's state_dict as FP32
+            self.model.load_state_dict(resume_state_dict, strict=True)  # load model state dict
+            self.optimizer.load_state_dict(self.ckpt['optimizer']) # load optimizer
+            self.start_epoch = self.ckpt['epoch'] + 1
+            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict()) # load ema state dict
+            self.ema.updates = self.ckpt['updates']
+
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
@@ -176,7 +192,7 @@ class Trainer:
         if self.main_process:
             LOGGER.info(f'\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours.')
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
-            strip_optimizer(save_ckpt_dir)  # strip optimizers for saved pt model
+            strip_optimizer(save_ckpt_dir, self.epoch)  # strip optimizers for saved pt model
         if self.device != 'cpu':
             torch.cuda.empty_cache()
 
@@ -210,14 +226,14 @@ class Trainer:
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                          hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
-                                         check_labels=args.check_labels, class_names=class_names, task='train')[0]
+                                         check_labels=args.check_labels, data_dict=data_dict, task='train')[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
                                            workers=args.workers, check_images=args.check_images,
-                                           check_labels=args.check_labels, class_names=class_names, task='val')[0]
+                                           check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
 
         return train_loader, val_loader
 
@@ -227,8 +243,7 @@ class Trainer:
         targets = batch_data[1].to(device)
         return images, targets
 
-    @staticmethod
-    def get_model(args, cfg, nc, device):
+    def get_model(self, args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
         if cfg.training_mode == 'repvgg' and weights:
@@ -266,8 +281,7 @@ class Trainer:
 
         return model
 
-    @staticmethod
-    def get_optimizer(args, cfg, model):
+    def get_optimizer(self, args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
         optimizer = build_optimizer(cfg, model)
