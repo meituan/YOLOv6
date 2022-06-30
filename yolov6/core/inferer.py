@@ -3,16 +3,13 @@
 import os
 import os.path as osp
 import math
-
 from tqdm import tqdm
-
 import numpy as np
 import cv2
 import torch
 from PIL import ImageFont
 
 from yolov6.utils.events import LOGGER, load_yaml
-
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.utils.nms import non_max_suppression
@@ -67,7 +64,7 @@ class Inferer:
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
 
             save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.basename(img_path).split('.')[0])
+            txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src

@@ -18,9 +18,7 @@ from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
 
 '''
-
 python tools/eval.py --task 'train'/'val'/'speed'
-
 '''
 
 

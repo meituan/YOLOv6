@@ -48,7 +48,7 @@ Single GPU
 
 ```shell
 python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
-                                         configs/yolov6n.py
+                                        configs/yolov6n.py
 ```
 
 Multi GPUs (DDP mode recommended)
@@ -67,8 +67,8 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 Reproduce mAP on COCO val2017 dataset
 
 ```shell
-python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --task val
-                                                                 yolov6n.pt
+python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val
+                                                                yolov6n.pt
 ```
 
 
@@ -81,7 +81,6 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
-
 
 
 ## Benchmark
@@ -97,4 +96,10 @@ python tools/eval.py --data data/coco.yaml  --batch 32 --weights yolov6s.pt --ta
 - Comparisons of the mAP and speed of different object detectors are tested on [COCO val2017](https://cocodataset.org/#download) dataset.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
 - Params and Flops of YOLOv6 are estimated on deployed model.
-- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.
+- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.  
+  
+ ## Third-party resources  
+ * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
+ * YOLOv6 ONNXRuntime/MNN/TNN C++: [YOLOv6-ORT](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth) 
+ * YOLOv6 TensorRT Python: [yolov6-tensorrt-python](https://github.com/Linaom1214/tensorrt-python/blob/main/yolov6/trt.py) from [Linaom1214](https://github.com/Linaom1214)
+ * YOLOv6 TensorRT Windows C++: [yolort](https://github.com/zhiqwang/yolov5-rt-stack/tree/main/deployment/tensorrt-yolov6) from [Wei Zeng](https://github.com/Wulingtian)

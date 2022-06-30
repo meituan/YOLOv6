@@ -49,12 +49,20 @@ class Trainer:
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
 
         self.start_epoch = 0
+
+        # resume ckpt from user-defined path
+        if args.resume:
+            assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exists'
+            self.ckpt = torch.load(args.resume, map_location='cpu')
+            self.start_epoch = self.ckpt['epoch'] + 1
+            
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
 
     # Training Process
+
     def train(self):
         try:
             self.train_before_loop()
@@ -146,6 +154,14 @@ class Trainer:
         self.evaluate_results = (0, 0) # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
+        if hasattr(self, "ckpt"):
+            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint's state_dict as FP32
+            self.model.load_state_dict(resume_state_dict, strict=True)  # load model state dict
+            self.optimizer.load_state_dict(self.ckpt['optimizer']) # load optimizer
+            self.start_epoch = self.ckpt['epoch'] + 1
+            self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict()) # load ema state dict
+            self.ema.updates = self.ckpt['updates']
+
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
@@ -172,7 +188,7 @@ class Trainer:
         if self.main_process:
             LOGGER.info(f'\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours.')
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
-            strip_optimizer(save_ckpt_dir)  # strip optimizers for saved pt model
+            strip_optimizer(save_ckpt_dir, self.epoch)  # strip optimizers for saved pt model
         if self.device != 'cpu':
             torch.cuda.empty_cache()
 
@@ -223,8 +239,7 @@ class Trainer:
         targets = batch_data[1].to(device)
         return images, targets
 
-    @staticmethod
-    def get_model(args, cfg, nc, device):
+    def get_model(self, args, cfg, nc, device):
         model = build_model(cfg, nc, device)
         weights = cfg.model.pretrained
         if weights:  # finetune if pretrained model is set
@@ -248,8 +263,7 @@ class Trainer:
 
         return model
 
-    @staticmethod
-    def get_optimizer(args, cfg, model):
+    def get_optimizer(self, args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
         optimizer = build_optimizer(cfg, model)

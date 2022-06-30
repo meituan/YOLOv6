@@ -20,24 +20,25 @@ from yolov6.utils.general import increment_name
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
-    parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='dataset path')
-    parser.add_argument('--conf-file', default='./configs/yolov6s.py', type=str, help='experiment description file')
+    parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='path of dataset')
+    parser.add_argument('--conf-file', default='./configs/yolov6s.py', type=str, help='experiments description file')
     parser.add_argument('--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--eval-interval', default=20, help='evaluate at every interval epochs')
+    parser.add_argument('--eval-interval', type=int, default=20, help='evaluate at every interval epochs')
     parser.add_argument('--eval-final-only', action='store_true', help='only evaluate at the final epoch')
     parser.add_argument('--heavy-eval-range', default=50,
                         help='evaluating every epoch for last such epochs (can be jointly used with --eval-interval)')
     parser.add_argument('--check-images', action='store_true', help='check images when initializing datasets')
     parser.add_argument('--check-labels', action='store_true', help='check label files when initializing datasets')
     parser.add_argument('--output-dir', default='./runs/train', type=str, help='path to save outputs')
-    parser.add_argument('--name', default='exp', type=str, help='experiment name, save to output_dir/name')
-    parser.add_argument('--dist_url', type=str, default="tcp://127.0.0.1:8888")
+    parser.add_argument('--name', default='exp', type=str, help='experiment name, saved to output_dir/name')
+    parser.add_argument('--dist_url', type=str, default="default url: tcp://127.0.0.1:8888")
     parser.add_argument('--gpu_count', type=int, default=0)
-    parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
+    parser.add_argument('--resume', type=str, default=None, help='resume the corresponding ckpt')
 
     return parser
 
