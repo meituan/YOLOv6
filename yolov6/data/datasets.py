@@ -257,7 +257,7 @@ class TrainValDataset(Dataset):
 
         img_paths = list(img_info.keys())
         label_paths = sorted(
-            osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
+            osp.join(label_dir, osp.splitext(osp.basename(p))[0] + ".txt")
             for p in img_paths
         )
         label_hash = self.get_hash(label_paths)
