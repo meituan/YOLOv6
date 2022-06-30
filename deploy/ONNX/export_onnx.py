@@ -99,7 +99,7 @@ if __name__ == '__main__':
                 assert check, 'assert check failed'
             except Exception as e:
                 LOGGER.info(f'Simplifier failure: {e}')
-        onnx.save(onnx_model, f)
+        onnx.save(onnx_model, export_file)
         LOGGER.info(f'ONNX export success, saved as {export_file}')
     except Exception as e:
         LOGGER.info(f'ONNX export failure: {e}')
