@@ -17,9 +17,6 @@ from yolov6.utils.nms import non_max_suppression
 
 class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
-        import glob
-        from yolov6.data.datasets import IMG_FORMATS
-
         self.__dict__.update(locals())
 
         # Init model
@@ -42,6 +39,12 @@ class Inferer:
         if self.device.type != 'cpu':
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
 
+        self.setup_source(source)    
+
+    def setup_source(self, source):
+        import glob
+        from yolov6.data.datasets import IMG_FORMATS
+
         # Load data
         if os.path.isdir(source):
             img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
@@ -51,11 +54,24 @@ class Inferer:
             raise Exception(f'Invalid path: {source}')
         self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
 
+    def img_iterator(self):
+        for img_path in self.img_paths:
+            try:
+                img_src = cv2.imread(img_path)
+                assert img_src is not None, f'Invalid image: {img_path}'
+                yield img_src, img_path
+            except Exception as e:
+                LOGGER.Warning(e)
+                continue
+    
+    def iterator_length(self):
+        return len(self.img_paths)
+
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''
-
-        for img_path in tqdm(self.img_paths):
-            img, img_src = self.precess_image(img_path, self.img_size, self.stride, self.half)
+        it = self.img_iterator()
+        for img_src, img_path in tqdm(it, total=self.iterator_length()):
+            img = self.precess_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
@@ -96,13 +112,8 @@ class Inferer:
                     cv2.imwrite(save_path, img_src)
 
     @staticmethod
-    def precess_image(path, img_size, stride, half):
+    def precess_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
-        try:
-            img_src = cv2.imread(path)
-            assert img_src is not None, f'Invalid image: {path}'
-        except Exception as e:
-            LOGGER.Warning(e)
         image = letterbox(img_src, img_size, stride=stride)[0]
 
         # Convert
@@ -111,7 +122,7 @@ class Inferer:
         image = image.half() if half else image.float()  # uint8 to fp16/32
         image /= 255  # 0 - 255 to 0.0 - 1.0
 
-        return image, img_src
+        return image
 
     @staticmethod
     def rescale(ori_shape, boxes, target_shape):
@@ -191,3 +202,28 @@ class Inferer:
         num = len(palette)
         color = palette[int(i) % num]
         return (color[2], color[1], color[0]) if bgr else color
+
+
+class VideoInferer(Inferer):
+    
+    def setup_source(self, source):
+        # Load data
+        if os.path.isfile(source):
+            self.vid_path = source
+            self.vid_name = '.'.join(os.path.basename(source).split('.')[:-1])
+        else:
+            raise Exception(f'Invalid path: {source}')
+
+        self.cap = cv2.VideoCapture(self.vid_path)
+        
+    def iterator_length(self):
+        return int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def img_iterator(self):
+        cur_fid = 0
+        ret, frame = self.cap.read()
+
+        while ret:
+            yield frame, f'{self.vid_name}_frame_{cur_fid:06}.jpg'
+            ret, frame = self.cap.read()
+            cur_fid += 1
