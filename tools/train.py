@@ -46,7 +46,8 @@ def check_and_init(args):
     args.save_dir = osp.join(args.output_dir, args.name)
     os.makedirs(args.save_dir, exist_ok=True)
     cfg = Config.fromfile(args.conf_file)
-
+    if not hasattr(cfg, 'training_mode'):
+        setattr(cfg, 'training_mode', 'repvgg')
     # check device
     device = select_device(args.device)
 
