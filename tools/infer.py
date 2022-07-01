@@ -20,7 +20,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--weights', type=str, default='weights/yolov6s.pt', help='model path(s) for inference.')
     parser.add_argument('--source', type=str, default='data/images', help='the source path, e.g. image-file/dir.')
     parser.add_argument('--yaml', type=str, default='data/coco.yaml', help='data yaml file.')
-    parser.add_argument('--img-size', type=int, default=640, help='the image-size(h,w) in inference size.')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 480], help='image size.')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold for inference.')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold for inference.')
     parser.add_argument('--max-det', type=int, default=1000, help='maximal inferences per image.')
