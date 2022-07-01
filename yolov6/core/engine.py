@@ -50,8 +50,8 @@ class Trainer:
         self.start_epoch = 0   
         #resume
         if hasattr(self, "ckpt"):
-            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            model.load_state_dict(csd, strict=True)  # load
+            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            model.load_state_dict(resume_state_dict, strict=True)  # load
             self.start_epoch = self.ckpt['epoch'] + 1
             self.optimizer.load_state_dict(self.ckpt['optimizer'])
             if self.main_process:
