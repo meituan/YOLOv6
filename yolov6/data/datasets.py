@@ -284,7 +284,7 @@ class TrainValDataset(Dataset):
                     ne_per_file,
                     msg,
                 ) in pbar:
-                    if img_path:
+                    if nc_per_file == 0:
                         img_info[img_path]["labels"] = labels_per_file
                     else:
                         img_info.pop(img_path)
@@ -484,7 +484,7 @@ class TrainValDataset(Dataset):
         except Exception as e:
             nc = 1
             msg = f"WARNING: {lb_path}: ignoring invalid labels: {e}"
-            return None, None, nc, nm, nf, ne, msg
+            return img_path, None, nc, nm, nf, ne, msg
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
