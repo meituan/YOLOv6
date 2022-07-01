@@ -45,12 +45,20 @@ class Trainer:
         self.optimizer = self.get_optimizer(args, cfg, model)
         self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer)
         self.ema = ModelEMA(model) if self.main_process else None
-        self.model = self.parallel_model(args, model, device)
-        self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
         # tensorboard
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
-
         self.start_epoch = 0   
+        #resume
+        if hasattr(self, "ckpt"):
+            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            model.load_state_dict(csd, strict=True)  # load
+            self.start_epoch = self.ckpt['epoch'] + 1
+            self.optimizer.load_state_dict(self.ckpt['optimizer'])
+            if self.main_process:
+                self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
+                self.ema.updates = self.ckpt['updates']
+        self.model = self.parallel_model(args, model, device)
+        self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']   
 
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
@@ -151,14 +159,6 @@ class Trainer:
         self.evaluate_results = (0, 0) # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
-        if hasattr(self, "ckpt"):
-            self.optimizer.load_state_dict(self.ckpt['optimizer'])
-            self.start_epoch = self.ckpt['epoch'] + 1
-            if self.ema:
-                self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
-                self.ema.updates = self.ckpt['updates']
-
-
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
@@ -242,9 +242,6 @@ class Trainer:
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
-        if hasattr(self, "ckpt"):
-            csd = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-            model.load_state_dict(csd, strict=True)  # load
         LOGGER.info('Model: {}'.format(model))
         return model
 
