@@ -47,8 +47,8 @@ def check_and_init(args):
     '''check config files and device, and initialize '''
 
     # check files
-    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
-    os.makedirs(args.save_dir, exist_ok=True)
+    master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
+    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name), master_process))
     cfg = Config.fromfile(args.conf_file)
 
     # check device
@@ -58,7 +58,9 @@ def check_and_init(args):
     set_random_seed(1+args.rank, deterministic=(args.rank == -1))
 
     # save args
-    save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
+    if master_process:
+        os.makedirs(args.save_dir)
+        save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
 
     return cfg, device
 
