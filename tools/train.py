@@ -47,7 +47,8 @@ def check_and_init(args):
     '''check config files and device, and initialize '''
 
     # check files
-    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
+    master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
+    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name), master_process))
     os.makedirs(args.save_dir, exist_ok=True)
     cfg = Config.fromfile(args.conf_file)
 
