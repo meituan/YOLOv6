@@ -103,7 +103,7 @@ class ONNX_ORT(nn.Module):
         resClasses = objCls[X, Y, :].float()
         resScores = objScore[X, Y, :]
         X = X.unsqueeze(1).float()
-        return torch.concat([X, resBoxes, resClasses, resScores], 1)
+        return torch.cat([X, resBoxes, resClasses, resScores], 1)
 
 class ONNX_TRT(nn.Module):
 
