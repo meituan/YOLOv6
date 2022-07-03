@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 
 # collect requirements from requirements.txt
@@ -21,7 +21,7 @@ install_requires = _install_requires
 setup(
     name='yolov6',
     version='0.1.0',
-    packages=[''],
+    packages=find_packages(),
     url='https://github.com/meituan/YOLOv6',
     license='GNU General Public License v3.0',
     author='meituan',
