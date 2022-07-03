@@ -62,7 +62,7 @@ def run(data,
     if task == 'train':
         save_dir = save_dir
     else:
-        save_dir = str(increment_name(osp.join(save_dir, name)))
+        save_dir = str(increment_name(osp.join(save_dir, name), True))
         os.makedirs(save_dir, exist_ok=True)
 
     # reload thres/device/half/data according task
