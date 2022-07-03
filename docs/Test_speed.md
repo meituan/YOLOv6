@@ -10,7 +10,7 @@ Download the models you want to test from the latest release.
 
 Refer to README, install packages corresponding to CUDA, CUDNN and TensorRT version.
 
-Here, we use Torch1.8.0 inference on V100 and TensorRT 7.2 on T4.
+Here, we use Torch1.8.0 inference on V100 and TensorRT 7.2 Cuda 10.2 Cudnn 8.0.2 on T4.
 
 ## 2. Reproduce speed
 

@@ -66,16 +66,18 @@ def check_and_init(args):
             args.save_dir = str(Path(checkpoint_path).parent.parent)
         args.resume = checkpoint_path  # set the args.resume to checkpoint path.
     else:
-        args.save_dir = str(increment_name(osp.join(args.output_dir, args.name), master_process))
+        args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
         if master_process:
             os.makedirs(args.save_dir)
+
     cfg = Config.fromfile(args.conf_file)
     # check device
     device = select_device(args.device)
     # set random seed
     set_random_seed(1+args.rank, deterministic=(args.rank == -1))
     # save args
-    save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
+    if master_process:
+        save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
 
     return cfg, device, args
 
