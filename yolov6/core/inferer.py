@@ -102,7 +102,7 @@ class Inferer:
             img_src = cv2.imread(path)
             assert img_src is not None, f'Invalid image: {path}'
         except Exception as e:
-            LOGGER.Warning(e)
+            LOGGER.warning(e)
         image = letterbox(img_src, img_size, stride=stride)[0]
 
         # Convert
