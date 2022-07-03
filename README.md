@@ -42,6 +42,12 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir
                                 yolov6n.pt
 ```
 
+Additionally, you can run inference directly on a video file (note the additional `--video` flag at the end)
+```shell
+python tools/infer.py --weights yolov6s.pt --source video.mp4 --video
+                                yolov6n.pt
+```
+
 ### Training
 
 Single GPU

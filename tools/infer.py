@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from yolov6.utils.events import LOGGER
-from yolov6.core.inferer import Inferer
+from yolov6.core.inferer import Inferer, VideoInferer
 
 
 def get_args_parser(add_help=True):
@@ -34,6 +34,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels.')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences.')
     parser.add_argument('--half', action='store_true', help='whether to use FP16 half-precision inference.')
+    parser.add_argument('--video', action='store_true', help='whether to use image based or video based inference engine')
 
     args = parser.parse_args()
     LOGGER.info(args)
@@ -57,6 +58,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_labels=False,
         hide_conf=False,
         half=False,
+        video=False
         ):
     """ Inference process
 
@@ -92,7 +94,8 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         os.mkdir(osp.join(save_dir, 'labels'))
 
     # Inference
-    inferer = Inferer(source, weights, device, yaml, img_size, half)
+    infer_cls = Inferer if not video else VideoInferer
+    inferer = infer_cls(source, weights, device, yaml, img_size, half)
     inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf)
 
     if save_txt or save_img:
