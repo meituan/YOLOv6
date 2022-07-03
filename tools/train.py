@@ -48,7 +48,7 @@ def check_and_init(args):
 
     # check files
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
-    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name), master_process))
+    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
     cfg = Config.fromfile(args.conf_file)
 
     # check device
