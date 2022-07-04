@@ -1,5 +1,4 @@
-# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
-
+# YOLOv6
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
@@ -71,6 +70,20 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --tas
                                                                 yolov6n.pt
 ```
 
+### Resume
+If your training process is corrupted, you can resume training by
+```
+# single GPU traning.
+python tools/train.py --resume 
+# multi GPU training.
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
+```
+Your can also specify a checkpoint path to `--resume` parameter by
+```
+# remember replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training. 
+--resume /path/to/your/checkpoint/path
+
+```
 
 ### Deployment
 

@@ -102,3 +102,9 @@ venv.bak/
 
 # Pytorch
 *.pth
+
+#vscode
+.vscode/*
+
+#user scripts
+*.sh
