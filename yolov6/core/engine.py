@@ -55,7 +55,7 @@ class Trainer:
             assert os.path.isfile(args.resume), 'ERROR: --resume checkpoint does not exists'
             self.ckpt = torch.load(args.resume, map_location='cpu')
             self.start_epoch = self.ckpt['epoch'] + 1
-            
+
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
