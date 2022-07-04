@@ -34,6 +34,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels.')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences.')
     parser.add_argument('--half', action='store_true', help='whether to use FP16 half-precision inference.')
+    parser.add_argument('--debug', action='store_true', help='debug draw.')
 
     args = parser.parse_args()
     LOGGER.info(args)
@@ -57,6 +58,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_labels=False,
         hide_conf=False,
         half=False,
+        debug=False,
         ):
     """ Inference process
 
@@ -92,7 +94,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         os.mkdir(osp.join(save_dir, 'labels'))
 
     # Inference
-    inferer = Inferer(source, weights, device, yaml, img_size, half)
+    inferer = Inferer(source, weights, device, yaml, img_size, half, debug)
     inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf)
 
     if save_txt or save_img:

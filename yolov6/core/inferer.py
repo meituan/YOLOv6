@@ -3,24 +3,29 @@
 import os
 import os.path as osp
 import math
+
 from tqdm import tqdm
+
 import numpy as np
 import cv2
 import torch
 from PIL import ImageFont
 
-from yolov6.utils.events import LOGGER, load_yaml
+from yolov6.utils.events import load_yaml
+
 from yolov6.layers.common import DetectBackend
-from yolov6.data.data_augment import letterbox
+from yolov6.data.data_source import *
 from yolov6.utils.nms import non_max_suppression
+
+video_extention = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv', 'h264']
 
 
 class Inferer:
-    def __init__(self, source, weights, device, yaml, img_size, half):
+    def __init__(self, source, weights, device, yaml, img_size, half, debug):
         import glob
-        from yolov6.data.datasets import IMG_FORMATS
 
         self.__dict__.update(locals())
+        self.debug = debug
 
         # Init model
         self.device = device
@@ -44,27 +49,38 @@ class Inferer:
 
         # Load data
         if os.path.isdir(source):
-            img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
+            self.source = ImagesSource(source, self.img_size, self.stride, self.half)
+            print('ImagesSource', len(self.source))
         elif os.path.isfile(source):
-            img_paths = [source]  # files
-        else:
+            if source.split('.')[1].lower() in video_extention:
+                self.source = VideoSource(source, self.img_size, self.stride, self.half)
+                print('VideoSource', len(self.source))
+            elif source.split('.')[1].lower() in IMG_FORMATS:
+                self.source = ImagesSource([source], self.img_size, self.stride, self.half)
+                print('ImagesSource', len(self.source))
+
+        if len(self.source) == 0:
             raise Exception(f'Invalid path: {source}')
-        self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''
 
-        for img_path in tqdm(self.img_paths):
-            img, img_src = self.precess_image(img_path, self.img_size, self.stride, self.half)
+        for i in tqdm(range(len(self.source))):
+            img, img_src = self.source.read()
+
+            if img is None or img_src is None:
+                continue
+
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
                 # expand for batch dim
+
             pred_results = self.model(img)
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
 
-            save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
+            save_path = osp.join(save_dir, osp.basename(self.source.current_path))  # im.jpg
+            txt_path = osp.join(save_dir, 'labels', osp.basename(self.source.current_path).split('.')[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src
@@ -83,7 +99,7 @@ class Inferer:
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-                    if save_img:
+                    if save_img or self.debug:
                         class_num = int(cls)  # integer class
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
@@ -95,23 +111,10 @@ class Inferer:
                 if save_img:
                     cv2.imwrite(save_path, img_src)
 
-    @staticmethod
-    def precess_image(path, img_size, stride, half):
-        '''Process image before image inference.'''
-        try:
-            img_src = cv2.imread(path)
-            assert img_src is not None, f'Invalid image: {path}'
-        except Exception as e:
-            LOGGER.warning(e)
-        image = letterbox(img_src, img_size, stride=stride)[0]
-
-        # Convert
-        image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
-        image = torch.from_numpy(np.ascontiguousarray(image))
-        image = image.half() if half else image.float()  # uint8 to fp16/32
-        image /= 255  # 0 - 255 to 0.0 - 1.0
-
-        return image, img_src
+                if self.debug:
+                    cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
+                    cv2.imshow('frame', img_src)
+                    cv2.waitKey(1)
 
     @staticmethod
     def rescale(ori_shape, boxes, target_shape):
