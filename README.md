@@ -1,4 +1,4 @@
-# MT-YOLOv6
+# YOLOv6
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
