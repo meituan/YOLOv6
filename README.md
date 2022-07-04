@@ -89,6 +89,7 @@ Your can also specify a checkpoint path to `--resume` parameter by
 
 *  [ONNX](./deploy/ONNX)
 *  [OpenVINO](./deploy/OpenVINO)
+*  [TensorRT](./deploy/TensorRT)
 
 ### Tutorials
 
