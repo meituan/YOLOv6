@@ -49,7 +49,7 @@ def get_args_parser(add_help=True):
 def check_and_init(args):
     '''check config files and device.'''
     # check files
-    master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
+    master_process = args.local_rank == 0 if args.gpu_count > 1 else args.local_rank == -1
     if args.resume:
         # args.resume can be a checkpoint file path or a boolean value.
         checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()
