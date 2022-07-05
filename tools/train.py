@@ -52,7 +52,7 @@ def check_and_init(args):
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
     if args.resume:
         # args.resume can be a checkpoint file path or a boolean value.
-        checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint() 
+        checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()
         assert os.path.isfile(checkpoint_path), f'the checkpoint path is not exist: {checkpoint_path}'
         LOGGER.info(f'Resume training from the checkpoint file :{checkpoint_path}')
         resume_opt_file_path = Path(checkpoint_path).parent.parent / 'args.yaml'
@@ -88,7 +88,7 @@ def main(args):
     args.rank, args.local_rank, args.world_size = get_envs()
     cfg, device, args = check_and_init(args)
     # reload envs because args was chagned in check_and_init(args)
-    args.rank, args.local_rank, args.world_size = get_envs() 
+    args.rank, args.local_rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
     if args.local_rank != -1: # if DDP mode
         torch.cuda.set_device(args.local_rank)
