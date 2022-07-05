@@ -55,7 +55,7 @@ def check_and_init(args):
         checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()
         assert os.path.isfile(checkpoint_path), f'the checkpoint path is not exist: {checkpoint_path}'
         LOGGER.info(f'Resume training from the checkpoint file :{checkpoint_path}')
-        resume_opt_file_path = Path(checkpoint_path).parent.parent / 'args.yaml'
+        resume_opt_file_path = Path(checkpoint_path).parent.parent / args.data-path
         if osp.exists(resume_opt_file_path):
             with open(resume_opt_file_path) as f:
                 args = argparse.Namespace(**yaml.safe_load(f))  # load args value from args.yaml
