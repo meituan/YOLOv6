@@ -32,7 +32,7 @@ class TRT_NMS(torch.autograd.Function):
         boxes,
         scores,
         background_class=-1,
-        box_coding=0,
+        box_coding=1,
         iou_threshold=0.45,
         max_output_boxes=100,
         plugin_version="1",
@@ -52,7 +52,7 @@ class TRT_NMS(torch.autograd.Function):
                  boxes,
                  scores,
                  background_class=-1,
-                 box_coding=0,
+                 box_coding=1,
                  iou_threshold=0.45,
                  max_output_boxes=100,
                  plugin_version="1",
@@ -112,22 +112,18 @@ class ONNX_TRT(nn.Module):
         assert max_wh is None
         self.device = device if device else torch.device('cpu')
         self.background_class = -1,
-        self.box_coding = 0,
+        self.box_coding = 1,
         self.iou_threshold = iou_thres
         self.max_obj = max_obj
         self.plugin_version = '1'
         self.score_activation = 0
         self.score_threshold = score_thres
-        self.convert_matrix = torch.tensor([[1, 0, 1, 0], [0, 1, 0, 1], [-0.5, 0, 0.5, 0], [0, -0.5, 0, 0.5]],
-                                           dtype=torch.float32,
-                                           device=self.device)
 
     def forward(self, x):
         box = x[:, :, :4]
         conf = x[:, :, 4:5]
         score = x[:, :, 5:]
         score *= conf
-        box @= self.convert_matrix
         num_det, det_boxes, det_scores, det_classes = TRT_NMS.apply(box, score, self.background_class, self.box_coding,
                                                                     self.iou_threshold, self.max_obj,
                                                                     self.plugin_version, self.score_activation,
