@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import warnings 
+warnings.filterwarnings("ignore")
+
 import os
-import os.path as osp
-import math
-from tqdm import tqdm
-import numpy as np
 import cv2
+import math
 import torch
+import numpy as np
+import os.path as osp
+
+from tqdm import tqdm
+from pathlib import Path
 from PIL import ImageFont
 
 from yolov6.utils.events import LOGGER, load_yaml
@@ -15,11 +20,10 @@ from yolov6.data.data_augment import letterbox
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 
-
 class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
         import glob
-        from yolov6.data.datasets import IMG_FORMATS
+        from yolov6.data.datasets import LoadData
 
         self.__dict__.update(locals())
 
@@ -44,13 +48,7 @@ class Inferer:
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
 
         # Load data
-        if os.path.isdir(source):
-            img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
-        elif os.path.isfile(source):
-            img_paths = [source]  # files
-        else:
-            raise Exception(f'Invalid path: {source}')
-        self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
+        self.files = LoadData(source)
 
         # Switch model to deploy status
         self.model_switch(self.model, self.img_size)
@@ -64,11 +62,11 @@ class Inferer:
 
         LOGGER.info("Switch model to deploy modality.")
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
+    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img):
         ''' Model Inference and results visualization '''
-
-        for img_path in tqdm(self.img_paths):
-            img, img_src = self.precess_image(img_path, self.img_size, self.stride, self.half)
+        vid_path, vid_writer, windows = None, None, []
+        for img_src, img_path, vid_cap in tqdm(self.files):
+            img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
@@ -80,15 +78,14 @@ class Inferer:
             txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-            img_ori = img_src
-
+            img_ori = img_src.copy()
+            
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
 
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -104,20 +101,37 @@ class Inferer:
 
                 img_src = np.asarray(img_ori)
 
-                # Save results (image with detections)
-                if save_img:
+            if view_img:
+                if img_path not in windows:
+                    windows.append(img_path)
+                    cv2.namedWindow(str(img_path), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                    cv2.resizeWindow(str(img_path), img_src.shape[1], img_src.shape[0])
+                cv2.imshow(str(img_path), img_src)
+                cv2.waitKey(1)  # 1 millisecond
+
+            # Save results (image with detections)
+            if save_img:
+                if self.files.type == 'image':
                     cv2.imwrite(save_path, img_src)
+                else:  # 'video' or 'stream'
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()  # release previous video writer
+                        if vid_cap:  # video
+                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        else:  # stream
+                            fps, w, h = 30, img_ori.shape[1], img_ori.shape[0]
+                        save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                    vid_writer.write(img_src)
 
     @staticmethod
-    def precess_image(path, img_size, stride, half):
+    def precess_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
-        try:
-            img_src = cv2.imread(path)
-            assert img_src is not None, f'Invalid image: {path}'
-        except Exception as e:
-            LOGGER.warning(e)
-        image = letterbox(img_src, img_size, stride=stride)[0]
-
+        image = letterbox(img_src, img_size, stride=stride)[0]  
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image))
