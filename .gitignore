@@ -102,3 +102,9 @@ venv.bak/
 
 # Pytorch
 *.pth
+
+# Models
+**.pt
+
+# WandB
+wandb

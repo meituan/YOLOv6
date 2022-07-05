@@ -14,3 +14,5 @@ pycocotools>=2.0
 onnx>=1.10.0  # ONNX export
 onnx-simplifier>=0.3.6 # ONNX simplifier
 thop  # FLOPs computation
+wandb>=0.12.20
+wget==3.2
