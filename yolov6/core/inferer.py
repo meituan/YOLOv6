@@ -51,7 +51,7 @@ class Inferer:
             raise Exception(f'Invalid path: {source}')
         self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
+    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf,view_img):
         ''' Model Inference and results visualization '''
 
         for img_path in tqdm(self.img_paths):
@@ -83,7 +83,7 @@ class Inferer:
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-                    if save_img:
+                    if save_img or view_img: 
                         class_num = int(cls)  # integer class
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
@@ -94,6 +94,11 @@ class Inferer:
                 # Save results (image with detections)
                 if save_img:
                     cv2.imwrite(save_path, img_src)
+                
+                # Show results (image with detections)
+                if view_img:
+                    cv2.imshow('Yolov6', img_src)
+                    cv2.waitKey(0)
 
     @staticmethod
     def precess_image(path, img_size, stride, half):
