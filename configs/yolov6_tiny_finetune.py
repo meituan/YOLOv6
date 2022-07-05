@@ -2,8 +2,8 @@
 model = dict(
     type='YOLOv6t',
     pretrained='./weights/yolov6t.pt',
-    depth_multiple=0.25,
-    width_multiple=0.50,
+    depth_multiple=0.33,
+    width_multiple=0.375,
     backbone=dict(
         type='EfficientRep',
         num_repeats=[1, 6, 12, 18, 6],
