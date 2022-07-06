@@ -18,7 +18,7 @@ from yolov6.core.inferer import Inferer
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Inference.', add_help=add_help)
     parser.add_argument('--weights', type=str, default='weights/yolov6s.pt', help='model path(s) for inference.')
-    parser.add_argument('--source', type=str, default='data/images', help='the source path, e.g. image-file/dir.')
+    parser.add_argument('--source', type=str, default='data/images', help='the source path, e.g. image-file/dir. or video-file or camera for webcam.')
     parser.add_argument('--yaml', type=str, default='data/coco.yaml', help='data yaml file.')
     parser.add_argument('--img-size', type=int, default=640, help='the image-size(h,w) in inference size.')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold for inference.')
@@ -63,7 +63,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
     """ Inference process, supporting inference on one image file or directory which containing images.
     Args:
         weights: The path of model.pt, e.g. yolov6s.pt
-        source: Source path, supporting image files or dirs containing images.
+        source: Source path, supporting image files or dirs containing images or video files or camera for webcam.
         yaml: Data yaml file, .
         img_size: Inference image-size, e.g. 640
         conf_thres: Confidence threshold in inference, e.g. 0.25
