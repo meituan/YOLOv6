@@ -1,0 +1,11 @@
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+train: VOCdevkit/voc_07_12/images/train # train images
+val: VOCdevkit/voc_07_12/images/val # val images
+test: VOCdevkit/voc_07_12/images/val # test images (optional)
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+# Classes
+nc: 20  # number of classes
+names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
+        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']  # class names
