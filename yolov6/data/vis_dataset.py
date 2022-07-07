@@ -36,7 +36,7 @@ def main(args):
                     y_tl = int((y_c - h / 2) * height)
                     cv2.rectangle(img_data, (x_tl, y_tl), (x_tl + int(w * width), y_tl + int(h * height)), tuple([int(x) for x in color[cls]]), thickness)
                     cv2.putText(img_data, label_map[cls], (x_tl, y_tl - 10), cv2.FONT_HERSHEY_COMPLEX, 1, tuple([int(x) for x in color[cls]]), thickness)
-            
+
             cv2.imshow('image', img_data)
             cv2.waitKey(0)
         except Exception as e:
@@ -53,5 +53,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    
+
     main(args)

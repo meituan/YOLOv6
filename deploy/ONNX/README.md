@@ -24,6 +24,7 @@ python ./deploy/ONNX/export_onnx.py \
 - `--inplace` : Whether to set Detect() inplace.
 - `--simplify` : Whether to simplify onnx. Not support in end to end export.
 - `--end2end` : Whether to export end to end onnx model. Only support onnxruntime and TensorRT >= 8.0.0 .
+- `--preprocess` : Whether to export preprocess with bgr2rgb and normalize (divide by 255)
 - `--max-wh` : Default is None for TensorRT backend. Set int for onnxruntime backend.
 - `--topk-all` : Topk objects for every image.
 - `--iou-thres` : IoU threshold for NMS algorithm.

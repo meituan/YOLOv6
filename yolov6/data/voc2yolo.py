@@ -37,7 +37,7 @@ def main(args):
     for year, image_set in ('2012', 'train'), ('2012', 'val'), ('2007', 'train'), ('2007', 'val'), ('2007', 'test'):
         imgs_path = os.path.join(voc_path, 'images', f'{image_set}')
         lbs_path = os.path.join(voc_path, 'labels', f'{image_set}')
-        
+
         try:
             with open(os.path.join(voc_path, f'VOC{year}/ImageSets/Main/{image_set}.txt'), 'r') as f:
                 image_ids = f.read().strip().split()
@@ -45,7 +45,7 @@ def main(args):
                 os.makedirs(imgs_path)
             if not os.path.exists(lbs_path):
                 os.makedirs(lbs_path)
-        
+
             for id in tqdm(image_ids, desc=f'{image_set}{year}'):
                 f = os.path.join(voc_path, f'VOC{year}/JPEGImages/{id}.jpg')  # old img path
                 lb_path = os.path.join(lbs_path, f'{id}.txt')  # new label path
@@ -62,5 +62,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    
+
     main(args)
