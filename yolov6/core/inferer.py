@@ -55,14 +55,14 @@ class Inferer:
         # Switch model to deploy status
         self.model_switch(self.model, self.img_size)
 
-    def model_switch(model, img_size):
+    def model_switch(self, model, img_size):
         ''' Model switch to deploy status '''
         from yolov6.layers.common import RepVGGBlock
         for layer in model.modules():
             if isinstance(layer, RepVGGBlock):
                 layer.switch_to_deploy()
+            
         LOGGER.info("Switch model to deploy modality.")
-        LOGGER.info("Model Summary: {}".format(get_model_info(model, img_size)))
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''
