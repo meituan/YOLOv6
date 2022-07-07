@@ -56,7 +56,7 @@ class Inferer:
         self.model_switch(self.model, self.img_size)
 
     def model_switch(model, img_size):
-        # switch to deploy
+        ''' Model switch to deploy status '''
         from yolov6.layers.common import RepVGGBlock
         for layer in model.modules():
             if isinstance(layer, RepVGGBlock):
