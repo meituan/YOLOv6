@@ -101,6 +101,8 @@ def get_model_info(model, img_size=640):
     stride = 32
     try:
         img = torch.zeros((1, 3, stride, stride), device=next(model.parameters()).device)
+    except:
+        raise Exception("model must be a torch.nn.Module")
         
     flops, params = profile(deepcopy(model), inputs=(img,), verbose=False)
     params /= 1e6
