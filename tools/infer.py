@@ -58,10 +58,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_conf=False,
         half=False,
         ):
-    """ Inference process
-
-    This function is the main process of inference, supporting image files or dirs containing images.
-
+    """ Inference process, supporting inference on one image file or directory which containing images.
     Args:
         weights: The path of model.pt, e.g. yolov6s.pt
         source: Source path, supporting image files or dirs containing images.
