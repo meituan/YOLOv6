@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
-    parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
+    parser.add_argument('--max-wh', type=int, default=None, help='None for tensorrt nms, int value for onnx-runtime nms')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='conf threshold for NMS')
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     if args.end2end:
         from yolov6.models.end2end import End2End
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
-                        max_wh=args.max_wh, device=device, preprocess=args.with_preprocess)
+                        max_wh=args.max_wh, device=device, with_preprocess=args.with_preprocess)
 
     y = model(img)  # dry run
 
