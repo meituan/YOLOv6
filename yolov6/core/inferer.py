@@ -61,7 +61,7 @@ class Inferer:
         for layer in model.modules():
             if isinstance(layer, RepVGGBlock):
                 layer.switch_to_deploy()
-            
+
         LOGGER.info("Switch model to deploy modality.")
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
