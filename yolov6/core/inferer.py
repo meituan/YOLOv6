@@ -67,6 +67,7 @@ class Inferer:
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf,view_img):
         ''' Model Inference and results visualization '''
 
+
         for img_path in tqdm(self.img_paths):
             img, img_src = self.precess_image(img_path, self.img_size, self.stride, self.half)
             img = img.to(self.device)
