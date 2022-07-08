@@ -50,6 +50,15 @@ class Inferer:
         else:
             raise Exception(f'Invalid path: {source}')
         self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
+    
+    def model_switch(self, model, img_size):
+        ''' Model switch to deploy status '''
+        from yolov6.layers.common import RepVGGBlock
+        for layer in model.modules():
+            if isinstance(layer, RepVGGBlock):
+                layer.switch_to_deploy()
+
+        LOGGER.info("Switch model to deploy modality.")
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf,view_img):
         ''' Model Inference and results visualization '''
@@ -88,7 +97,12 @@ class Inferer:
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
                         self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
+                    
+                    if view_img:
+                         class_num = int(cls)  # integer class
+                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
+                         self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))                       
                 img_src = np.asarray(img_ori)
 
                 # Save results (image with detections)
