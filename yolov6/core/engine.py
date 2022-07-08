@@ -22,6 +22,7 @@ from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 
+
 class Trainer:
     def __init__(self, args, cfg, device):
         self.args = args
@@ -64,7 +65,6 @@ class Trainer:
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
-
 
     # Training Process
 

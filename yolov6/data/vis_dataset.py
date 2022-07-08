@@ -8,6 +8,7 @@ import numpy as np
 
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
 
+
 def main(args):
     img_dir, label_dir, class_names = args.img_dir, args.label_dir, args.class_names
 
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--img_dir', default='VOCdevkit/voc_07_12/images')
     parser.add_argument('--label_dir', default='VOCdevkit/voc_07_12/labels')
     parser.add_argument('--class_names', default=['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
-        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'])
+                        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'])
 
     args = parser.parse_args()
     print(args)
