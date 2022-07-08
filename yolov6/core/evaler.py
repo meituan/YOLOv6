@@ -207,7 +207,7 @@ class Evaler:
 
     @staticmethod
     def check_task(task):
-        if task not in ['train','val','speed']:
+        if task not in ['train', 'val', 'speed']:
             raise Exception("task argument error: only support 'train' / 'val' / 'speed' task.")
 
     @staticmethod

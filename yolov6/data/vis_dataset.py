@@ -8,6 +8,7 @@ import numpy as np
 
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
 
+
 def main(args):
     img_dir, label_dir, class_names = args.img_dir, args.label_dir, args.class_names
 
@@ -36,7 +37,7 @@ def main(args):
                     y_tl = int((y_c - h / 2) * height)
                     cv2.rectangle(img_data, (x_tl, y_tl), (x_tl + int(w * width), y_tl + int(h * height)), tuple([int(x) for x in color[cls]]), thickness)
                     cv2.putText(img_data, label_map[cls], (x_tl, y_tl - 10), cv2.FONT_HERSHEY_COMPLEX, 1, tuple([int(x) for x in color[cls]]), thickness)
-            
+
             cv2.imshow('image', img_data)
             cv2.waitKey(0)
         except Exception as e:
@@ -49,9 +50,9 @@ if __name__ == '__main__':
     parser.add_argument('--img_dir', default='VOCdevkit/voc_07_12/images')
     parser.add_argument('--label_dir', default='VOCdevkit/voc_07_12/labels')
     parser.add_argument('--class_names', default=['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
-        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'])
+                        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'])
 
     args = parser.parse_args()
     print(args)
-    
+
     main(args)

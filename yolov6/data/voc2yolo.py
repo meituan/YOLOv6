@@ -10,7 +10,8 @@ import argparse
 # VOC2012 trainval: 1.95GB, 17126 images
 
 VOC_NAMES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
-        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+             'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+
 
 def convert_label(path, lb_path, year, image_id):
     def convert_box(size, box):
@@ -47,7 +48,7 @@ def gen_voc07_12(voc_path):
     dataset_root = os.path.join(voc_path, 'voc_07_12')
     if not os.path.exists(dataset_root):
         os.makedirs(dataset_root)
-    
+
     dataset_settings = {'train': ['train2007', 'val2007', 'train2012', 'val2012'], 'val':['test2007']}
     for item in ['images', 'labels']:
         for data_type, data_list in dataset_settings.items():
@@ -67,7 +68,7 @@ def main(args):
     for year, image_set in ('2012', 'train'), ('2012', 'val'), ('2007', 'train'), ('2007', 'val'), ('2007', 'test'):
         imgs_path = os.path.join(voc_path, 'images', f'{image_set}')
         lbs_path = os.path.join(voc_path, 'labels', f'{image_set}')
-        
+
         try:
             with open(os.path.join(voc_path, f'VOC{year}/ImageSets/Main/{image_set}.txt'), 'r') as f:
                 image_ids = f.read().strip().split()
@@ -75,7 +76,7 @@ def main(args):
                 os.makedirs(imgs_path)
             if not os.path.exists(lbs_path):
                 os.makedirs(lbs_path)
-        
+
             for id in tqdm(image_ids, desc=f'{image_set}{year}'):
                 f = os.path.join(voc_path, f'VOC{year}/JPEGImages/{id}.jpg')  # old img path
                 lb_path = os.path.join(lbs_path, f'{id}.txt')  # new label path
@@ -95,5 +96,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    
+
     main(args)
