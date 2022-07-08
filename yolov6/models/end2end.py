@@ -4,7 +4,7 @@ import random
 
 
 class ORT_NMS(torch.autograd.Function):
-
+    '''ONNX-Runtime NMS operation'''
     @staticmethod
     def forward(ctx,
                 boxes,
@@ -28,6 +28,7 @@ class ORT_NMS(torch.autograd.Function):
 
 
 class TRT_NMS(torch.autograd.Function):
+    '''TensorRT NMS operation'''
     @staticmethod
     def forward(
         ctx,
@@ -46,7 +47,6 @@ class TRT_NMS(torch.autograd.Function):
         det_boxes = torch.randn(batch_size, max_output_boxes, 4)
         det_scores = torch.randn(batch_size, max_output_boxes)
         det_classes = torch.randint(0, num_classes, (batch_size, max_output_boxes), dtype=torch.int32)
-
         return num_det, det_boxes, det_scores, det_classes
 
     @staticmethod
@@ -75,9 +75,8 @@ class TRT_NMS(torch.autograd.Function):
         return nums, boxes, scores, classes
 
 
-
 class ONNX_ORT(nn.Module):
-
+    '''onnx module with ONNX-Runtime NMS operation.'''
     def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=640, device=None):
         super().__init__()
         self.device = device if device else torch.device("cpu")
@@ -108,7 +107,7 @@ class ONNX_ORT(nn.Module):
         return torch.cat([X, resBoxes, resClasses, resScores], 1)
 
 class ONNX_TRT(nn.Module):
-
+    '''onnx module with TensorRT NMS operation.'''
     def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None ,device=None):
         super().__init__()
         assert max_wh is None
@@ -134,7 +133,7 @@ class ONNX_TRT(nn.Module):
 
 
 class End2End(nn.Module):
-
+    '''export onnx or tensorrt model with NMS operation.'''
     def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None, device=None, with_preprocess=False):
         super().__init__()
         device = device if device else torch.device('cpu')
