@@ -110,3 +110,8 @@ venv.bak/
 
 #user scripts
 *.sh
+
+# model files
+*.onnx
+*.pt
+*.engine
