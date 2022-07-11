@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     # Check device
     cuda = args.device != 'cpu' and torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device(f'cuda:{args.device}' if cuda else 'cpu')
     assert not (device.type == 'cpu' and args.half), '--half only compatible with GPU export, i.e. use --device 0'
     # Load PyTorch model
     model = load_checkpoint(args.weights, map_location=device, inplace=True, fuse=True)  # load FP32 model
