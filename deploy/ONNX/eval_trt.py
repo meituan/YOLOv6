@@ -17,11 +17,11 @@ from yolov6.utils.general import increment_name
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Evalating', add_help=add_help)
-    parser.add_argument('--data', type=str, default='./data/coco80.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', type=str, default='./yolov6s.engine', help='model.pt path(s)')
+    parser.add_argument('--data', type=str, default='./data/coco.yaml', help='dataset yaml file path.')
+    parser.add_argument('--weights', type=str, default='./yolov6s.engine', help='tensorrt engine file path.')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size')
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--task', default='val', help='val, or speed')
+    parser.add_argument('--task', default='val', help='can only be val now.')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
     parser.add_argument('--name', type=str, default='exp', help='save evaluation results to save_dir/name')
@@ -50,15 +50,13 @@ def run(data,
     """
 
      # task
-    Evaler.check_task(task)
-    if task == 'train':
-        save_dir = save_dir
-    else:
-        save_dir = str(increment_name(osp.join(save_dir, name)))
-        os.makedirs(save_dir, exist_ok=True)
-    # nothing for api pass
-    nothing = torch.zeros(1)
-    device = Evaler.reload_device(device, nothing, task)
+    assert task== 'val', f'task type can only be val, however you set it to {task}'
+
+    save_dir = str(increment_name(osp.join(save_dir, name)))
+    os.makedirs(save_dir, exist_ok=True)
+
+    dummy_model = torch.zeros(0)
+    device = Evaler.reload_device(device, dummy_model, task)
 
     data = Evaler.reload_dataset(data) if isinstance(data, str) else data
 
@@ -67,7 +65,7 @@ def run(data,
                 None, device, False, save_dir)
 
     dataloader,pred_result = val.eval_trt(weights)
-    eval_result = val.eval_model(pred_result, nothing, dataloader, task)
+    eval_result = val.eval_model(pred_result, dummy_model, dataloader, task)
     return eval_result
 
 

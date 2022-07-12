@@ -92,8 +92,14 @@ The onnx outputs are as shown :
 You can export TensorRT engine use [trtexec](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#trtexec-ovr) tools.
 #### Usage
 ``` shell
-/path/to/trtexec \
-    --onnx=yolov6s.onnx \
+    trtexec --onnx=yolov6s.onnx \
     --saveEngine=yolov6s.engine \
     --fp16 # if export TensorRT fp16 model
+```
+
+## Evaluate TensorRT model's performance
+
+When we get the TensorRT model, we can evalute its performance by:
+```
+python deploy/ONNX/eval_trt.py --weights yolov6s.engine --batch-size=1 --data data/coco.yaml
 ```
