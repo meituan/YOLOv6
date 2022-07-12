@@ -24,7 +24,6 @@ from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 
 
-
 class Trainer:
     def __init__(self, args, cfg, device):
         self.args = args
@@ -257,8 +256,7 @@ class Trainer:
         weights = cfg.model.pretrained
         scales = None
         if not weights:
-            import warnings
-            warnings.warn("Training RepOpt Architecture without Searched Hyper Scales")
+            LOGGER.warning("Training RepOpt Architecture without Searched Hyper Scales")
         else:
             ckpt = torch.load(weights, map_location=device)
             scales = extract_scales(ckpt)

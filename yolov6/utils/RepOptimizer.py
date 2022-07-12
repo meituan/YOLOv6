@@ -4,19 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from ..layers.common import RealVGGBlock, LinearAddBlock
 from torch.optim.sgd import SGD
+from yolov6.utils.events import LOGGER
 
 def extract_blocks_into_list(model, blocks):
-    # stages = [model.stage0, model.stage1, model.stage2, model.stage3, model.stage4]
-    # blocks = []
-    # for stage in stages:
-    #     if isinstance(stage, RealVGGBlock) or isinstance(stage, LinearAddBlock):
-    #         blocks.append(stage)
-    #     else:
-    #         assert isinstance(stage, nn.Sequential)
-    #         for block in stage.children():
-    #             assert isinstance(block, RealVGGBlock) or isinstance(block, LinearAddBlock)
-    #             blocks.append(block)
-    for module in model.children():
+   for module in model.children():
         if isinstance(module, LinearAddBlock) or isinstance(module, RealVGGBlock):
             blocks.append(module)
         else:
@@ -79,12 +70,6 @@ def get_optimizer_param(args, cfg, model):
             g_bnw.append(v.weight)
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
             g_w.append(v.weight)
-    # assert cfg.solver.optim == 'SGD' or 'Adam', 'ERROR: unknown optimizer, use SGD defaulted'
-    # if cfg.solver.optim == 'SGD':
-    #     optimizer = torch.optim.SGD(g_bnw, lr=cfg.solver.lr0, momentum=cfg.solver.momentum, nesterov=True)
-    # elif cfg.solver.optim == 'Adam':
-    #     optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
-
     return [{'params': g_bnw},
             {'params': g_w, 'weight_decay': cfg.solver.weight_decay},
             {'params': g_b}]
@@ -115,10 +100,10 @@ class RepVGGOptimizer(SGD):
                 if isinstance(m, nn.BatchNorm2d):
                     gamma_init = m.weight.mean()
                     if gamma_init == 1.0:
-                        print('Checked. This is training from scratch.')
+                        LOGGER.info('Checked. This is training from scratch.')
                     else:
-                        raise Warning('========================== Warning! Is this really training from scratch ? =================')
-            print('##################### Re-initialize #############')
+                        LOGGER.warning('========================== Warning! Is this really training from scratch ? =================')
+            LOGGER.info('##################### Re-initialize #############')
             self.reinitialize(scales, convs, use_identity_scales_for_reinit)
 
         self.generate_gradient_masks(scales, convs, cpu_mode)
@@ -167,7 +152,6 @@ class RepVGGOptimizer(SGD):
             group.setdefault('nesterov', False)
 
     def step(self, closure=None):
-
         loss = None
         if closure is not None:
             loss = closure()

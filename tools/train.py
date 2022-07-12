@@ -43,7 +43,6 @@ def get_args_parser(add_help=True):
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume the most recent training')
 
-
     return parser
 
 
@@ -51,7 +50,6 @@ def check_and_init(args):
     '''check config files and device.'''
     # check files
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
-
     if args.resume:
         # args.resume can be a checkpoint file path or a boolean value.
         checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()

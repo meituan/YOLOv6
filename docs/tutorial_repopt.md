@@ -2,7 +2,7 @@
 ## Introduction
 This is a RepOpt-version implementation of YOLOv6 according to RepOptimizer: https://arxiv.org/pdf/2205.15242.pdf @DingXiaoH \
 It shows some advantages：
-1. With only minor changes. it is compatible with the original repvgg version, and it is easily to reproduce the precision comparable with original version.
+1. With only minor changes. it is compatible with the original repvgg version, and it is easy to reproduce the precision comparable with original version.
 2. No more train/deploy transform. The target network is consistent when training and deploying.
 3. A slight training acceleration of about 8%.
 4. Last and the most important, It is quantization friendly. Compared to the original version, the mAP decrease of PTQ can be greatly improved. Furthermore, the architecture of RepOptimizer is friendly to wrap quant-models for QAT.

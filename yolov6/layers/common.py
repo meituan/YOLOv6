@@ -571,7 +571,6 @@ class RepBlock(nn.Module):
         return x
 
 
-
 def get_block(mode):
     if mode == 'repvgg':
         return RepVGGBlock
