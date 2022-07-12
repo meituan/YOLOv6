@@ -24,6 +24,7 @@ from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 
 
+
 class Trainer:
     def __init__(self, args, cfg, device):
         self.args = args
@@ -53,7 +54,7 @@ class Trainer:
         self.ema = ModelEMA(model) if self.main_process else None
         # tensorboard
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
-        self.start_epoch = 0   
+        self.start_epoch = 0
         #resume
         if hasattr(self, "ckpt"):
             resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
@@ -64,13 +65,12 @@ class Trainer:
                 self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
                 self.ema.updates = self.ckpt['updates']
         self.model = self.parallel_model(args, model, device)
-        self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']   
+        self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
 
         self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
-
 
     # Training Process
 
