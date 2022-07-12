@@ -25,5 +25,5 @@ Reproduce mAP on COCO val2017 dataset, you can directly test our [pretrained mod
   python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s_opt.pt --task val
   ```
 ## Benchmark
-We train a yolov6s-repopt with 300epochs, the fp32 mAP is 42.4, whie the mAP of PTQ is 40.5. More results is coming soon...
+We train a yolov6s-repopt with 300epochs, the fp32 mAP is 42.4, while the mAP of PTQ is 40.5. More results is coming soon...
 
