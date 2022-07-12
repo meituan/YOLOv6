@@ -275,7 +275,7 @@ class Evaler:
                 bindings[name] = Binding(name, dtype, shape, data, int(data.data_ptr()))
             binding_addrs = OrderedDict((n, d.ptr) for n, d in bindings.items())
             context = model.create_execution_context()
-            return context, bindings, binding_addrs
+            return context, bindings, binding_addrs, model.get_binding_shape(0)[0]
 
         def init_data(dataloader, task):
             self.is_coco = self.data.get("is_coco", False)
@@ -321,7 +321,8 @@ class Evaler:
                     pred_results.append(pred_data)
             return pred_results
 
-        context, bindings, binding_addrs = init_engine(engine)
+        context, bindings, binding_addrs, trt_batchsize = init_engine(engine)
+        assert trt_batchsize >= self.batch_size, f'--batchsize {self.batch_size} must <= tensorrt batchsize {trt_batchsize}'
         tmp = torch.randn(self.batch_size,3,self.img_size,self.img_size).to(self.device)
         # warm up for 10 times
         for _ in range(10):
