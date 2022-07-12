@@ -322,7 +322,7 @@ class Evaler:
             return pred_results
 
         context, bindings, binding_addrs, trt_batchsize = init_engine(engine)
-        assert trt_batchsize >= self.batch_size, f'--batchsize {self.batch_size} must <= tensorrt batchsize {trt_batchsize}'
+        assert trt_batchsize >= self.batch_size, f'--batch {self.batch_size} must <= tensorrt batchsize {trt_batchsize}'
         tmp = torch.randn(self.batch_size,3,self.img_size,self.img_size).to(self.device)
         # warm up for 10 times
         for _ in range(10):
