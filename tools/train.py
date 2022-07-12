@@ -71,6 +71,8 @@ def check_and_init(args):
             os.makedirs(args.save_dir)
 
     cfg = Config.fromfile(args.conf_file)
+    if not hasattr(cfg, 'training_mode'):
+        setattr(cfg, 'training_mode', 'repvgg')
     # check device
     device = select_device(args.device)
     # set random seed
