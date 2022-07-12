@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
+import torch.nn.init as init
 import torch.nn.functional as F
 from yolov6.layers.dbb_transforms import *
 
@@ -116,22 +118,6 @@ def conv_bn(in_channels, out_channels, kernel_size, stride, padding, groups=1):
                                                   kernel_size=kernel_size, stride=stride, padding=padding, groups=groups, bias=False))
     result.add_module('bn', nn.BatchNorm2d(num_features=out_channels))
     return result
-
-
-class RepBlock(nn.Module):
-    '''
-        RepBlock is a stage block with rep-style basic block
-    '''
-    def __init__(self, in_channels, out_channels, n=1):
-        super().__init__()
-        self.conv1 = RepVGGBlock(in_channels, out_channels)
-        self.block = nn.Sequential(*(RepVGGBlock(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
-
-    def forward(self, x):
-        x = self.conv1(x)
-        if self.block is not None:
-            x = self.block(x)
-        return x
 
 
 class RepVGGBlock(nn.Module):
@@ -253,6 +239,74 @@ class RepVGGBlock(nn.Module):
             self.__delattr__('id_tensor')
         self.deploy = True
 
+
+class RealVGGBlock(nn.Module):
+
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
+                 dilation=1, groups=1, padding_mode='zeros', use_se=False,
+    ):
+        super(RealVGGBlock, self).__init__()
+        self.relu = nn.ReLU()
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.bn = nn.BatchNorm2d(out_channels)
+
+        if use_se:
+            raise NotImplementedError("se block not supported yet")
+        else:
+            self.se = nn.Identity()
+
+    def forward(self, inputs):
+        out = self.relu(self.se(self.bn(self.conv(inputs))))
+        return out
+
+class ScaleLayer(torch.nn.Module):
+
+    def __init__(self, num_features, use_bias=True, scale_init=1.0):
+        super(ScaleLayer, self).__init__()
+        self.weight = Parameter(torch.Tensor(num_features))
+        init.constant_(self.weight, scale_init)
+        self.num_features = num_features
+        if use_bias:
+            self.bias = Parameter(torch.Tensor(num_features))
+            init.zeros_(self.bias)
+        else:
+            self.bias = None
+
+    def forward(self, inputs):
+        if self.bias is None:
+            return inputs * self.weight.view(1, self.num_features, 1, 1)
+        else:
+            return inputs * self.weight.view(1, self.num_features, 1, 1) + self.bias.view(1, self.num_features, 1, 1)
+
+#   A CSLA block is a LinearAddBlock with is_csla=True
+class LinearAddBlock(nn.Module):
+
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
+                 dilation=1, groups=1, padding_mode='zeros', use_se=False, is_csla=False, conv_scale_init=1.0):
+        super(LinearAddBlock, self).__init__()
+        self.in_channels = in_channels
+        self.relu = nn.ReLU()
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.scale_conv = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=conv_scale_init)
+        self.conv_1x1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride, padding=0, bias=False)
+        self.scale_1x1 = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=conv_scale_init)
+        if in_channels == out_channels and stride == 1:
+            self.scale_identity = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=1.0)
+        self.bn = nn.BatchNorm2d(out_channels)
+        if is_csla:     # Make them constant
+            self.scale_1x1.requires_grad_(False)
+            self.scale_conv.requires_grad_(False)
+        if use_se:
+            raise NotImplementedError("se block not supported yet")
+        else:
+            self.se = nn.Identity()
+
+    def forward(self, inputs):
+        out = self.scale_conv(self.conv(inputs)) + self.scale_1x1(self.conv_1x1(inputs))
+        if hasattr(self, 'scale_identity'):
+            out += self.scale_identity(inputs)
+        out = self.relu(self.se(self.bn(out)))
+        return out
 
 def conv_bn_v2(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1,
                padding_mode='zeros'):
@@ -499,3 +553,30 @@ class DetectBackend(nn.Module):
         if isinstance(y, np.ndarray):
             y = torch.tensor(y, device=self.device)
         return y
+
+
+class RepBlock(nn.Module):
+    '''
+        RepBlock is a stage block with rep-style basic block
+    '''
+    def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock):
+        super().__init__()
+        self.conv1 = block(in_channels, out_channels)
+        self.block = nn.Sequential(*(block(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
+
+    def forward(self, x):
+        x = self.conv1(x)
+        if self.block is not None:
+            x = self.block(x)
+        return x
+
+
+def get_block(mode):
+    if mode == 'repvgg':
+        return RepVGGBlock
+    elif mode == 'hyper_search':
+        return LinearAddBlock
+    elif mode == 'repopt':
+        return RealVGGBlock
+    else:
+        raise NotImplementedError("Undefied Repblock choice for mode {}".format(mode))
