@@ -504,8 +504,7 @@ class TrainValDataset(Dataset):
         LOGGER.info(f"Convert to COCO format")
         for i, (img_path, info) in enumerate(tqdm(img_info.items())):
             labels = info["labels"] if info["labels"] else []
-            path = Path(img_path)
-            img_id = int(path.stem) if path.stem.isnumeric() else path.stem
+            img_id = osp.splitext(osp.basename(img_path))[0]
             img_w, img_h = info["shape"]
             dataset["images"].append(
                 {
