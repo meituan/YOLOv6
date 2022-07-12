@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import argparse
+from logging import Logger
 import os
+import yaml
 import os.path as osp
+from pathlib import Path
 import torch
 import torch.distributed as dist
 import sys
@@ -15,7 +18,7 @@ from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
-from yolov6.utils.general import increment_name
+from yolov6.utils.general import increment_name, find_latest_checkpoint
 
 
 def get_args_parser(add_help=True):
@@ -38,40 +41,55 @@ def get_args_parser(add_help=True):
     parser.add_argument('--dist_url', default='env://', type=str, help='url used to set up distributed training')
     parser.add_argument('--gpu_count', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
-    parser.add_argument('--resume', type=str, default=None, help='resume the corresponding ckpt')
+    parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume the most recent training')
 
     return parser
 
 
 def check_and_init(args):
-    '''check config files and device, and initialize '''
-
+    '''check config files and device.'''
     # check files
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
-    args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
-    cfg = Config.fromfile(args.conf_file)
+    if args.resume:
+        # args.resume can be a checkpoint file path or a boolean value.
+        checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()
+        assert os.path.isfile(checkpoint_path), f'the checkpoint path is not exist: {checkpoint_path}'
+        LOGGER.info(f'Resume training from the checkpoint file :{checkpoint_path}')
+        resume_opt_file_path = Path(checkpoint_path).parent.parent / 'args.yaml'
+        if osp.exists(resume_opt_file_path):
+            with open(resume_opt_file_path) as f:
+                args = argparse.Namespace(**yaml.safe_load(f))  # load args value from args.yaml
+        else:
+            LOGGER.warning(f'We can not find the path of {Path(checkpoint_path).parent.parent / "args.yaml"},'\
+                           f' we will save exp log to {Path(checkpoint_path).parent.parent}')
+            LOGGER.warning(f'In this case, make sure to provide configuration, such as data, batch size.')
+            args.save_dir = str(Path(checkpoint_path).parent.parent)
+        args.resume = checkpoint_path  # set the args.resume to checkpoint path.
+    else:
+        args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
+        if master_process:
+            os.makedirs(args.save_dir)
 
+    cfg = Config.fromfile(args.conf_file)
     # check device
     device = select_device(args.device)
-
     # set random seed
     set_random_seed(1+args.rank, deterministic=(args.rank == -1))
-
     # save args
     if master_process:
-        os.makedirs(args.save_dir)
         save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
 
-    return cfg, device
+    return cfg, device, args
 
 
 def main(args):
     '''main function of training'''
     # Setup
     args.rank, args.local_rank, args.world_size = get_envs()
+    cfg, device, args = check_and_init(args)
+    # reload envs because args was chagned in check_and_init(args)
+    args.rank, args.local_rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
-    cfg, device = check_and_init(args)
-
     if args.local_rank != -1: # if DDP mode
         torch.cuda.set_device(args.local_rank)
         device = torch.device('cuda', args.local_rank)

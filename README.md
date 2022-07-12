@@ -1,5 +1,4 @@
-# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
-
+# YOLOv6
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
@@ -71,6 +70,20 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --tas
                                                                 yolov6n.pt
 ```
 
+### Resume
+If your training process is corrupted, you can resume training by
+```
+# single GPU traning.
+python tools/train.py --resume
+# multi GPU training.
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
+```
+Your can also specify a checkpoint path to `--resume` parameter by
+```
+# remember replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
+--resume /path/to/your/checkpoint/path
+
+```
 
 ### Deployment
 
@@ -103,3 +116,4 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --tas
  * YOLOv6 ONNXRuntime/MNN/TNN C++: [YOLOv6-ORT](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth)
  * YOLOv6 TensorRT Python: [yolov6-tensorrt-python](https://github.com/Linaom1214/tensorrt-python/blob/main/yolov6/trt.py) from [Linaom1214](https://github.com/Linaom1214)
  * YOLOv6 TensorRT Windows C++: [yolort](https://github.com/zhiqwang/yolov5-rt-stack/tree/main/deployment/tensorrt-yolov6) from [Wei Zeng](https://github.com/Wulingtian)
+ * YOLOv6 Quantization and Auto Compression Example [YOLOv6-ACT](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolov6) from [PaddleSlim](https://github.com/PaddlePaddle/PaddleSlim)

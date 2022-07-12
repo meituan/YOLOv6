@@ -13,6 +13,7 @@ from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.torch_utils import get_model_info
 
 
 class Inferer:
@@ -50,6 +51,18 @@ class Inferer:
         else:
             raise Exception(f'Invalid path: {source}')
         self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
+
+        # Switch model to deploy status
+        self.model_switch(self.model, self.img_size)
+
+    def model_switch(self, model, img_size):
+        ''' Model switch to deploy status '''
+        from yolov6.layers.common import RepVGGBlock
+        for layer in model.modules():
+            if isinstance(layer, RepVGGBlock):
+                layer.switch_to_deploy()
+
+        LOGGER.info("Switch model to deploy modality.")
 
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''

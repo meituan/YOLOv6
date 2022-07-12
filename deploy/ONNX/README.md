@@ -24,6 +24,7 @@ python ./deploy/ONNX/export_onnx.py \
 - `--inplace` : Whether to set Detect() inplace.
 - `--simplify` : Whether to simplify onnx. Not support in end to end export.
 - `--end2end` : Whether to export end to end onnx model. Only support onnxruntime and TensorRT >= 8.0.0 .
+- `--with-preprocess` : Whether to export preprocess with bgr2rgb and normalize (divide by 255)
 - `--max-wh` : Default is None for TensorRT backend. Set int for onnxruntime backend.
 - `--topk-all` : Topk objects for every image.
 - `--iou-thres` : IoU threshold for NMS algorithm.
@@ -60,7 +61,7 @@ The onnx outputs shape is ```nums x 7```.
 
 ```nums``` means the number of all objects which were detected.
 
-```7```  means [`batch_index`,`x0`,`y0`,`x1`,` y1`,`classid`,`score`]
+```7```  means [`batch_index`,`x0`,`y0`,`x1`,`y1`,`classid`,`score`]
 
 ### TensorRT backend (TensorRT version>= 8.0.0)
 
@@ -81,7 +82,7 @@ The onnx outputs are as shown :
 
 ```num_dets``` means the number of object in every image in its batch .
 
-```det_boxes``` means topk(100) object's location about [`x0`,`y0`,`x1`,` y1`] .
+```det_boxes``` means topk(100) object's location about [`x0`,`y0`,`x1`,`y1`] .
 
 ```det_scores``` means the confidence score of every topk(100) objects .
 
