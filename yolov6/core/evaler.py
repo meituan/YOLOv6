@@ -285,7 +285,7 @@ class Evaler:
                                            self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad, rect=False,
                                            data_dict=self.data, task=task)[0]
             return dataloader
-        
+
         def convert_to_coco_format_trt(nums, boxes, scores, classes, paths, shapes, ids):
             pred_results = []
             for i, (num, detbox, detscore, detcls) in enumerate(zip(nums, boxes, scores, classes)):
@@ -320,7 +320,7 @@ class Evaler:
                     }
                     pred_results.append(pred_data)
             return pred_results
-        
+
         context, bindings, binding_addrs, trt_batch_size = init_engine(engine)
         assert trt_batch_size >= self.batch_size, f'The batch size you set is {self.batch_size}, it must <= tensorrt binding batch size {trt_batch_size}.'
         tmp = torch.randn(self.batch_size, 3, self.img_size, self.img_size).to(self.device)
