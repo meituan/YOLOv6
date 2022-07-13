@@ -9,7 +9,7 @@ It shows some advantages：
 
 ## Training
 The training of V6-RepOpt can be divided into two stages, hyperparameter search and target network training.
-1. hyperparameter search. This stage is used to get a suitable 'scale' for RepOptimizer, and the result checkpoint can be passed to stage2. Remember to add `training_mode='hyper_search'` in your config. 
+1. hyperparameter search. This stage is used to get a suitable 'scale' for RepOptimizer, and the result checkpoint can be passed to stage2. Remember to add `training_mode='hyper_search'` in your config.
   ```
   python tools/train.py --batch 32 --conf configs/repopt/yolov6s_hs.py --data data/coco.yaml --device 0
   ```
@@ -26,4 +26,3 @@ Reproduce mAP on COCO val2017 dataset, you can directly test our [pretrained mod
   ```
 ## Benchmark
 We train a yolov6s-repopt with 300epochs, the fp32 mAP is 42.4, while the mAP of PTQ is 40.5. More results is coming soon...
-
