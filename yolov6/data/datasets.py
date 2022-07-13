@@ -502,7 +502,6 @@ class TrainValDataset(Dataset):
         for i, (img_path, info) in enumerate(tqdm(img_info.items())):
             labels = info["labels"] if info["labels"] else []
             img_id = osp.splitext(osp.basename(img_path))[0]
-            img_id = int(img_id) if img_id.isnumeric() else img_id
             img_w, img_h = info["shape"]
             dataset["images"].append(
                 {
