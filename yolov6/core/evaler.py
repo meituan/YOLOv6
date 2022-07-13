@@ -187,7 +187,7 @@ class Evaler:
                 continue
             path, shape = Path(paths[i]), shapes[i][0]
             self.scale_coords(imgs[i].shape[1:], pred[:, :4], shape, shapes[i][1])
-            image_id = int(path.stem) if path.stem.isnumeric() else path.stem
+            image_id = int(path.stem) if self.is_coco else path.stem
             bboxes = self.box_convert(pred[:, 0:4])
             bboxes[:, :2] -= bboxes[:, 2:] / 2
             cls = pred[:, 5]
@@ -207,7 +207,7 @@ class Evaler:
 
     @staticmethod
     def check_task(task):
-        if task not in ['train','val','speed']:
+        if task not in ['train', 'val', 'speed']:
             raise Exception("task argument error: only support 'train' / 'val' / 'speed' task.")
 
     @staticmethod
