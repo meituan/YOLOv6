@@ -46,7 +46,8 @@ class Trainer:
         model = self.get_model(args, cfg, self.num_classes, device)
         if cfg.training_mode == 'repopt':
             scales = self.load_scale_from_pretrained_models(cfg, device)
-            self.optimizer = RepVGGOptimizer(model, scales, args, cfg)
+            reinit = False if cfg.model.pretrained is not None else True
+            self.optimizer = RepVGGOptimizer(model, scales, args, cfg, reinit=reinit)
         else:
             self.optimizer = self.get_optimizer(args, cfg, model)
         self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer)
@@ -253,10 +254,10 @@ class Trainer:
 
     @staticmethod
     def load_scale_from_pretrained_models(cfg, device):
-        weights = cfg.model.pretrained
+        weights = cfg.model.scales
         scales = None
         if not weights:
-            LOGGER.warning("Training RepOpt Architecture without Searched Hyper Scales")
+            LOGGER.error("ERROR: No scales provided to init RepOptimizer!")
         else:
             ckpt = torch.load(weights, map_location=device)
             scales = extract_scales(ckpt)

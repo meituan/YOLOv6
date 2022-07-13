@@ -15,7 +15,7 @@ The training of V6-RepOpt can be divided into two stages, hyperparameter search 
   ```
   Or you can directly use the [pretrained scale](https://github.com/xingyueye/YOLOv6/releases/download/0.1.0/yolov6s_scale.pt) we provided and omit this stage.
 
-2. Training. Add the flag of `training_mode='repopt'` and pretraind model `pretrained='./assets/yolov6s_scale.pt',` in your config
+2. Training. Add the flag of `training_mode='repopt'` and pretraind model `scales='./assets/yolov6s_scale.pt',` in your config
   ```
   python tools/train.py --batch 32 --conf configs/repopt/yolov6s_opt.py --data data/coco.yaml --device 0
   ```
