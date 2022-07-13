@@ -40,13 +40,8 @@ def run(data,
         save_dir='',
         name = ''
         ):
-    """ Run the evaluation process
-
-    This function is the main process of evaluataion, supporting image file and dir containing images.
-    It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
-    Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
-    evaluation of inference speed of model.pt.
-
+    """ 
+    TensorRT models's evaluation process.
     """
 
      # task
