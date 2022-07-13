@@ -1,7 +1,8 @@
 # YOLOv6s model
 model = dict(
     type='YOLOv6s',
-    pretrained='./assets/yolov6s_scale.pt',
+    pretrained=None,
+    scales='./assets/yolov6s_scale.pt',
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
