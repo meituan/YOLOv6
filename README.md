@@ -58,7 +58,22 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 ```
 
 - conf: select config file to specify network/optimizer/hyperparameters
-- data: prepare [COCO](http://cocodataset.org) dataset and specify dataset paths in data.yaml
+- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labes](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
+- make sure your dataset structure as fellows:
+```
+├── coco
+│   ├── annotations
+│   │   ├── instances_train2017.json
+│   │   └── instances_val2017.json
+│   ├── images
+│   │   ├── train2017
+│   │   └── val2017
+│   ├── labels
+│   │   ├── train2017
+│   │   ├── val2017
+│   ├── LICENSE
+│   ├── README.txt
+```
 
 
 ### Evaluation
