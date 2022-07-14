@@ -289,6 +289,8 @@ class Evaler:
         def convert_to_coco_format_trt(nums, boxes, scores, classes, paths, shapes, ids):
             pred_results = []
             for i, (num, detbox, detscore, detcls) in enumerate(zip(nums, boxes, scores, classes)):
+                if i >= len(paths):
+                    break
                 n = int(num[0])
                 if n == 0:
                     continue
