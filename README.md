@@ -104,6 +104,7 @@ Your can also specify a checkpoint path to `--resume` parameter by
 
 *  [ONNX](./deploy/ONNX)
 *  [OpenVINO](./deploy/OpenVINO)
+*  [Partial Quantization](./tools/partial_quantization)
 
 ### Tutorials
 
