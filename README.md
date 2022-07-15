@@ -1,4 +1,6 @@
 # MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
+[![Open All Collab](https://colab.research.google.com/assets/colab-badge.svg)]https://colab.research.google.com/github/mahdilamb/YOLOv6/blob/main/inference.ipynb)
+
 
 ## Introduction
 
