@@ -257,7 +257,7 @@ class TrainValDataset(Dataset):
 
         img_paths = list(img_info.keys())
         label_paths = sorted(
-            osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
+            osp.join(label_dir, osp.splitext(osp.basename(p))[0] + ".txt")
             for p in img_paths
         )
         label_hash = self.get_hash(label_paths)
@@ -284,7 +284,7 @@ class TrainValDataset(Dataset):
                     ne_per_file,
                     msg,
                 ) in pbar:
-                    if img_path:
+                    if nc_per_file == 0:
                         img_info[img_path]["labels"] = labels_per_file
                     else:
                         img_info.pop(img_path)
@@ -484,7 +484,7 @@ class TrainValDataset(Dataset):
         except Exception as e:
             nc = 1
             msg = f"WARNING: {lb_path}: ignoring invalid labels: {e}"
-            return None, None, nc, nm, nf, ne, msg
+            return img_path, None, nc, nm, nf, ne, msg
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
@@ -500,7 +500,6 @@ class TrainValDataset(Dataset):
         for i, (img_path, info) in enumerate(tqdm(img_info.items())):
             labels = info["labels"] if info["labels"] else []
             img_id = osp.splitext(osp.basename(img_path))[0]
-            img_id = int(img_id) if img_id.isnumeric() else img_id
             img_w, img_h = info["shape"]
             dataset["images"].append(
                 {

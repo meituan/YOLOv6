@@ -1,6 +1,5 @@
-# MT-YOLOv6 [About Naming YOLOv6](./docs/About_naming_yolov6.md)
+# YOLOv6
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahdilamb/YOLOv6/blob/main/inference.ipynb)
-
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
@@ -60,7 +59,22 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 ```
 
 - conf: select config file to specify network/optimizer/hyperparameters
-- data: prepare [COCO](http://cocodataset.org) dataset and specify dataset paths in data.yaml
+- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labes](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
+- make sure your dataset structure as fellows:
+```
+├── coco
+│   ├── annotations
+│   │   ├── instances_train2017.json
+│   │   └── instances_val2017.json
+│   ├── images
+│   │   ├── train2017
+│   │   └── val2017
+│   ├── labels
+│   │   ├── train2017
+│   │   ├── val2017
+│   ├── LICENSE
+│   ├── README.txt
+```
 
 
 ### Evaluation
@@ -72,17 +86,32 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --tas
                                                                 yolov6n.pt
 ```
 
+### Resume
+If your training process is corrupted, you can resume training by
+```
+# single GPU traning.
+python tools/train.py --resume
+# multi GPU training.
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
+```
+Your can also specify a checkpoint path to `--resume` parameter by
+```
+# remember replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
+--resume /path/to/your/checkpoint/path
+
+```
 
 ### Deployment
 
 *  [ONNX](./deploy/ONNX)
 *  [OpenVINO](./deploy/OpenVINO)
+*  [Partial Quantization](./tools/partial_quantization)
 
 ### Tutorials
 
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
-
+*  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
 
 ## Benchmark
 
@@ -98,3 +127,11 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --tas
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
 - Params and Flops of YOLOv6 are estimated on deployed model.
 - Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.
+
+ ## Third-party resources
+ * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
+ * YOLOv6 ONNXRuntime/MNN/TNN C++: [YOLOv6-ORT](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth)
+ * YOLOv6 TensorRT Python: [yolov6-tensorrt-python](https://github.com/Linaom1214/tensorrt-python/blob/main/yolov6/trt.py) from [Linaom1214](https://github.com/Linaom1214)
+ * YOLOv6 TensorRT Windows C++: [yolort](https://github.com/zhiqwang/yolov5-rt-stack/tree/main/deployment/tensorrt-yolov6) from [Wei Zeng](https://github.com/Wulingtian)
+ * YOLOv6 Quantization and Auto Compression Example [YOLOv6-ACT](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/example/auto_compression/pytorch_yolov6) from [PaddleSlim](https://github.com/PaddlePaddle/PaddleSlim)
+ * [YOLOv6 web demo](https://huggingface.co/spaces/nateraw/yolov6) on [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/nateraw/yolov6)

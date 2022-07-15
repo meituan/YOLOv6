@@ -13,6 +13,7 @@ from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.torch_utils import get_model_info
 
 
 class Inferer:
@@ -51,6 +52,18 @@ class Inferer:
             raise Exception(f'Invalid path: {source}')
         self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
 
+        # Switch model to deploy status
+        self.model_switch(self.model, self.img_size)
+
+    def model_switch(self, model, img_size):
+        ''' Model switch to deploy status '''
+        from yolov6.layers.common import RepVGGBlock
+        for layer in model.modules():
+            if isinstance(layer, RepVGGBlock):
+                layer.switch_to_deploy()
+
+        LOGGER.info("Switch model to deploy modality.")
+
     def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
         ''' Model Inference and results visualization '''
 
@@ -64,7 +77,7 @@ class Inferer:
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
 
             save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.basename(img_path).split('.')[0])
+            txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src
@@ -102,7 +115,7 @@ class Inferer:
             img_src = cv2.imread(path)
             assert img_src is not None, f'Invalid image: {path}'
         except Exception as e:
-            LOGGER.Warning(e)
+            LOGGER.warning(e)
         image = letterbox(img_src, img_size, stride=stride)[0]
 
         # Convert
