@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import warnings 
+warnings.filterwarnings("ignore")
+
 import os
-import os.path as osp
+import cv2
+import time
 import math
+import torch
+import numpy as np
+import os.path as osp
 
 from tqdm import tqdm
-
-import numpy as np
-import cv2
-import torch
+from pathlib import Path
 from PIL import ImageFont
+from collections import deque
 
 from yolov6.utils.events import LOGGER, load_yaml
-
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
+from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.torch_utils import get_model_info
 
-
-class Inferer():
+class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
-        import glob
-        from yolov6.data.datasets import IMG_FORMATS
 
         self.__dict__.update(locals())
 
@@ -46,39 +49,47 @@ class Inferer():
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
 
         # Load data
-        if os.path.isdir(source):
-            img_paths = sorted(glob.glob(os.path.join(source, '*.*')))  # dir
-        elif os.path.isfile(source):
-            img_paths = [source]  # files
-        else:
-            raise Exception(f'Invalid path: {source}')
-        self.img_paths = [img_path for img_path in img_paths if img_path.split('.')[-1].lower() in IMG_FORMATS]
+        self.files = LoadData(source)
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf):
+        # Switch model to deploy status
+        self.model_switch(self.model, self.img_size)
+
+    def model_switch(self, model, img_size):
+        ''' Model switch to deploy status '''
+        from yolov6.layers.common import RepVGGBlock
+        for layer in model.modules():
+            if isinstance(layer, RepVGGBlock):
+                layer.switch_to_deploy()
+
+        LOGGER.info("Switch model to deploy modality.")
+
+    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True):
         ''' Model Inference and results visualization '''
-
-        for img_path in tqdm(self.img_paths):
-            img, img_src = self.precess_image(img_path, self.img_size, self.stride, self.half)
+        vid_path, vid_writer, windows = None, None, []
+        fps_calculator = CalcFPS()
+        for img_src, img_path, vid_cap in tqdm(self.files):
+            img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
                 # expand for batch dim
+            t1 = time.time()
             pred_results = self.model(img)
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
+            t2 = time.time()
 
             save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.basename(img_path).split('.')[0])
+            txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-            img_ori = img_src
-
+            img_ori = img_src.copy()
+            
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
 
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -94,20 +105,52 @@ class Inferer():
 
                 img_src = np.asarray(img_ori)
 
-                # Save results (image with detections)
-                if save_img:
+            # FPS counter
+            fps_calculator.update(1.0 / (t2 - t1))
+            avg_fps = fps_calculator.accumulate()
+            
+            if self.files.type == 'video':
+                self.draw_text(
+                    img_src,
+                    f"FPS: {avg_fps:0.1f}",
+                    pos=(20, 20),
+                    font_scale=1.0,
+                    text_color=(204, 85, 17),
+                    text_color_bg=(255, 255, 255),
+                    font_thickness=2,
+                )
+
+            if view_img:
+                if img_path not in windows:
+                    windows.append(img_path)
+                    cv2.namedWindow(str(img_path), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                    cv2.resizeWindow(str(img_path), img_src.shape[1], img_src.shape[0])
+                cv2.imshow(str(img_path), img_src)
+                cv2.waitKey(1)  # 1 millisecond
+
+            # Save results (image with detections)
+            if save_img:
+                if self.files.type == 'image':
                     cv2.imwrite(save_path, img_src)
+                else:  # 'video' or 'stream'
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()  # release previous video writer
+                        if vid_cap:  # video
+                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        else:  # stream
+                            fps, w, h = 30, img_ori.shape[1], img_ori.shape[0]
+                        save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                    vid_writer.write(img_src)
 
     @staticmethod
-    def precess_image(path, img_size, stride, half):
+    def precess_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
-        try:
-            img_src = cv2.imread(path)
-            assert img_src is not None, f'Invalid image: {path}'
-        except Exception as e:
-            LOGGER.Warning(e)
-        image = letterbox(img_src, img_size, stride=stride)[0]
-
+        image = letterbox(img_src, img_size, stride=stride)[0]  
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image))
@@ -149,6 +192,38 @@ class Inferer():
     def make_divisible(self, x, divisor):
         # Upward revision the value x to make it evenly divisible by the divisor.
         return math.ceil(x / divisor) * divisor
+
+    @staticmethod
+    def draw_text(
+        img,
+        text,
+        font=cv2.FONT_HERSHEY_SIMPLEX,
+        pos=(0, 0),
+        font_scale=1,
+        font_thickness=2,
+        text_color=(0, 255, 0),
+        text_color_bg=(0, 0, 0),
+    ):
+
+        offset = (5, 5)
+        x, y = pos
+        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+        text_w, text_h = text_size
+        rec_start = tuple(x - y for x, y in zip(pos, offset))
+        rec_end = tuple(x + y for x, y in zip((x + text_w, y + text_h), offset))
+        cv2.rectangle(img, rec_start, rec_end, text_color_bg, -1)
+        cv2.putText(
+            img,
+            text,
+            (x, int(y + text_h + font_scale - 1)),
+            font,
+            font_scale,
+            text_color,
+            font_thickness,
+            cv2.LINE_AA,
+        )
+
+        return text_size
 
     @staticmethod
     def plot_box_and_label(image, lw, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255)):
@@ -194,3 +269,16 @@ class Inferer():
         num = len(palette)
         color = palette[int(i) % num]
         return (color[2], color[1], color[0]) if bgr else color
+
+class CalcFPS:
+    def __init__(self, nsamples: int = 50):
+        self.framerate = deque(maxlen=nsamples)
+
+    def update(self, duration: float):
+        self.framerate.append(duration)
+
+    def accumulate(self):
+        if len(self.framerate) > 1:
+            return np.average(self.framerate)
+        else:
+            return 0.0

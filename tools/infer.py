@@ -9,7 +9,7 @@ import torch
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  
+    sys.path.append(str(ROOT))
 
 from yolov6.utils.events import LOGGER
 from yolov6.core.inferer import Inferer
@@ -27,6 +27,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--device', default='0', help='device to run our model i.e. 0 or 0,1,2,3 or cpu.')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt.')
     parser.add_argument('--save-img', action='store_false', help='save visuallized inference results.')
+    parser.add_argument('--view-img', action='store_true', help='show inference results')
     parser.add_argument('--classes', nargs='+', type=int, help='filter by classes, e.g. --classes 0, or --classes 0 2 3.')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS.')
     parser.add_argument('--project', default='runs/inference', help='save inference results to project/name.')
@@ -34,7 +35,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels.')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences.')
     parser.add_argument('--half', action='store_true', help='whether to use FP16 half-precision inference.')
-    
+
     args = parser.parse_args()
     LOGGER.info(args)
     return args
@@ -50,6 +51,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         device='',
         save_txt=False,
         save_img=True,
+        view_img=True,
         classes=None,
         agnostic_nms=False,
         project=osp.join(ROOT, 'runs/inference'),
@@ -58,10 +60,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_conf=False,
         half=False,
         ):
-    """ Inference process
-    
-    This function is the main process of inference, supporting image files or dirs containing images.
-
+    """ Inference process, supporting inference on one image file or directory which containing images.
     Args:
         weights: The path of model.pt, e.g. yolov6s.pt
         source: Source path, supporting image files or dirs containing images.
@@ -89,11 +88,13 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
     else:
         LOGGER.warning('Save directory already existed')
     if save_txt:
-        os.mkdir(osp.join(save_dir, 'labels'))
+        save_txt_path = osp.join(save_dir, 'labels')
+        if not osp.exists(save_txt_path):
+            os.makedirs(save_txt_path)
 
     # Inference
     inferer = Inferer(source, weights, device, yaml, img_size, half)
-    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf)
+    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img)
 
     if save_txt or save_img:
         LOGGER.info(f"Results saved to {save_dir}")

@@ -7,6 +7,7 @@ import os.path as osp
 from yolov6.utils.events import LOGGER
 from yolov6.utils.torch_utils import fuse_model
 
+
 def load_state_dict(weights, model, map_location=None):
     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
     ckpt = torch.load(weights, map_location=map_location)
@@ -25,9 +26,9 @@ def load_checkpoint(weights, map_location=None, inplace=True, fuse=True):
     model = ckpt['ema' if ckpt.get('ema') else 'model'].float()
     if fuse:
         LOGGER.info("\nFusing model...")
-        model = fuse_model(model).eval() 
+        model = fuse_model(model).eval()
     else:
-        model = model.eval()       
+        model = model.eval()
     return model
 
 
@@ -40,9 +41,9 @@ def save_checkpoint(ckpt, is_best, save_dir, model_name=""):
     if is_best:
         best_filename = osp.join(save_dir, 'best_ckpt.pt')
         shutil.copyfile(filename, best_filename)
-        
 
-def strip_optimizer(ckpt_dir):
+
+def strip_optimizer(ckpt_dir, epoch):
     for s in ['best', 'last']:
         ckpt_path = osp.join(ckpt_dir, '{}_ckpt.pt'.format(s))
         if not osp.exists(ckpt_path):
@@ -52,11 +53,8 @@ def strip_optimizer(ckpt_dir):
             ckpt['model'] = ckpt['ema']  # replace model with ema
         for k in ['optimizer', 'ema', 'updates']:  # keys
             ckpt[k] = None
-        ckpt['epoch'] = -1
+        ckpt['epoch'] = epoch
         ckpt['model'].half()  # to FP16
         for p in ckpt['model'].parameters():
             p.requires_grad = False
         torch.save(ckpt, ckpt_path)
-        
-
-

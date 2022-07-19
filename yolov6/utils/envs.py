@@ -8,6 +8,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from yolov6.utils.events import LOGGER
 
+
 def get_envs():
     """Get PyTorch needed environments from system envirionments."""
     local_rank = int(os.getenv('LOCAL_RANK', -1))
@@ -21,9 +22,9 @@ def select_device(device):
     Args:
         device: a string, like 'cpu' or '1,2,3,4'
     Returns:
-        torch.device 
+        torch.device
     """
-    if device == 'cpu': 
+    if device == 'cpu':
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
         LOGGER.info('Using CPU for training... ')
     elif device:
@@ -51,7 +52,3 @@ def set_random_seed(seed, deterministic=False):
     else:
         cudnn.deterministic = False
         cudnn.benchmark = True
-
-
-
-

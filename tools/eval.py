@@ -2,15 +2,17 @@
 # -*- coding:utf-8 -*-
 import argparse
 import os
+import os.path as osp
 import sys
 import torch
 
-ROOT = os.getcwd()                                                           
+ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from yolov6.core.evaler import Evaler
 from yolov6.utils.events import LOGGER
+from yolov6.utils.general import increment_name
 
 
 def get_args_parser(add_help=True):
@@ -24,7 +26,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--task', default='val', help='val, or speed')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--half', default=False, action='store_true', help='whether to use fp16 infer')
-    parser.add_argument('--save_dir', type=str, default='runs/val/exp', help='evaluation save dir')
+    parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
+    parser.add_argument('--name', type=str, default='exp', help='save evaluation results to save_dir/name')
     args = parser.parse_args()
     LOGGER.info(args)
     return args
@@ -43,33 +46,37 @@ def run(data,
         model=None,
         dataloader=None,
         save_dir='',
+        name = ''
         ):
     """ Run the evaluation process
 
-    This function is the main process of evalutaion, supporting image file and dir containing images.
+    This function is the main process of evaluataion, supporting image file and dir containing images.
     It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
     Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
     evaluation of inference speed of model.pt.
 
     """
-    
+
      # task
     Evaler.check_task(task)
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir) 
+    if task == 'train':
+        save_dir = save_dir
+    else:
+        save_dir = str(increment_name(osp.join(save_dir, name)))
+        os.makedirs(save_dir, exist_ok=True)
 
     # reload thres/device/half/data according task
     conf_thres, iou_thres = Evaler.reload_thres(conf_thres, iou_thres, task)
     device = Evaler.reload_device(device, model, task)
     half = device.type != 'cpu' and half
     data = Evaler.reload_dataset(data) if isinstance(data, str) else data
-       
+
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
-    
+
     # eval
     model.eval()
     pred_result = val.predict_model(model, dataloader, task)
@@ -83,4 +90,4 @@ def main(args):
 
 if __name__ == "__main__":
     args = get_args_parser()
-    main(args) 
+    main(args)

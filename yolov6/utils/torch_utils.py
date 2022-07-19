@@ -81,6 +81,7 @@ def fuse_conv_and_bn(conv, bn):
 
     return fusedconv
 
+
 def fuse_model(model):
     from yolov6.layers.common import Conv
 
@@ -91,6 +92,7 @@ def fuse_model(model):
             m.forward = m.forward_fuse  # update forward
     return model
 
+
 def get_model_info(model, img_size=640):
     """Get model Params and GFlops.
     Code base on https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/utils/model_utils.py
@@ -98,6 +100,7 @@ def get_model_info(model, img_size=640):
     from thop import profile
     stride = 32
     img = torch.zeros((1, 3, stride, stride), device=next(model.parameters()).device)
+
     flops, params = profile(deepcopy(model), inputs=(img,), verbose=False)
     params /= 1e6
     flops /= 1e9

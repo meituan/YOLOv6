@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6t',
     pretrained=None,
-    depth_multiple=0.25,  
+    depth_multiple=0.25,
     width_multiple=0.50,
     backbone=dict(
         type='EfficientRep',
@@ -15,7 +15,7 @@ model = dict(
         out_channels=[256, 128, 128, 256, 256, 512],
         ),
     head=dict(
-        type='YOLOv6tHead',
+        type='EffiDeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
         begin_indices=24,
@@ -35,12 +35,12 @@ solver = dict(
     weight_decay=0.0005,
     warmup_epochs=3.0,
     warmup_momentum=0.8,
-    warmup_bias_lr=0.1       
+    warmup_bias_lr=0.1
 )
- 
+
 data_aug = dict(
-    hsv_h=0.015,  
-    hsv_s=0.7, 
+    hsv_h=0.015,
+    hsv_s=0.7,
     hsv_v=0.4,
     degrees=0.0,
     translate=0.1,

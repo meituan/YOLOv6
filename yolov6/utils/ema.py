@@ -7,6 +7,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 
+
 class ModelEMA:
     """ Model Exponential Moving Average from https://github.com/rwightman/pytorch-image-models
     Keep a moving average of everything in the model state_dict (parameters and buffers).
@@ -19,7 +20,7 @@ class ModelEMA:
 
     def __init__(self, model, decay=0.9999, updates=0):
         self.ema = deepcopy(model.module if is_parallel(model) else model).eval()  # FP32 EMA
-        self.updates = updates  
+        self.updates = updates
         self.decay = lambda x: decay * (1 - math.exp(-x / 2000))
         for param in self.ema.parameters():
             param.requires_grad_(False)

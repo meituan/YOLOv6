@@ -1,17 +1,19 @@
 import torch
 from torch import nn
-from yolov6.layers.common import RepBlock, SimConv, Transpose
+from yolov6.layers.common import RepBlock, SimConv, Transpose, RepVGGBlock
 
 
 class RepPANNeck(nn.Module):
-    """RepPANNeck
-    RepPANNeck module. EfficientRep is the default backbone of this model.
+    """RepPANNeck Module
+    EfficientRep is the default backbone of this model.
+    RepPANNeck has the balance of feature fusion ability and hardware efficiency.
     """
 
     def __init__(
         self,
         channels_list=None,
-        num_repeats=None
+        num_repeats=None,
+        block=RepVGGBlock,
     ):
         super().__init__()
 
@@ -22,24 +24,28 @@ class RepPANNeck(nn.Module):
             in_channels=channels_list[3] + channels_list[5],
             out_channels=channels_list[5],
             n=num_repeats[5],
+            block=block
         )
 
         self.Rep_p3 = RepBlock(
             in_channels=channels_list[2] + channels_list[6],
             out_channels=channels_list[6],
-            n=num_repeats[6]
+            n=num_repeats[6],
+            block=block
         )
 
         self.Rep_n3 = RepBlock(
             in_channels=channels_list[6] + channels_list[7],
             out_channels=channels_list[8],
             n=num_repeats[7],
+            block=block
         )
 
         self.Rep_n4 = RepBlock(
             in_channels=channels_list[5] + channels_list[9],
             out_channels=channels_list[10],
-            n=num_repeats[8]
+            n=num_repeats[8],
+            block=block
         )
 
         self.reduce_layer0 = SimConv(
@@ -105,8 +111,3 @@ class RepPANNeck(nn.Module):
         outputs = [pan_out2, pan_out1, pan_out0]
 
         return outputs
-
-        
-
-
-
