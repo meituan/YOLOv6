@@ -19,12 +19,12 @@ from collections import deque
 from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
+from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 
 class Inferer:
     def __init__(self, source, weights, device, yaml, img_size, half):
-        from yolov6.data.datasets import LoadData
 
         self.__dict__.update(locals())
 
@@ -108,16 +108,17 @@ class Inferer:
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
             avg_fps = fps_calculator.accumulate()
-
-            self.draw_text(
-                img_src,
-                f"FPS: {avg_fps:0.1f}",
-                pos=(20, 20),
-                font_scale=1.0,
-                text_color=(204, 85, 17),
-                text_color_bg=(255, 255, 255),
-                font_thickness=2,
-            )
+            
+            if self.files.type == 'video':
+                self.draw_text(
+                    img_src,
+                    f"FPS: {avg_fps:0.1f}",
+                    pos=(20, 20),
+                    font_scale=1.0,
+                    text_color=(204, 85, 17),
+                    text_color_bg=(255, 255, 255),
+                    font_thickness=2,
+                )
 
             if view_img:
                 if img_path not in windows:
