@@ -77,7 +77,7 @@ class Evaler:
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc="Inferencing model in val datasets.", ncols=NCOLS)
-        for imgs, targets, paths, shapes in pbar:
+        for i, (imgs, targets, paths, shapes) in enumerate(pbar):
 
             # pre-process
             t1 = time_sync()
@@ -99,7 +99,14 @@ class Evaler:
 
             # save result
             pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
-        return pred_results
+
+            # for tensorboard visualization, maximum images to show: 8
+            if i == 0:
+                vis_num = min(len(imgs), 8)
+                vis_outputs = outputs[:vis_num]
+                vis_paths = paths[:vis_num]
+
+        return pred_results, vis_outputs, vis_paths
 
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
