@@ -113,8 +113,9 @@ class Trainer:
         images, targets = self.prepro_data(self.batch_data, self.device)
 
         # plot train_batch and save to tensorboard
-        self.plot_train_batch(images, targets)
-        write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type='train')
+        if self.main_process:
+            self.plot_train_batch(images, targets)
+            write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type='train')
         
         # forward
         with amp.autocast(enabled=self.device != 'cpu'):
