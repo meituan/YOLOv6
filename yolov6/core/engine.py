@@ -184,7 +184,7 @@ class Trainer:
             w = math.ceil(scale * w)
             mosaic = cv2.resize(mosaic, tuple(int(x * ns) for x in (w, h)))
 
-        for i in range(bs + 1):
+        for i in range(bs):
             x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
             cv2.rectangle(mosaic, (x, y), (x + w, y + h), (255, 255, 255), thickness=2)  # borders
             cv2.putText(mosaic, f"{os.path.basename(paths[i])[:40]}", (x + 5, y + 15), 
