@@ -79,13 +79,14 @@ class ComputeLoss:
         for batch_idx in range(batch_size):
             num_gt = int(num_targets_list[batch_idx])
             num_gts += num_gt
-            if num_gt == 0:
-                cls_target = outputs.new_zeros((0, num_classes))
-                reg_target = outputs.new_zeros((0, 4))
-                l1_target = outputs.new_zeros((0, 4))
-                obj_target = outputs.new_zeros((total_num_anchors, 1))
-                fg_mask = outputs.new_zeros(total_num_anchors).bool()
-            else:
+
+            cls_target = outputs.new_zeros((0, num_classes))
+            reg_target = outputs.new_zeros((0, 4))
+            l1_target = outputs.new_zeros((0, 4))
+            obj_target = outputs.new_zeros((total_num_anchors, 1))
+            fg_mask = outputs.new_zeros(total_num_anchors).bool()
+            
+            if num_gt > 0:
 
                 gt_bboxes_per_image = targets[batch_idx, :num_gt, 1:5].mul_(gt_bboxes_scale)
                 gt_classes = targets[batch_idx, :num_gt, 0]
@@ -382,16 +383,18 @@ class ComputeLoss:
         matching_matrix = torch.zeros_like(cost, dtype=torch.uint8)
         ious_in_boxes_matrix = pair_wise_ious
         n_candidate_k = min(10, ious_in_boxes_matrix.size(1))
-        topk_ious, _ = torch.topk(ious_in_boxes_matrix, n_candidate_k, dim=1)
-        dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1)
-        dynamic_ks = dynamic_ks.tolist()
+        
+        if n_candidate_k != 0:
+            topk_ious, _ = torch.topk(ious_in_boxes_matrix, n_candidate_k, dim=1)
+            dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1)
+            dynamic_ks = dynamic_ks.tolist()
 
-        for gt_idx in range(num_gt):
-            _, pos_idx = torch.topk(
-                cost[gt_idx], k=dynamic_ks[gt_idx], largest=False
-            )
-            matching_matrix[gt_idx][pos_idx] = 1
-        del topk_ious, dynamic_ks, pos_idx
+            for gt_idx in range(num_gt):
+                _, pos_idx = torch.topk(
+                    cost[gt_idx], k=dynamic_ks[gt_idx], largest=False
+                )
+                matching_matrix[gt_idx][pos_idx] = 1
+            del topk_ious, dynamic_ks, pos_idx
 
         anchor_matching_gt = matching_matrix.sum(0)
         if (anchor_matching_gt > 1).sum() > 0:
