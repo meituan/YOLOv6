@@ -80,7 +80,7 @@ class Inferer:
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src.copy()
-            
+
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
@@ -105,7 +105,7 @@ class Inferer:
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
             avg_fps = fps_calculator.accumulate()
-            
+
             if self.files.type == 'video':
                 self.draw_text(
                     img_src,
@@ -147,7 +147,7 @@ class Inferer:
     @staticmethod
     def precess_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
-        image = letterbox(img_src, img_size, stride=stride)[0]  
+        image = letterbox(img_src, img_size, stride=stride)[0]
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image))

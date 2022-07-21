@@ -116,7 +116,7 @@ class Trainer:
         if self.main_process:
             self.plot_train_batch(images, targets)
             write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type='train')
-        
+
         # forward
         with amp.autocast(enabled=self.device != 'cpu'):
             preds = self.model(images)
@@ -188,7 +188,7 @@ class Trainer:
         for i in range(bs):
             x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
             cv2.rectangle(mosaic, (x, y), (x + w, y + h), (255, 255, 255), thickness=2)  # borders
-            cv2.putText(mosaic, f"{os.path.basename(paths[i])[:40]}", (x + 5, y + 15), 
+            cv2.putText(mosaic, f"{os.path.basename(paths[i])[:40]}", (x + 5, y + 15),
                         cv2.FONT_HERSHEY_COMPLEX, 0.5, color=(220, 220, 220), thickness=1)  # filename
             if len(targets) > 0:
                 ti = targets[targets[:, 0] == i]  # image targets
@@ -213,7 +213,7 @@ class Trainer:
                         label = f'{cls}'
                         cv2.rectangle(mosaic, (box[0], box[1]), (box[2], box[3]), color, thickness=1)
                         cv2.putText(mosaic, label, (box[0], box[1] - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=1)
-            
+
         self.vis_train_batch = mosaic.copy()
 
     def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=5):
