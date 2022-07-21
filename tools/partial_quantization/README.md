@@ -1,5 +1,5 @@
 # Partial Quantization
-The performance of YOLOv6s heavily degrades from 42.4% to 35.6% after traditional PTQ, which is unacceptable. To resolve this issue, we propose **partial quantization**. First we analyze the quantization sensitivity of all layers, and then we let the most sensitive layers to have full precision as a  compromise. 
+The performance of YOLOv6s heavily degrades from 42.4% to 35.6% after traditional PTQ, which is unacceptable. To resolve this issue, we propose **partial quantization**. First we analyze the quantization sensitivity of all layers, and then we let the most sensitive layers to have full precision as a  compromise.
 
 With partial quantization, we finally reach 42.1%, only 0.3% loss in accuracy, while the throughput of the partially quantized model is about 1.56 times that of the FP16 model at a batch size of 32. This method achieves a nice tradeoff between accuracy and throughput.
 
