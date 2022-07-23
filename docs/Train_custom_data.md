@@ -17,10 +17,11 @@ $ git clone https://github.com/meituan/YOLOv6.git
 
 One image corresponds to one label file, and the label format example is presented as below.
 
-| class_id | center_x | center_y | bbox_width | bbox_height |
-|----------|----------|----------|------------|-------------|
-| 0        | 0.300926 | 0.617063 | 0.601852   | 0.765873    |
-| 1        | 0.575    | 0.319531 | 0.4        | 0.551562    |
+```json
+# class_id center_x center_y bbox_width bbox_height
+0 0.300926 0.617063 0.601852 0.765873
+1 0.575 0.319531 0.4 0.551562
+```
 
 
 - Each row represents one object.
