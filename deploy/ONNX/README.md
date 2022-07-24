@@ -23,7 +23,8 @@ python ./deploy/ONNX/export_onnx.py \
 - `--half` : Whether to export half-precision model.
 - `--inplace` : Whether to set Detect() inplace.
 - `--simplify` : Whether to simplify onnx. Not support in end to end export.
-- `--end2end` : Whether to export end to end onnx model. Only support onnxruntime and TensorRT >= 8.0.0 .
+- `--end2end` : Whether to export end to end onnx model. Only support onnxruntime and TensorRT.
+- `--trt-version` :  Export onnx for TensorRT version. Support : 7 or 8.
 - `--with-preprocess` : Whether to export preprocess with bgr2rgb and normalize (divide by 255)
 - `--max-wh` : Default is None for TensorRT backend. Set int for onnxruntime backend.
 - `--topk-all` : Topk objects for every image.
@@ -63,6 +64,21 @@ The onnx outputs shape is ```nums x 7```.
 
 ```7```  means [`batch_index`,`x0`,`y0`,`x1`,`y1`,`classid`,`score`]
 
+### TensorRT backend (TensorRT version == 7.2.3.4)
+
+#### Usage
+
+```bash
+python ./deploy/ONNX/export_onnx.py \
+    --weights yolov6s.pt \
+    --img 640 \
+    --batch 1 \
+    --end2end \
+    --trt-version 7
+```
+
+You will get an onnx with **[BatchedNMSDynamic_TRT](https://github.com/triple-Mu/TensorRT/tree/main/plugin/batchedNMSPlugin)** plugin .
+
 ### TensorRT backend (TensorRT version>= 8.0.0)
 
 #### Usage
@@ -72,10 +88,14 @@ python ./deploy/ONNX/export_onnx.py \
     --weights yolov6s.pt \
     --img 640 \
     --batch 1 \
-    --end2end
+    --end2end \
+    --trt-version 8
 ```
 
 You will get an onnx with **[EfficientNMS_TRT](https://github.com/NVIDIA/TensorRT/tree/main/plugin/efficientNMSPlugin)** plugin .
+
+### Outputs Description
+
 The onnx outputs are as shown :
 
 <img src="https://user-images.githubusercontent.com/92794867/176650971-a4fa3d65-10d4-4b65-b8ef-00a2ff13406c.png" height="300px" />
@@ -91,10 +111,14 @@ The onnx outputs are as shown :
 
 You can export TensorRT engine use [trtexec](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#trtexec-ovr) tools.
 #### Usage
+
+For both TensorRT-7 and TensorRT-8  `trtexec`  tool is avaiable.
+
 ``` shell
-    trtexec --onnx=yolov6s.onnx \
-    --saveEngine=yolov6s.engine \
-    --fp16 # if export TensorRT fp16 model
+trtexec --onnx=yolov6s.onnx \
+        --saveEngine=yolov6s.engine \
+        --workspace=8192 # 8GB
+        --fp16 # if export TensorRT fp16 model
 ```
 
 ## Evaluate TensorRT model's performance

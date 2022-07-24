@@ -559,7 +559,7 @@ class LoadData:
             files = [p]  # files
         else:
             raise FileNotFoundError(f'Invalid path {p}')
-        
+
         imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
         vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
         self.files = imgp + vidp
@@ -601,7 +601,7 @@ class LoadData:
             img = cv2.imread(path)  # BGR
 
         return img, path, self.cap
-    
+
     def add_video(self, path):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
