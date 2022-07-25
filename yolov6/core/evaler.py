@@ -333,7 +333,7 @@ class Evaler:
         tmp = torch.randn(self.batch_size, 3, self.img_size, self.img_size).to(self.device)
         # warm up for 10 times
         for _ in range(10):
-            binding_addrs['images_arrays'] = int(tmp.data_ptr())
+            binding_addrs['images'] = int(tmp.data_ptr())
             context.execute_v2(list(binding_addrs.values()))
         dataloader = init_data(None,'val')
         self.speed_result = torch.zeros(4, device=self.device)
@@ -355,7 +355,7 @@ class Evaler:
 
             # inference
             t2 = time_sync()
-            binding_addrs['image_arrays'] = int(imgs.data_ptr())
+            binding_addrs['images'] = int(imgs.data_ptr())
             context.execute_v2(list(binding_addrs.values()))
             # in the last batch, the nb_img may less than the batch size, so we need to fetch the valid detect results by [:nb_img]
             nums = bindings['num_dets'].data[:nb_img]
