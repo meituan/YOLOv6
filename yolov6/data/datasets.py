@@ -424,6 +424,7 @@ class TrainValDataset(Dataset):
         try:
             im = Image.open(im_file)
             im.verify()  # PIL verify
+            im = Image.open(im_file)  # need to reload the image after using verify()
             shape = im.size  # (width, height)
             im_exif = im._getexif()
             if im_exif and ORIENTATION in im_exif:
