@@ -67,7 +67,7 @@ if __name__ == '__main__':
     if args.end2end:
         from yolov6.models.end2end import End2End
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
-                        max_wh=args.max_wh, device=device, trt_version=args.trt_version,with_preprocess=args.with_preprocess)
+                        max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
 
     y = model(img)  # dry run
 
