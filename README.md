@@ -21,6 +21,7 @@ YOLOv6 is composed of the following methods:
 
 
 ## Quick Start
+If you just want to try YOLOv6, check out the [live demo](https://yolov6.dagshubusercontent.com/).
 
 ### Install
 
