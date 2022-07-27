@@ -67,11 +67,12 @@ if __name__ == '__main__':
             m.inplace = args.inplace
     dynamic_axes = None
     if args.dynamic_batch:
+        args.batch_size = 'batch'
         dynamic_axes = {
             'images' :{
                 0:'batch',
             },}
-        if args.eng2end and args.max_wh is None:
+        if args.end2end and args.max_wh is None:
             output_axes = {
                 'num_dets': {0: 'batch'},
                 'det_boxes': {0: 'batch'},
@@ -102,7 +103,8 @@ if __name__ == '__main__':
                               do_constant_folding=True,
                               input_names=['images'],
                               output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
-                              if args.end2end and args.max_wh is None else ['outputs'],)
+                              if args.end2end and args.max_wh is None else ['outputs'],
+                              dynamic_axes=dynamic_axes)
             f.seek(0)
             # Checks
             onnx_model = onnx.load(f)  # load onnx model
