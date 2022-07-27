@@ -133,5 +133,14 @@ if __name__ == '__main__':
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
     if args.end2end:
         if args.max_wh is None:
+            info = f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}'
+            if args.dynamic_batch:
+                LOGGER.info('Dynamic batch export should define min/opt/max batchsize\n'+
+                            'We set min/opt/max = 1/16/32 default!')
+                wandh = 'x'.join(list(map(str,args.img_size)))
+                info += (f' --minShapes=images:1x3x{wandh}'+
+                f' --optShapes=images:16x3x{wandh}'+
+                f' --maxShapes=images:32x3x{wandh}'+
+                f' --shapes=images:16x3x{wandh}')
             LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
-            LOGGER.info(f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
+            LOGGER.info(info)
