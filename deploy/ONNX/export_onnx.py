@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
+    parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
     parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
@@ -64,6 +65,26 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
+    dynamic_axes = None
+    if args.dynamic_batch:
+        dynamic_axes = {
+            'images' :{
+                0:'batch',
+            },}
+        if args.eng2end and args.max_wh is None:
+            output_axes = {
+                'num_dets': {0: 'batch'},
+                'det_boxes': {0: 'batch'},
+                'det_scores': {0: 'batch'},
+                'det_classes': {0: 'batch'},
+            }
+        else:
+            output_axes = {
+                'outputs': {0: 'batch'},
+            }
+        dynamic_axes.update(output_axes)
+
+
     if args.end2end:
         from yolov6.models.end2end import End2End
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
