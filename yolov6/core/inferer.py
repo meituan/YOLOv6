@@ -29,7 +29,7 @@ class Inferer:
         self.device = device
         self.img_size = img_size
         cuda = self.device != 'cpu' and torch.cuda.is_available()
-        self.device = torch.device('cuda:0' if cuda else 'cpu')
+        self.device = torch.device(f'cuda:{device}' if cuda else 'cpu')
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
@@ -49,7 +49,7 @@ class Inferer:
         self.files = LoadData(source)
 
         # Switch model to deploy status
-        self.model_switch(self.model, self.img_size)
+        self.model_switch(self.model.model, self.img_size)
 
     def model_switch(self, model, img_size):
         ''' Model switch to deploy status '''
