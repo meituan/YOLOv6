@@ -75,6 +75,7 @@ class Trainer:
         self.batch_size = args.batch_size
         self.img_size = args.img_size
         self.vis_imgs_list = []
+        self.write_trainbatch_tb = args.write_trainbatch_tb
 
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
@@ -113,8 +114,8 @@ class Trainer:
     def train_in_steps(self):
         images, targets = self.prepro_data(self.batch_data, self.device)
 
-        # plot train_batch and save to tensorboard
-        if self.main_process:
+        # plot train_batch and save to tensorboard once an epoch
+        if self.write_trainbatch_tb and self.main_process and self.step == 0:
             self.plot_train_batch(images, targets)
             write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type='train')
 
@@ -151,6 +152,11 @@ class Trainer:
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
             save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
             del ckpt
+
+            # log for learning rate
+            lr = [x['lr'] for x in self.optimizer.param_groups] 
+            self.evaluate_results = list(self.evaluate_results) + lr
+            
             # log for tensorboard
             write_tblog(self.tblogger, self.epoch, self.evaluate_results, self.mean_loss)
 
