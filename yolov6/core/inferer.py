@@ -47,6 +47,7 @@ class Inferer:
 
         # Load data
         self.files = LoadData(source)
+        self.source = source
 
         # Switch model to deploy status
         self.model_switch(self.model.model, self.img_size)
@@ -75,8 +76,11 @@ class Inferer:
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
             t2 = time.time()
 
-            save_path = osp.join(save_dir, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, 'labels', osp.splitext(osp.basename(img_path))[0])
+            # Create output files in nested dirs that mirrors the structure of the images' dirs
+            rel_path = osp.relpath(osp.dirname(img_path), self.source)
+            save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
+            txt_path = osp.join(save_dir, rel_path, osp.splitext(osp.basename(img_path))[0])
+            os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src.copy()
