@@ -19,9 +19,7 @@ model = dict(
         type='EffiDeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
-        begin_indices=24,
         anchors=1,
-        out_indices=[17, 20, 23],
         strides=[8, 16, 32],
         iou_type='siou'
     )

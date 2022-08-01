@@ -22,11 +22,7 @@ class Model(nn.Module):
         self.backbone, self.neck, self.detect = build_network(config, channels, num_classes, anchors, num_layers)
 
         # Init Detect head
-        begin_indices = config.model.head.begin_indices
-        out_indices_head = config.model.head.out_indices
         self.stride = self.detect.stride
-        self.detect.i = begin_indices
-        self.detect.f = out_indices_head
         self.detect.initialize_biases()
 
         # Init weights
