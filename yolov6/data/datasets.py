@@ -262,6 +262,7 @@ class TrainValDataset(Dataset):
             osp.join(label_dir, osp.splitext(osp.basename(p))[0] + ".txt")
             for p in img_paths
         )
+        assert label_paths, f"No labels found in {label_dir}."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
             self.check_labels = True
@@ -306,8 +307,9 @@ class TrainValDataset(Dataset):
                 LOGGER.info("\n".join(msgs))
             if nf == 0:
                 LOGGER.warning(
-                    f"WARNING: No labels found in {osp.dirname(self.img_paths[0])}. "
+                    f"WARNING: No labels found in {osp.dirname(img_paths[0])}. "
                 )
+
 
         if self.task.lower() == "val":
             if self.data_dict.get("is_coco", False): # use original json file when evaluating on coco dataset.
@@ -425,7 +427,14 @@ class TrainValDataset(Dataset):
             im = Image.open(im_file)
             im.verify()  # PIL verify
             shape = im.size  # (width, height)
-            im_exif = im._getexif()
+            try:
+                im_exif = im._getexif()
+                if im_exif and ORIENTATION in im_exif:
+                    rotation = im_exif[ORIENTATION]
+                    if rotation in (6, 8):
+                        shape = (shape[1], shape[0])
+            except:
+                im_exif = None
             if im_exif and ORIENTATION in im_exif:
                 rotation = im_exif[ORIENTATION]
                 if rotation in (6, 8):
