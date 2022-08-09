@@ -1,19 +1,19 @@
 # Export ONNX Model
 
 ## Check requirements
+
 ```shell
 pip install onnx>=1.10.0
 ```
 
 ## Export script
+
 ```shell
 python ./deploy/ONNX/export_onnx.py \
     --weights yolov6s.pt \
     --img 640 \
     --batch 1
 ```
-
-
 
 #### Description of all arguments
 
@@ -45,6 +45,7 @@ Now YOLOv6 supports end to end detect for onnxruntime and TensorRT !
 If you want to deploy in TensorRT, make sure you have installed TensorRT >= 8.0.0 !
 
 ### onnxruntime backend
+
 #### Usage
 
 ```bash
@@ -77,7 +78,8 @@ python ./deploy/ONNX/export_onnx.py \
     --trt-version 7
 ```
 
-You will get an onnx with **[BatchedNMSDynamic_TRT](https://github.com/triple-Mu/TensorRT/tree/main/plugin/batchedNMSPlugin)** plugin .
+You will get an onnx
+with **[BatchedNMSDynamic_TRT](https://github.com/triple-Mu/TensorRT/tree/main/plugin/batchedNMSPlugin)** plugin .
 
 ### TensorRT backend (TensorRT version>= 8.0.0)
 
@@ -92,7 +94,8 @@ python ./deploy/ONNX/export_onnx.py \
     --trt-version 8
 ```
 
-You will get an onnx with **[EfficientNMS_TRT](https://github.com/NVIDIA/TensorRT/tree/main/plugin/efficientNMSPlugin)** plugin .
+You will get an onnx with **[EfficientNMS_TRT](https://github.com/NVIDIA/TensorRT/tree/main/plugin/efficientNMSPlugin)**
+plugin .
 
 ### Outputs Description
 
@@ -108,8 +111,9 @@ The onnx outputs are as shown :
 
 ```det_classes``` means the category of every topk(100) objects .
 
+You can export TensorRT engine
+use [trtexec](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#trtexec-ovr) tools.
 
-You can export TensorRT engine use [trtexec](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#trtexec-ovr) tools.
 #### Usage
 
 For both TensorRT-7 and TensorRT-8  `trtexec`  tool is avaiable.
@@ -124,6 +128,7 @@ trtexec --onnx=yolov6s.onnx \
 ## Evaluate TensorRT model's performance
 
 When we get the TensorRT model, we can evalute its performance by:
+
 ```
 python deploy/ONNX/eval_trt.py --weights yolov6s.engine --batch-size=1 --data data/coco.yaml
 ```

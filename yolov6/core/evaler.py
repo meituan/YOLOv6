@@ -66,7 +66,8 @@ class Evaler:
         if task != 'train':
             pad = 0.0 if task == 'speed' else 0.5
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
-                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad, rect=True,
+                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad,
+                                           rect=True,
                                            data_dict=self.data, task=task)[0]
         return dataloader
 
@@ -136,7 +137,7 @@ class Evaler:
             cocoEval = COCOeval(anno, pred, 'bbox')
             if self.is_coco:
                 imgIds = [int(os.path.basename(x).split(".")[0])
-                            for x in dataloader.dataset.img_paths]
+                          for x in dataloader.dataset.img_paths]
                 cocoEval.params.imgIds = imgIds
             cocoEval.evaluate()
             cocoEval.accumulate()
@@ -154,7 +155,7 @@ class Evaler:
         if task != 'train':
             n_samples = self.speed_result[0].item()
             pre_time, inf_time, nms_time = 1000 * self.speed_result[1:].cpu().numpy() / n_samples
-            for n, v in zip(["pre-process", "inference", "NMS"],[pre_time, inf_time, nms_time]):
+            for n, v in zip(["pre-process", "inference", "NMS"], [pre_time, inf_time, nms_time]):
                 LOGGER.info("Average {} time: {:.2f} ms".format(n, v))
 
     def box_convert(self, x):
@@ -255,19 +256,20 @@ class Evaler:
 
     @staticmethod
     def coco80_to_coco91_class():  # converts 80-index (val2014) to 91-index (paper)
-    # https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
+        # https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
         x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20,
-            21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-            41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-            59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
-            80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+             21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+             59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
+             80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
         return x
 
     def eval_trt(self, engine, stride=32):
         self.stride = stride
+
         def init_engine(engine):
             import tensorrt as trt
-            from collections import namedtuple,OrderedDict
+            from collections import namedtuple, OrderedDict
             Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
             logger = trt.Logger(trt.Logger.ERROR)
             trt.init_libnvinfer_plugins(logger, namespace="")
@@ -289,7 +291,8 @@ class Evaler:
             self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
             pad = 0.0 if task == 'speed' else 0.5
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
-                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad, rect=False,
+                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad,
+                                           rect=False,
                                            data_dict=self.data, task=task)[0]
             return dataloader
 
@@ -301,7 +304,7 @@ class Evaler:
                     continue
                 path, shape = Path(paths[i]), shapes[i][0]
                 gain = shapes[i][1][0][0]
-                pad = torch.tensor(shapes[i][1][1]*2).to(self.device)
+                pad = torch.tensor(shapes[i][1][1] * 2).to(self.device)
                 detbox = detbox[:n, :]
                 detbox -= pad
                 detbox /= gain
@@ -309,7 +312,7 @@ class Evaler:
                 detbox[:, 1].clamp_(0, shape[0])
                 detbox[:, 2].clamp_(0, shape[1])
                 detbox[:, 3].clamp_(0, shape[0])
-                detbox[:,2:] = detbox[:,2:] - detbox[:,:2]
+                detbox[:, 2:] = detbox[:, 2:] - detbox[:, :2]
                 detscore = detscore[:n]
                 detcls = detcls[:n]
 
@@ -335,7 +338,7 @@ class Evaler:
         for _ in range(10):
             binding_addrs['images'] = int(tmp.data_ptr())
             context.execute_v2(list(binding_addrs.values()))
-        dataloader = init_data(None,'val')
+        dataloader = init_data(None, 'val')
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc="Inferencing model in validation dataset.", ncols=NCOLS)
@@ -344,7 +347,7 @@ class Evaler:
             if nb_img != self.batch_size:
                 # pad to tensorrt model setted batch size
                 zeros = torch.zeros(self.batch_size - nb_img, 3, *imgs.shape[2:])
-                imgs = torch.cat([imgs, zeros],0)
+                imgs = torch.cat([imgs, zeros], 0)
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
             # preprocess

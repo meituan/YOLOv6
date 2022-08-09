@@ -9,12 +9,12 @@ model = dict(
         type='EfficientRep',
         num_repeats=[1, 6, 12, 18, 6],
         out_channels=[64, 128, 256, 512, 1024],
-        ),
+    ),
     neck=dict(
         type='RepPAN',
         num_repeats=[12, 12, 12, 12],
         out_channels=[256, 128, 128, 256, 256, 512],
-        ),
+    ),
     head=dict(
         type='EffiDeHead',
         in_channels=[128, 256, 512],
@@ -52,4 +52,4 @@ data_aug = dict(
 )
 
 # Choose Rep-block by the training Mode, choices=["repvgg", "hyper-search", "repopt"]
-training_mode='repopt'
+training_mode = 'repopt'

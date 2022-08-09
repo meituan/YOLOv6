@@ -46,7 +46,7 @@ def run(data,
         model=None,
         dataloader=None,
         save_dir='',
-        name = ''
+        name=''
         ):
     """ Run the evaluation process
 
@@ -57,7 +57,7 @@ def run(data,
 
     """
 
-     # task
+    # task
     Evaler.check_task(task)
     if task == 'train':
         save_dir = save_dir
@@ -73,7 +73,7 @@ def run(data,
 
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
-                iou_thres, device, half, save_dir)
+                 iou_thres, device, half, save_dir)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
 

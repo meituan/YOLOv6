@@ -10,10 +10,10 @@ class RepPANNeck(nn.Module):
     """
 
     def __init__(
-        self,
-        channels_list=None,
-        num_repeats=None,
-        block=RepVGGBlock,
+            self,
+            channels_list=None,
+            num_repeats=None,
+            block=RepVGGBlock,
     ):
         super().__init__()
 
@@ -87,7 +87,6 @@ class RepPANNeck(nn.Module):
         )
 
     def forward(self, input):
-
         (x2, x1, x0) = input
 
         fpn_out0 = self.reduce_layer0(x0)

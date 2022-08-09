@@ -9,11 +9,11 @@ class EfficientRep(nn.Module):
     '''
 
     def __init__(
-        self,
-        in_channels=3,
-        channels_list=None,
-        num_repeats=None,
-        block=RepVGGBlock
+            self,
+            in_channels=3,
+            channels_list=None,
+            num_repeats=None,
+            block=RepVGGBlock
     ):
         super().__init__()
 
@@ -93,7 +93,6 @@ class EfficientRep(nn.Module):
         )
 
     def forward(self, x):
-
         outputs = []
         x = self.stem(x)
         x = self.ERBlock_2(x)

@@ -14,6 +14,7 @@ class Model(nn.Module):
     The default parts are EfficientRep Backbone, Rep-PAN and
     Efficient Decoupled Head.
     '''
+
     def __init__(self, config, channels=3, num_classes=None, anchors=None):  # model, input channels, number of classes
         super().__init__()
         # Build network

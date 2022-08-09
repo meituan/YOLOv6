@@ -9,6 +9,7 @@ class Detect(nn.Module):
     With hardware-aware degisn, the decoupled head is optimized with
     hybridchannels methods.
     '''
+
     def __init__(self, num_classes=80, anchors=1, num_layers=3, inplace=True, head_layers=None):  # detection layer
         super().__init__()
         assert head_layers is not None
@@ -36,13 +37,13 @@ class Detect(nn.Module):
 
         # Efficient decoupled head layers
         for i in range(num_layers):
-            idx = i*6
+            idx = i * 6
             self.stems.append(head_layers[idx])
-            self.cls_convs.append(head_layers[idx+1])
-            self.reg_convs.append(head_layers[idx+2])
-            self.cls_preds.append(head_layers[idx+3])
-            self.reg_preds.append(head_layers[idx+4])
-            self.obj_preds.append(head_layers[idx+5])
+            self.cls_convs.append(head_layers[idx + 1])
+            self.reg_convs.append(head_layers[idx + 2])
+            self.cls_preds.append(head_layers[idx + 3])
+            self.reg_preds.append(head_layers[idx + 4])
+            self.obj_preds.append(head_layers[idx + 5])
 
     def initialize_biases(self):
         for conv in self.cls_preds:
@@ -79,7 +80,7 @@ class Detect(nn.Module):
                     self.grid[i] = torch.stack((xv, yv), 2).view(1, self.na, ny, nx, 2).float()
                 if self.inplace:
                     y[..., 0:2] = (y[..., 0:2] + self.grid[i]) * self.stride[i]  # xy
-                    y[..., 2:4] = torch.exp(y[..., 2:4]) * self.stride[i] # wh
+                    y[..., 2:4] = torch.exp(y[..., 2:4]) * self.stride[i]  # wh
                 else:
                     xy = (y[..., 0:2] + self.grid[i]) * self.stride[i]  # xy
                     wh = torch.exp(y[..., 2:4]) * self.stride[i]  # wh

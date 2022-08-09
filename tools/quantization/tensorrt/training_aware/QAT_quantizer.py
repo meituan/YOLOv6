@@ -10,6 +10,7 @@ from absl import logging
 from pytorch_quantization import nn as quant_nn
 from pytorch_quantization import quant_modules
 
+
 # Call this function before defining the model
 def tensorrt_official_qat():
     # Quantization Aware Training is based on Straight Through Estimator (STE) derivative approximation.

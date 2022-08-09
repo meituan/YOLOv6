@@ -9,7 +9,8 @@ import argparse
 # VOC2007 test:     438MB, 4953 images
 # VOC2012 trainval: 1.95GB, 17126 images
 
-VOC_NAMES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
+VOC_NAMES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
+             'dog',
              'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
 
 
@@ -18,6 +19,7 @@ def convert_label(path, lb_path, year, image_id):
         dw, dh = 1. / size[0], 1. / size[1]
         x, y, w, h = (box[0] + box[1]) / 2.0 - 1, (box[2] + box[3]) / 2.0 - 1, box[1] - box[0], box[3] - box[2]
         return x * dw, y * dh, w * dw, h * dh
+
     in_file = open(os.path.join(path, f'VOC{year}/Annotations/{image_id}.xml'))
     out_file = open(lb_path, 'w')
     tree = ET.parse(in_file)
@@ -49,7 +51,7 @@ def gen_voc07_12(voc_path):
     if not os.path.exists(dataset_root):
         os.makedirs(dataset_root)
 
-    dataset_settings = {'train': ['train2007', 'val2007', 'train2012', 'val2012'], 'val':['test2007']}
+    dataset_settings = {'train': ['train2007', 'val2007', 'train2012', 'val2012'], 'val': ['test2007']}
     for item in ['images', 'labels']:
         for data_type, data_list in dataset_settings.items():
             for data_name in data_list:
@@ -82,12 +84,11 @@ def main(args):
                 lb_path = os.path.join(lbs_path, f'{id}.txt')  # new label path
                 convert_label(voc_path, lb_path, year, id)  # convert labels to YOLO format
                 if os.path.exists(f):
-                    shutil.move(f, imgs_path)       # move image
+                    shutil.move(f, imgs_path)  # move image
         except Exception as e:
             print(f'[Warning]: {e} {year}{image_set} convert fail!')
 
     gen_voc07_12(voc_path)
-
 
 
 if __name__ == '__main__':

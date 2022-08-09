@@ -7,6 +7,7 @@ import torch
 class IOUloss:
     """ Calculate IoU loss.
     """
+
     def __init__(self, box_format='xywh', iou_type='ciou', reduction='none', eps=1e-7):
         """ Setting of the class.
         Args:

@@ -19,7 +19,6 @@ from yolov6.layers.common import *
 from yolov6.utils.events import LOGGER
 from yolov6.utils.checkpoint import load_checkpoint
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='./yolov6s.pt', help='weights path')
@@ -68,7 +67,7 @@ if __name__ == '__main__':
                           do_constant_folding=True,
                           input_names=['image_arrays'],
                           output_names=['outputs'],
-                         )
+                          )
 
         # Checks
         onnx_model = onnx.load(export_file)  # load onnx model

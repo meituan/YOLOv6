@@ -9,6 +9,7 @@ from pytorch_quantization.tensor_quant import QuantDescriptor
 
 from tools.partial_quantization.utils import set_module, module_quant_disable
 
+
 def collect_stats(model, data_loader, batch_number, device='cuda'):
     """Feed data to the network and collect statistic"""
 
@@ -23,7 +24,7 @@ def collect_stats(model, data_loader, batch_number, device='cuda'):
 
     for i, data_tuple in enumerate(data_loader):
         image = data_tuple[0]
-        image = image.float()/255.0
+        image = image.float() / 255.0
         model(image.to(device))
         if i + 1 >= batch_number:
             break
@@ -37,6 +38,7 @@ def collect_stats(model, data_loader, batch_number, device='cuda'):
             else:
                 module.enable()
 
+
 def compute_amax(model, **kwargs):
     # Load calib result
     for name, module in model.named_modules():
@@ -48,6 +50,7 @@ def compute_amax(model, **kwargs):
                     module.load_calib_amax(**kwargs)
             print(F"{name:40}: {module}")
 
+
 def quantable_op_check(k, quantable_ops):
     if quantable_ops is None:
         return True
@@ -57,8 +60,8 @@ def quantable_op_check(k, quantable_ops):
     else:
         return False
 
-def quant_model_init(model, device):
 
+def quant_model_init(model, device):
     model_ptq = copy.deepcopy(model)
     model_ptq.eval()
     model_ptq.to(device)
@@ -87,8 +90,8 @@ def quant_model_init(model, device):
                                               kernel_size,
                                               stride,
                                               padding,
-                                              quant_desc_input = conv2d_input_default_desc,
-                                              quant_desc_weight = conv2d_weight_default_desc)
+                                              quant_desc_input=conv2d_input_default_desc,
+                                              quant_desc_weight=conv2d_weight_default_desc)
             quant_conv.weight.data.copy_(m.weight.detach())
             if m.bias is not None:
                 quant_conv.bias.data.copy_(m.bias.detach())
@@ -107,12 +110,12 @@ def quant_model_init(model, device):
             stride = m.stride
             padding = m.padding
             quant_convtrans = quant_nn.QuantConvTranspose2d(in_channels,
-                                                       out_channels,
-                                                       kernel_size,
-                                                       stride,
-                                                       padding,
-                                                       quant_desc_input = convtrans2d_input_default_desc,
-                                                       quant_desc_weight = convtrans2d_weight_default_desc)
+                                                            out_channels,
+                                                            kernel_size,
+                                                            stride,
+                                                            padding,
+                                                            quant_desc_input=convtrans2d_input_default_desc,
+                                                            quant_desc_weight=convtrans2d_weight_default_desc)
             quant_convtrans.weight.data.copy_(m.weight.detach())
             if m.bias is not None:
                 quant_convtrans.bias.data.copy_(m.bias.detach())
@@ -135,13 +138,14 @@ def quant_model_init(model, device):
                                                       padding,
                                                       dilation,
                                                       ceil_mode,
-                                                      quant_desc_input = conv2d_input_default_desc)
+                                                      quant_desc_input=conv2d_input_default_desc)
             set_module(model_ptq, k, quant_maxpool2d)
         else:
             # module can not be quantized, continue
             continue
 
     return model_ptq.to(device)
+
 
 def do_ptq(model, train_loader, batch_number, device):
     model_ptq = quant_model_init(model, device)
@@ -151,10 +155,12 @@ def do_ptq(model, train_loader, batch_number, device):
         compute_amax(model_ptq, method='entropy')
     return model_ptq
 
+
 def load_ptq(model, calib_path, device):
     model_ptq = quant_model_init(model, device)
     model_ptq.load_state_dict(torch.load(calib_path)['model'].state_dict())
     return model_ptq
+
 
 def partial_quant(model_ptq, quantable_ops=None):
     # ops not in quantable_ops will reserve full-precision.
@@ -163,6 +169,6 @@ def partial_quant(model_ptq, quantable_ops=None):
             continue
         # enable full-precision
         if isinstance(m, quant_nn.QuantConv2d) or \
-            isinstance(m, quant_nn.QuantConvTranspose2d) or \
-            isinstance(m, quant_nn.QuantMaxPool2d):
+                isinstance(m, quant_nn.QuantConvTranspose2d) or \
+                isinstance(m, quant_nn.QuantMaxPool2d):
             module_quant_disable(model_ptq, k)

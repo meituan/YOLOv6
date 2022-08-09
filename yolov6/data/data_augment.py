@@ -73,7 +73,6 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1, eps=1e-16):  #
 
 def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
                   new_shape=(640, 640)):
-
     n = len(labels)
     height, width = new_shape
 
@@ -138,12 +137,11 @@ def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate)
 
 
 def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
-
     assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
 
     labels4 = []
     s = img_size
-    yc, xc = (int(random.uniform(s//2, 3*s//2)) for _ in range(2))  # mosaic center x, y
+    yc, xc = (int(random.uniform(s // 2, 3 * s // 2)) for _ in range(2))  # mosaic center x, y
     for i in range(len(imgs)):
         # Load image
         img, h, w = imgs[i], hs[i], ws[i]
