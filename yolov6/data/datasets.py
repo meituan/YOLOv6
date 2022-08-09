@@ -555,6 +555,8 @@ class TrainValDataset(Dataset):
 
 
 class LoadData:
+    count: int
+
     def __init__(self, path):
         if path != 'camera':
             p = str(Path(path).resolve())  # os-agnostic absolute path

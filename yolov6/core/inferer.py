@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-from yolov6.utils.torch_utils import get_model_info
+
 import math
 import os
 import os.path as osp
@@ -11,9 +11,11 @@ import cv2
 import numpy as np
 import torch
 from PIL import ImageFont
+from tensorboard.compat import tf
 from tqdm import tqdm
 from yolov6.data.data_augment import letterbox
 from yolov6.layers.common import DetectBackend
+from yolov6.utils import nms
 from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.utils.nms import non_max_suppression
 
@@ -111,11 +113,16 @@ class Inferer:
 
                     if save_img:
                         class_num = int(cls)  # integer class
+                        counter = str(len(det))
                         label = None if hide_labels else (
-                            self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+                            self.class_names[
+                                class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
-                        self.plot_box_and_label(img_ori, max(round(sum(
-                            img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
+                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2),
+                                                xyxy, label, color=self.generate_colors(class_num, True))
+
+                        cv2.putText(img_ori, counter, (25, 25), 0, max(round(sum(img_ori.shape) / 2 * 0.003), 2) / 3,
+                                    (56, 108, 32), 2, cv2.LINE_AA)
 
                 img_src = np.asarray(img_ori)
 
