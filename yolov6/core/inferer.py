@@ -2,7 +2,6 @@
 # -*- coding:utf-8 -*-
 
 import math
-import os
 import os.path as osp
 import warnings
 from pathlib import Path
