@@ -18,6 +18,7 @@ import torch
 from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
+from pathlib import Path
 
 from .data_augment import (
     augment_hsv,
@@ -29,7 +30,8 @@ from .data_augment import (
 from yolov6.utils.events import LOGGER
 
 # Parameters
-IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
+IMG_FORMATS = ["bmp", "jpg", "jpeg", "png",
+               "tif", "tiff", "dng", "webp", "mpo"]
 VID_FORMATS = ["mp4", "mov", "avi", "mkv"]
 # Get orientation exif tag
 for k, v in ExifTags.TAGS.items():
@@ -41,27 +43,27 @@ for k, v in ExifTags.TAGS.items():
 class TrainValDataset(Dataset):
     # YOLOv6 train_loader/val_loader, loads images and labels for training and validation
     def __init__(
-        self,
-        img_dir,
-        img_size=640,
-        batch_size=16,
-        augment=False,
-        hyp=None,
-        rect=False,
-        check_images=False,
-        check_labels=False,
-        stride=32,
-        pad=0.0,
-        rank=-1,
-        data_dict=None,
-        task="train",
+            self,
+            img_dir,
+            img_size=640,
+            batch_size=16,
+            augment=False,
+            hyp=None,
+            rect=False,
+            check_images=False,
+            check_labels=False,
+            stride=32,
+            pad=0.0,
+            rank=-1,
+            class_names=None,
+            task="train",
     ):
-        assert task.lower() in ("train", "val", "speed"), f"Not supported task: {task}"
+        assert task.lower() in (
+            "train", "val", "speed"), f"Not supported task: {task}"
         t1 = time.time()
         self.__dict__.update(locals())
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
-        self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -107,8 +109,10 @@ class TrainValDataset(Dataset):
                 if self.rect
                 else self.img_size
             )  # final letterboxed shape
-            img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
-            shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
+            img, ratio, pad = letterbox(
+                img, shape, auto=False, scaleup=self.augment)
+            # for COCO mAP rescaling
+            shapes = (h0, w0), ((h / h0, w / w0), pad)
 
             labels = self.labels[index].copy()
             if labels.size:
@@ -117,16 +121,16 @@ class TrainValDataset(Dataset):
                 # new boxes
                 boxes = np.copy(labels[:, 1:])
                 boxes[:, 0] = (
-                    w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
+                        w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
                 )  # top left x
                 boxes[:, 1] = (
-                    h * (labels[:, 2] - labels[:, 4] / 2) + pad[1]
+                        h * (labels[:, 2] - labels[:, 4] / 2) + pad[1]
                 )  # top left y
                 boxes[:, 2] = (
-                    w * (labels[:, 1] + labels[:, 3] / 2) + pad[0]
+                        w * (labels[:, 1] + labels[:, 3] / 2) + pad[0]
                 )  # bottom right x
                 boxes[:, 3] = (
-                    h * (labels[:, 2] + labels[:, 4] / 2) + pad[1]
+                        h * (labels[:, 2] + labels[:, 4] / 2) + pad[1]
                 )  # bottom right y
                 labels[:, 1:] = boxes
 
@@ -204,28 +208,18 @@ class TrainValDataset(Dataset):
         valid_img_record = osp.join(
             osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
         )
+        img_info = {}
         NUM_THREADS = min(8, os.cpu_count())
-
-        img_paths = glob.glob(osp.join(img_dir, "*"), recursive=True)
-        img_paths = sorted(
-            p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS
-        )
-        assert img_paths, f"No images found in {img_dir}."
-
-        img_hash = self.get_hash(img_paths)
-        if osp.exists(valid_img_record):
-            with open(valid_img_record, "r") as f:
-                cache_info = json.load(f)
-                if "image_hash" in cache_info and cache_info["image_hash"] == img_hash:
-                    img_info = cache_info["information"]
-                else:
-                    self.check_images = True
-        else:
-            self.check_images = True
-
         # check images
-        if self.check_images and self.main_process:
-            img_info = {}
+        if (
+                self.check_images or not osp.exists(valid_img_record)
+        ) and self.main_process:
+            img_paths = glob.glob(osp.join(img_dir, "*"), recursive=True)
+            img_paths = sorted(
+                p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS
+            )
+            assert img_paths, f"No images found in {img_dir}."
+
             nc, msgs = 0, []  # number corrupt, messages
             LOGGER.info(
                 f"{self.task}: Checking formats of images with {NUM_THREADS} process(es): "
@@ -246,48 +240,51 @@ class TrainValDataset(Dataset):
             if msgs:
                 LOGGER.info("\n".join(msgs))
 
-            cache_info = {"information": img_info, "image_hash": img_hash}
             # save valid image paths.
             with open(valid_img_record, "w") as f:
-                json.dump(cache_info, f)
+                json.dump(img_info, f)
 
         # check and load anns
         label_dir = osp.join(
             osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
         )
-        assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
-
+        assert osp.exists(
+            label_dir), f"{label_dir} is an invalid directory path!"
+        if not img_info:
+            with open(valid_img_record, "r") as f:
+                img_info = json.load(f)
+                assert (
+                    img_info
+                ), "No information in record files, please add option --check_images."
         img_paths = list(img_info.keys())
-        label_paths = sorted(
-            osp.join(label_dir, osp.splitext(osp.basename(p))[0] + ".txt")
+        label_paths = [
+            osp.join(label_dir, osp.basename(p).split(".")[0] + ".txt")
             for p in img_paths
-        )
-        assert label_paths, f"No labels found in {label_dir}."
-        label_hash = self.get_hash(label_paths)
-        if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
-            self.check_labels = True
-
-        if self.check_labels:
-            cache_info["label_hash"] = label_hash
+        ]
+        if (
+                self.check_labels or "labels" not in img_info[img_paths[0]]
+        ):  # key 'labels' not saved in img_info
             nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number corrupt, messages
             LOGGER.info(
                 f"{self.task}: Checking formats of labels with {NUM_THREADS} process(es): "
             )
             with Pool(NUM_THREADS) as pool:
                 pbar = pool.imap(
-                    TrainValDataset.check_label_files, zip(img_paths, label_paths)
+                    TrainValDataset.check_label_files, zip(
+                        img_paths, label_paths)
                 )
-                pbar = tqdm(pbar, total=len(label_paths)) if self.main_process else pbar
+                pbar = tqdm(pbar, total=len(label_paths)
+                            ) if self.main_process else pbar
                 for (
-                    img_path,
-                    labels_per_file,
-                    nc_per_file,
-                    nm_per_file,
-                    nf_per_file,
-                    ne_per_file,
-                    msg,
+                        img_path,
+                        labels_per_file,
+                        nc_per_file,
+                        nm_per_file,
+                        nf_per_file,
+                        ne_per_file,
+                        msg,
                 ) in pbar:
-                    if nc_per_file == 0:
+                    if img_path:
                         img_info[img_path]["labels"] = labels_per_file
                     else:
                         img_info.pop(img_path)
@@ -302,28 +299,28 @@ class TrainValDataset(Dataset):
             if self.main_process:
                 pbar.close()
                 with open(valid_img_record, "w") as f:
-                    json.dump(cache_info, f)
+                    json.dump(img_info, f)
             if msgs:
                 LOGGER.info("\n".join(msgs))
             if nf == 0:
                 LOGGER.warning(
-                    f"WARNING: No labels found in {osp.dirname(img_paths[0])}. "
+                    f"WARNING: No labels found in {osp.dirname(self.img_paths[0])}. "
                 )
-
-
+        else:
+            with open(valid_img_record) as f:
+                img_info = json.load(f)
         if self.task.lower() == "val":
-            if self.data_dict.get("is_coco", False): # use original json file when evaluating on coco dataset.
-                assert osp.exists(self.data_dict["anno_path"]), "Eval on coco dataset must provide valid path of the annotation file in config file: data/coco.yaml"
-            else:
-                assert (
-                    self.class_names
-                ), "Class names is required when converting labels to coco format for evaluating."
-                save_dir = osp.join(osp.dirname(osp.dirname(img_dir)), "annotations")
-                if not osp.exists(save_dir):
-                    os.mkdir(save_dir)
-                save_path = osp.join(
-                    save_dir, "instances_" + osp.basename(img_dir) + ".json"
-                )
+            assert (
+                self.class_names
+            ), "Class names is required when converting labels to coco format for evaluating."
+            save_dir = osp.join(osp.dirname(
+                osp.dirname(img_dir)), "annotations")
+            if not osp.exists(save_dir):
+                os.mkdir(save_dir)
+            save_path = osp.join(
+                save_dir, "instances_" + osp.basename(img_dir) + ".json"
+            )
+            if not osp.exists(save_path):
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
                 )
@@ -361,7 +358,8 @@ class TrainValDataset(Dataset):
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
-        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp)
+        img, labels = mosaic_augmentation(
+            self.img_size, imgs, hs, ws, labels, self.hyp)
         return img, labels
 
     def general_augment(self, img, labels):
@@ -413,10 +411,10 @@ class TrainValDataset(Dataset):
             elif mini > 1:
                 shapes[i] = [1, 1 / mini]
         self.batch_shapes = (
-            np.ceil(np.array(shapes) * self.img_size / self.stride + self.pad).astype(
-                np.int
-            )
-            * self.stride
+                np.ceil(np.array(shapes) * self.img_size / self.stride + self.pad).astype(
+                    np.int
+                )
+                * self.stride
         )
 
     @staticmethod
@@ -427,21 +425,16 @@ class TrainValDataset(Dataset):
             im = Image.open(im_file)
             im.verify()  # PIL verify
             shape = im.size  # (width, height)
-            try:
-                im_exif = im._getexif()
-                if im_exif and ORIENTATION in im_exif:
-                    rotation = im_exif[ORIENTATION]
-                    if rotation in (6, 8):
-                        shape = (shape[1], shape[0])
-            except:
-                im_exif = None
+            im_exif = im._getexif()
             if im_exif and ORIENTATION in im_exif:
                 rotation = im_exif[ORIENTATION]
                 if rotation in (6, 8):
                     shape = (shape[1], shape[0])
 
-            assert (shape[0] > 9) & (shape[1] > 9), f"image size {shape} <10 pixels"
-            assert im.format.lower() in IMG_FORMATS, f"invalid image format {im.format}"
+            assert (shape[0] > 9) & (
+                    shape[1] > 9), f"image size {shape} <10 pixels"
+            assert im.format.lower(
+            ) in IMG_FORMATS, f"invalid image format {im.format}"
             if im.format.lower() in ("jpg", "jpeg"):
                 with open(im_file, "rb") as f:
                     f.seek(-2, 2)
@@ -459,7 +452,8 @@ class TrainValDataset(Dataset):
     @staticmethod
     def check_label_files(args):
         img_path, lb_path = args
-        nm, nf, ne, nc, msg = 0, 0, 0, 0, ""  # number (missing, found, empty, message
+        # number (missing, found, empty, message
+        nm, nf, ne, nc, msg = 0, 0, 0, 0, ""
         try:
             if osp.exists(lb_path):
                 nf = 1  # label found
@@ -473,10 +467,10 @@ class TrainValDataset(Dataset):
                         len(l) == 5 for l in labels
                     ), f"{lb_path}: wrong label format."
                     assert (
-                        labels >= 0
+                            labels >= 0
                     ).all(), f"{lb_path}: Label values error: all values in label file must > 0"
                     assert (
-                        labels[:, 1:] <= 1
+                            labels[:, 1:] <= 1
                     ).all(), f"{lb_path}: Label values error: all coordinates must be normalized"
 
                     _, indices = np.unique(labels, axis=0, return_index=True)
@@ -495,7 +489,7 @@ class TrainValDataset(Dataset):
         except Exception as e:
             nc = 1
             msg = f"WARNING: {lb_path}: ignoring invalid labels: {e}"
-            return img_path, None, nc, nm, nf, ne, msg
+            return None, None, nc, nm, nf, ne, msg
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
@@ -559,29 +553,46 @@ class TrainValDataset(Dataset):
         h = hashlib.md5("".join(paths).encode())
         return h.hexdigest()
 
-class LoadData:
-    def __init__(self, path):
-        p = str(Path(path).resolve())  # os-agnostic absolute path
-        if os.path.isdir(p):
-            files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
-        elif os.path.isfile(p):
-            files = [p]  # files
-        else:
-            raise FileNotFoundError(f'Invalid path {p}')
 
-        imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
-        vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
-        self.files = imgp + vidp
-        self.nf = len(self.files)
-        self.type = 'image'
-        if any(vidp):
-            self.add_video(vidp[0])  # new video
-        else:
-            self.cap = None
+class LoadData:
+    count: int
+
+    def __init__(self, path):
+        if path != 'camera':
+            p = str(Path(path).resolve())  # os-agnostic absolute path
+            if os.path.isdir(p):
+                files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
+            elif os.path.isfile(p):
+                files = [p]  # files
+            else:
+                raise FileNotFoundError(f'Invalid path {p}')
+            imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
+            vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
+            self.files = imgp + vidp
+            self.nf = len(self.files)
+            self.type = 'image'
+            if any(vidp):
+                self.add_video(vidp[0])  # new video
+            else:
+                self.cap = None
+        elif path == 'camera':
+            imgp = []
+            vidp = [cv2.VideoCapture(0)]
+            self.files = imgp + vidp
+            self.nf = len(self.files)
+            self.type = 'image'
+            if any(vidp):
+                self.add_video(0)  # new video
+            else:
+                self.cap = None
 
     @staticmethod
     def checkext(path):
-        file_type = 'image' if path.split('.')[-1].lower() in IMG_FORMATS else 'video'
+        try:
+            file_type = 'image' if path.split(
+                '.')[-1].lower() in IMG_FORMATS else 'video'
+        except AttributeError:
+            file_type = 'video'
         return file_type
 
     def __iter__(self):
@@ -618,3 +629,6 @@ class LoadData:
 
     def __len__(self):
         return self.nf  # number of files
+
+    def stop(self):
+        self.videoCapture.release()

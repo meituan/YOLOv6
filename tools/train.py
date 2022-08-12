@@ -42,7 +42,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--gpu_count', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume the most recent training')
-    parser.add_argument('--write_trainbatch_tb', action='store_true', help='write train_batch image to tensorboard once an epoch, may slightly slower train speed if open')
+    parser.add_argument('--write_trainbatch_tb', action='store_true',
+                        help='write train_batch image to tensorboard once an epoch, may slightly slower train speed if open')
 
     return parser
 
@@ -61,7 +62,7 @@ def check_and_init(args):
             with open(resume_opt_file_path) as f:
                 args = argparse.Namespace(**yaml.safe_load(f))  # load args value from args.yaml
         else:
-            LOGGER.warning(f'We can not find the path of {Path(checkpoint_path).parent.parent / "args.yaml"},'\
+            LOGGER.warning(f'We can not find the path of {Path(checkpoint_path).parent.parent / "args.yaml"},' \
                            f' we will save exp log to {Path(checkpoint_path).parent.parent}')
             LOGGER.warning(f'In this case, make sure to provide configuration, such as data, batch size.')
             args.save_dir = str(Path(checkpoint_path).parent.parent)
@@ -77,7 +78,7 @@ def check_and_init(args):
     # check device
     device = select_device(args.device)
     # set random seed
-    set_random_seed(1+args.rank, deterministic=(args.rank == -1))
+    set_random_seed(1 + args.rank, deterministic=(args.rank == -1))
     # save args
     if master_process:
         save_yaml(vars(args), osp.join(args.save_dir, 'args.yaml'))
@@ -93,12 +94,12 @@ def main(args):
     # reload envs because args was chagned in check_and_init(args)
     args.rank, args.local_rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
-    if args.local_rank != -1: # if DDP mode
+    if args.local_rank != -1:  # if DDP mode
         torch.cuda.set_device(args.local_rank)
         device = torch.device('cuda', args.local_rank)
         LOGGER.info('Initializing process group... ')
         dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo", \
-                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size)
+                                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size)
 
     # Start
     trainer = Trainer(args, cfg, device)

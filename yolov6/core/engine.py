@@ -58,7 +58,7 @@ class Trainer:
         # tensorboard
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
         self.start_epoch = 0
-        #resume
+        # resume
         if hasattr(self, "ckpt"):
             resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
             model.load_state_dict(resume_state_dict, strict=True)  # load
@@ -135,28 +135,28 @@ class Trainer:
         eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 1
         is_val_epoch = (not self.args.eval_final_only or (remaining_epochs == 1)) and (self.epoch % eval_interval == 0)
         if self.main_process:
-            self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
+            self.ema.update_attr(self.model, include=['nc', 'names', 'stride'])  # update attributes for ema model
             if is_val_epoch:
                 self.eval_model()
                 self.ap = self.evaluate_results[0] * 0.1 + self.evaluate_results[1] * 0.9
                 self.best_ap = max(self.ap, self.best_ap)
             # save ckpt
             ckpt = {
-                    'model': deepcopy(de_parallel(self.model)).half(),
-                    'ema': deepcopy(self.ema.ema).half(),
-                    'updates': self.ema.updates,
-                    'optimizer': self.optimizer.state_dict(),
-                    'epoch': self.epoch,
-                    }
+                'model': deepcopy(de_parallel(self.model)).half(),
+                'ema': deepcopy(self.ema.ema).half(),
+                'updates': self.ema.updates,
+                'optimizer': self.optimizer.state_dict(),
+                'epoch': self.epoch,
+            }
 
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
             save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
             del ckpt
 
             # log for learning rate
-            lr = [x['lr'] for x in self.optimizer.param_groups] 
+            lr = [x['lr'] for x in self.optimizer.param_groups]
             self.evaluate_results = list(self.evaluate_results) + lr
-            
+
             # log for tensorboard
             write_tblog(self.tblogger, self.epoch, self.evaluate_results, self.mean_loss)
 
@@ -219,7 +219,8 @@ class Trainer:
                     if labels:
                         label = f'{cls}'
                         cv2.rectangle(mosaic, (box[0], box[1]), (box[2], box[3]), color, thickness=1)
-                        cv2.putText(mosaic, label, (box[0], box[1] - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=1)
+                        cv2.putText(mosaic, label, (box[0], box[1] - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color,
+                                    thickness=1)
 
         self.vis_train_batch = mosaic.copy()
 
@@ -227,7 +228,7 @@ class Trainer:
         # plot validation predictions
         self.vis_imgs_list = []
         for (vis_output, vis_path) in zip(vis_outputs, vis_paths):
-            vis_output_array = vis_output.cpu().numpy()     # xyxy
+            vis_output_array = vis_output.cpu().numpy()  # xyxy
             ori_img = cv2.imread(vis_path)
 
             for bbox_idx, vis_bbox in enumerate(vis_output_array):
@@ -241,18 +242,20 @@ class Trainer:
                 # draw top n bbox
                 if box_score < vis_conf or bbox_idx > vis_max_box_num:
                     break
-                cv2.rectangle(ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]), thickness=1)
-                cv2.putText(ori_img, f"{self.data_dict['names'][cls_id]}: {box_score:.2f}", (x_tl, y_tl - 10), cv2.FONT_HERSHEY_COMPLEX, 0.5, tuple([int(x) for x in self.color[cls_id]]), thickness=1)
+                cv2.rectangle(ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]),
+                              thickness=1)
+                cv2.putText(ori_img, f"{self.data_dict['names'][cls_id]}: {box_score:.2f}", (x_tl, y_tl - 10),
+                            cv2.FONT_HERSHEY_COMPLEX, 0.5, tuple([int(x) for x in self.color[cls_id]]), thickness=1)
             self.vis_imgs_list.append(torch.from_numpy(ori_img[:, :, ::-1].copy()))
 
     def eval_model(self):
         results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                           batch_size=self.batch_size // self.world_size * 2,
-                           img_size=self.img_size,
-                           model=self.ema.ema,
-                           dataloader=self.val_loader,
-                           save_dir=self.save_dir,
-                           task='train')
+                                                   batch_size=self.batch_size // self.world_size * 2,
+                                                   img_size=self.img_size,
+                                                   model=self.ema.ema,
+                                                   dataloader=self.val_loader,
+                                                   save_dir=self.save_dir,
+                                                   task='train')
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
         self.evaluate_results = results[:2]
@@ -269,7 +272,7 @@ class Trainer:
         self.scaler = amp.GradScaler(enabled=self.device != 'cpu')
 
         self.best_ap, self.ap = 0.0, 0.0
-        self.evaluate_results = (0, 0) # AP50, AP50_95
+        self.evaluate_results = (0, 0)  # AP50, AP50_95
         self.compute_loss = ComputeLoss(iou_type=self.cfg.model.head.iou_type)
 
     def prepare_for_steps(self):
@@ -284,14 +287,15 @@ class Trainer:
         LOGGER.info(('\n' + '%10s' * 5) % ('Epoch', 'iou_loss', 'l1_loss', 'obj_loss', 'cls_loss'))
         self.pbar = enumerate(self.train_loader)
         if self.main_process:
-            self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS,
+                             bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
 
     # Print loss after each steps
     def print_details(self):
         if self.main_process:
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
             self.pbar.set_description(('%10s' + '%10.4g' * 4) % (f'{self.epoch}/{self.max_epoch - 1}', \
-                                                                *(self.mean_loss)))
+                                                                 *(self.mean_loss)))
 
     # Empty cache if training finished
     def train_after_loop(self):
@@ -309,9 +313,11 @@ class Trainer:
             self.accumulate = max(1, np.interp(curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]).round())
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
-                param['lr'] = np.interp(curr_step, [0, self.warmup_stepnum], [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
+                param['lr'] = np.interp(curr_step, [0, self.warmup_stepnum],
+                                        [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
                 if 'momentum' in param:
-                    param['momentum'] = np.interp(curr_step, [0, self.warmup_stepnum], [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
+                    param['momentum'] = np.interp(curr_step, [0, self.warmup_stepnum],
+                                                  [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
         if curr_step - self.last_opt_step >= self.accumulate:
             self.scaler.step(self.optimizer)
             self.scaler.update()
@@ -369,7 +375,6 @@ class Trainer:
             ckpt = torch.load(weights, map_location=device)
             scales = extract_scales(ckpt)
         return scales
-
 
     @staticmethod
     def parallel_model(args, model, device):

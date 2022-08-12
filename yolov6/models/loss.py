@@ -16,6 +16,7 @@ class ComputeLoss:
     '''Loss computation func.
     This func contains SimOTA and siou loss.
     '''
+
     def __init__(self,
                  reg_weight=5.0,
                  iou_weight=3.0,
@@ -44,14 +45,14 @@ class ComputeLoss:
         self.iou_loss = IOUloss(iou_type=iou_type, reduction="none")
 
     def __call__(
-        self,
-        outputs,
-        targets
+            self,
+            outputs,
+            targets
     ):
         dtype = outputs[0].type()
         device = targets.device
         loss_cls, loss_obj, loss_iou, loss_l1 = torch.zeros(1, device=device), torch.zeros(1, device=device), \
-            torch.zeros(1, device=device), torch.zeros(1, device=device)
+                                                torch.zeros(1, device=device), torch.zeros(1, device=device)
         num_classes = outputs[0].shape[-1] - 5
 
         outputs, outputs_origin, gt_bboxes_scale, xy_shifts, expanded_strides = self.get_outputs_and_grids(
@@ -70,7 +71,9 @@ class ComputeLoss:
             targets_list[int(item[0])].append(item[1:])
         max_len = max((len(l) for l in targets_list))
 
-        targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0]]*(max_len - len(l)), targets_list)))[:,1:,:]).to(targets.device)
+        targets = torch.from_numpy(
+            np.array(list(map(lambda l: l + [[-1, 0, 0, 0, 0]] * (max_len - len(l)), targets_list)))[:, 1:, :]).to(
+            targets.device)
         num_targets_list = (targets.sum(dim=2) > 0).sum(dim=1)  # number of objects
 
         num_fg, num_gts = 0, 0
@@ -190,7 +193,7 @@ class ComputeLoss:
         loss_iou += (self.iou_loss(bbox_preds.view(-1, 4)[fg_masks].T, reg_targets)).sum() / num_fg
         loss_l1 += (self.l1_loss(bbox_preds_org.view(-1, 4)[fg_masks], l1_targets)).sum() / num_fg
 
-        loss_obj += (self.bcewithlog_loss(obj_preds.view(-1, 1), obj_targets*1.0)).sum() / num_fg
+        loss_obj += (self.bcewithlog_loss(obj_preds.view(-1, 1), obj_targets * 1.0)).sum() / num_fg
         loss_cls += (self.bcewithlog_loss(cls_preds.view(-1, num_classes)[fg_masks], cls_targets)).sum() / num_fg
 
         total_losses = self.reg_weight * loss_iou + loss_l1 + loss_obj + loss_cls
@@ -233,7 +236,7 @@ class ComputeLoss:
             outputs_origin.append(output_origin)
 
         xy_shifts = torch.cat(xy_shifts, 1)  # [1, n_anchors_all, 2]
-        expanded_strides = torch.cat(expanded_strides, 1) # [1, n_anchors_all, 1]
+        expanded_strides = torch.cat(expanded_strides, 1)  # [1, n_anchors_all, 1]
         outputs_origin = torch.cat(outputs_origin, 1)
         outputs = torch.cat(outputs_new, 1)
 
@@ -251,18 +254,18 @@ class ComputeLoss:
 
     @torch.no_grad()
     def get_assignments(
-        self,
-        batch_idx,
-        num_gt,
-        total_num_anchors,
-        gt_bboxes_per_image,
-        gt_classes,
-        bboxes_preds_per_image,
-        cls_preds_per_image,
-        obj_preds_per_image,
-        expanded_strides,
-        xy_shifts,
-        num_classes
+            self,
+            batch_idx,
+            num_gt,
+            total_num_anchors,
+            gt_bboxes_per_image,
+            gt_classes,
+            bboxes_preds_per_image,
+            cls_preds_per_image,
+            obj_preds_per_image,
+            expanded_strides,
+            xy_shifts,
+            num_classes
     ):
 
         fg_mask, is_in_boxes_and_center = self.get_in_boxes_info(
@@ -291,8 +294,8 @@ class ComputeLoss:
 
         with torch.cuda.amp.autocast(enabled=False):
             cls_preds_ = (
-                cls_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
-                * obj_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
+                    cls_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
+                    * obj_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
             )
             pair_wise_cls_loss = F.binary_cross_entropy(
                 cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
@@ -300,9 +303,9 @@ class ComputeLoss:
         del cls_preds_, obj_preds_
 
         cost = (
-            self.cls_weight * pair_wise_cls_loss
-            + self.iou_weight * pair_wise_ious_loss
-            + 100000.0 * (~is_in_boxes_and_center)
+                self.cls_weight * pair_wise_cls_loss
+                + self.iou_weight * pair_wise_ious_loss
+                + 100000.0 * (~is_in_boxes_and_center)
         )
 
         (
@@ -323,12 +326,12 @@ class ComputeLoss:
         )
 
     def get_in_boxes_info(
-        self,
-        gt_bboxes_per_image,
-        expanded_strides,
-        xy_shifts,
-        total_num_anchors,
-        num_gt,
+            self,
+            gt_bboxes_per_image,
+            expanded_strides,
+            xy_shifts,
+            total_num_anchors,
+            num_gt,
     ):
         expanded_strides_per_image = expanded_strides[0]
         xy_shifts_per_image = xy_shifts[0] * expanded_strides_per_image
@@ -374,7 +377,7 @@ class ComputeLoss:
         is_in_boxes_anchor = is_in_boxes_all | is_in_centers_all
 
         is_in_boxes_and_center = (
-            is_in_boxes[:, is_in_boxes_anchor] & is_in_centers[:, is_in_boxes_anchor]
+                is_in_boxes[:, is_in_boxes_anchor] & is_in_centers[:, is_in_boxes_anchor]
         )
         return is_in_boxes_anchor, is_in_boxes_and_center
 

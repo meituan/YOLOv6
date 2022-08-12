@@ -79,7 +79,7 @@ if __name__ == '__main__':
     quant_sensitivity = quant_sensitivity_load(args.sensitivity_file)
     quant_sensitivity.sort(key=lambda tup: tup[2], reverse=True)
     boundary = args.quant_boundary
-    quantable_ops = [qops[0] for qops in quant_sensitivity[:boundary+1]]
+    quantable_ops = [qops[0] for qops in quant_sensitivity[:boundary + 1]]
     # only quantize ops in quantable_ops list
     partial_quant(model_ptq, quantable_ops=quantable_ops)
     # concat amax fusion
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                           input_names=['image_arrays'],
                           output_names=['outputs'],
                           dynamic_axes=dynamic_axes
-                         )
+                          )
     else:
         img = torch.zeros(args.export_batch_size, 3, *args.img_size).to(device)
         export_file = args.weights.replace('.pt', '_partial_bs{}.onnx'.format(args.export_batch_size))  # filename

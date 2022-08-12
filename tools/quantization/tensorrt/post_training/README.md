@@ -1,7 +1,9 @@
 # ONNX -> TensorRT INT8
+
 These scripts were last tested using the
 [NGC TensorRT Container Version 20.06-py3](https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt).
-You can see the corresponding framework versions for this container [here](https://docs.nvidia.com/deeplearning/sdk/tensorrt-container-release-notes/rel_20.06.html#rel_20.06).
+You can see the corresponding framework versions for this
+container [here](https://docs.nvidia.com/deeplearning/sdk/tensorrt-container-release-notes/rel_20.06.html#rel_20.06).
 
 ## Quickstart
 
@@ -9,7 +11,8 @@ You can see the corresponding framework versions for this container [here](https
 >
 INT8 Calibration on **dynamic-shape** models is now supported, however this example has not been updated
 to reflect that yet. For more details on INT8 Calibration for **dynamic-shape** models, please
-see the [documentation](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#int8-calib-dynamic-shapes).
+see
+the [documentation](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#int8-calib-dynamic-shapes).
 
 ### 1. Convert ONNX model to TensorRT INT8
 
@@ -31,7 +34,9 @@ or want to create a new one.
 ## INT8 Calibration
 
 See [ImagenetCalibrator.py](ImagenetCalibrator.py) for a reference implementation
-of TensorRT's [IInt8EntropyCalibrator2](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/infer/Int8/EntropyCalibrator2.html).
+of
+TensorRT's [IInt8EntropyCalibrator2](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/infer/Int8/EntropyCalibrator2.html)
+.
 
 This class can be tweaked to work for other kinds of models, inputs, etc.
 

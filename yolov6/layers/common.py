@@ -15,6 +15,7 @@ from yolov6.layers.dbb_transforms import *
 
 class SiLU(nn.Module):
     '''Activation of SiLU'''
+
     @staticmethod
     def forward(x):
         return x * torch.sigmoid(x)
@@ -22,6 +23,7 @@ class SiLU(nn.Module):
 
 class Conv(nn.Module):
     '''Normal Conv with SiLU activation'''
+
     def __init__(self, in_channels, out_channels, kernel_size, stride, groups=1, bias=False):
         super().__init__()
         padding = kernel_size // 2
@@ -46,6 +48,7 @@ class Conv(nn.Module):
 
 class SimConv(nn.Module):
     '''Normal Conv with ReLU activation'''
+
     def __init__(self, in_channels, out_channels, kernel_size, stride, groups=1, bias=False):
         super().__init__()
         padding = kernel_size // 2
@@ -70,6 +73,7 @@ class SimConv(nn.Module):
 
 class SimSPPF(nn.Module):
     '''Simplified SPPF with ReLU activation'''
+
     def __init__(self, in_channels, out_channels, kernel_size=5):
         super().__init__()
         c_ = in_channels // 2  # hidden channels
@@ -88,6 +92,7 @@ class SimSPPF(nn.Module):
 
 class Transpose(nn.Module):
     '''Normal Transpose, default for upsampling'''
+
     def __init__(self, in_channels, out_channels, kernel_size=2, stride=2):
         super().__init__()
         self.upsample_transpose = torch.nn.ConvTranspose2d(
@@ -115,7 +120,8 @@ def conv_bn(in_channels, out_channels, kernel_size, stride, padding, groups=1):
     '''Basic cell for rep-style block, including conv and bn'''
     result = nn.Sequential()
     result.add_module('conv', nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                                                  kernel_size=kernel_size, stride=stride, padding=padding, groups=groups, bias=False))
+                                        kernel_size=kernel_size, stride=stride, padding=padding, groups=groups,
+                                        bias=False))
     result.add_module('bn', nn.BatchNorm2d(num_features=out_channels))
     return result
 
@@ -124,6 +130,7 @@ class RepVGGBlock(nn.Module):
     '''RepVGGBlock is a basic rep-style block, including training and deploy status
     This code is based on https://github.com/DingXiaoH/RepVGG/blob/main/repvgg.py
     '''
+
     def __init__(self, in_channels, out_channels, kernel_size=3,
                  stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
         super(RepVGGBlock, self).__init__()
@@ -160,13 +167,18 @@ class RepVGGBlock(nn.Module):
             self.se = nn.Identity()
 
         if deploy:
-            self.rbr_reparam = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride,
-                                         padding=padding, dilation=dilation, groups=groups, bias=True, padding_mode=padding_mode)
+            self.rbr_reparam = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                         stride=stride,
+                                         padding=padding, dilation=dilation, groups=groups, bias=True,
+                                         padding_mode=padding_mode)
 
         else:
-            self.rbr_identity = nn.BatchNorm2d(num_features=in_channels) if out_channels == in_channels and stride == 1 else None
-            self.rbr_dense = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, groups=groups)
-            self.rbr_1x1 = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride, padding=padding_11, groups=groups)
+            self.rbr_identity = nn.BatchNorm2d(
+                num_features=in_channels) if out_channels == in_channels and stride == 1 else None
+            self.rbr_dense = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                     stride=stride, padding=padding, groups=groups)
+            self.rbr_1x1 = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride,
+                                   padding=padding_11, groups=groups)
 
     def forward(self, inputs):
         '''Forward process'''
@@ -224,9 +236,11 @@ class RepVGGBlock(nn.Module):
         if hasattr(self, 'rbr_reparam'):
             return
         kernel, bias = self.get_equivalent_kernel_bias()
-        self.rbr_reparam = nn.Conv2d(in_channels=self.rbr_dense.conv.in_channels, out_channels=self.rbr_dense.conv.out_channels,
+        self.rbr_reparam = nn.Conv2d(in_channels=self.rbr_dense.conv.in_channels,
+                                     out_channels=self.rbr_dense.conv.out_channels,
                                      kernel_size=self.rbr_dense.conv.kernel_size, stride=self.rbr_dense.conv.stride,
-                                     padding=self.rbr_dense.conv.padding, dilation=self.rbr_dense.conv.dilation, groups=self.rbr_dense.conv.groups, bias=True)
+                                     padding=self.rbr_dense.conv.padding, dilation=self.rbr_dense.conv.dilation,
+                                     groups=self.rbr_dense.conv.groups, bias=True)
         self.rbr_reparam.weight.data = kernel
         self.rbr_reparam.bias.data = bias
         for para in self.parameters():
@@ -244,10 +258,11 @@ class RealVGGBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
                  dilation=1, groups=1, padding_mode='zeros', use_se=False,
-    ):
+                 ):
         super(RealVGGBlock, self).__init__()
         self.relu = nn.ReLU()
-        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                              stride=stride, padding=padding, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
         if use_se:
@@ -258,6 +273,7 @@ class RealVGGBlock(nn.Module):
     def forward(self, inputs):
         out = self.relu(self.se(self.bn(self.conv(inputs))))
         return out
+
 
 class ScaleLayer(torch.nn.Module):
 
@@ -278,6 +294,7 @@ class ScaleLayer(torch.nn.Module):
         else:
             return inputs * self.weight.view(1, self.num_features, 1, 1) + self.bias.view(1, self.num_features, 1, 1)
 
+
 #   A CSLA block is a LinearAddBlock with is_csla=True
 class LinearAddBlock(nn.Module):
 
@@ -286,14 +303,16 @@ class LinearAddBlock(nn.Module):
         super(LinearAddBlock, self).__init__()
         self.in_channels = in_channels
         self.relu = nn.ReLU()
-        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                              stride=stride, padding=padding, bias=False)
         self.scale_conv = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=conv_scale_init)
-        self.conv_1x1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride, padding=0, bias=False)
+        self.conv_1x1 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride,
+                                  padding=0, bias=False)
         self.scale_1x1 = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=conv_scale_init)
         if in_channels == out_channels and stride == 1:
             self.scale_identity = ScaleLayer(num_features=out_channels, use_bias=False, scale_init=1.0)
         self.bn = nn.BatchNorm2d(out_channels)
-        if is_csla:     # Make them constant
+        if is_csla:  # Make them constant
             self.scale_1x1.requires_grad_(False)
             self.scale_conv.requires_grad_(False)
         if use_se:
@@ -307,6 +326,7 @@ class LinearAddBlock(nn.Module):
             out += self.scale_identity(inputs)
         out = self.relu(self.se(self.bn(out)))
         return out
+
 
 def conv_bn_v2(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1,
                padding_mode='zeros'):
@@ -323,7 +343,8 @@ def conv_bn_v2(in_channels, out_channels, kernel_size, stride=1, padding=0, dila
 class IdentityBasedConv1x1(nn.Conv2d):
 
     def __init__(self, channels, groups=1):
-        super(IdentityBasedConv1x1, self).__init__(in_channels=channels, out_channels=channels, kernel_size=1, stride=1, padding=0, groups=groups, bias=False)
+        super(IdentityBasedConv1x1, self).__init__(in_channels=channels, out_channels=channels, kernel_size=1, stride=1,
+                                                   padding=0, groups=groups, bias=False)
 
         assert channels % groups == 0
         input_dim = channels // groups
@@ -358,7 +379,8 @@ class BNAndPadLayer(nn.Module):
         output = self.bn(input)
         if self.pad_pixels > 0:
             if self.bn.affine:
-                pad_values = self.bn.bias.detach() - self.bn.running_mean * self.bn.weight.detach() / torch.sqrt(self.bn.running_var + self.bn.eps)
+                pad_values = self.bn.bias.detach() - self.bn.running_mean * self.bn.weight.detach() / torch.sqrt(
+                    self.bn.running_var + self.bn.eps)
             else:
                 pad_values = - self.bn.running_mean / torch.sqrt(self.bn.running_var + self.bn.eps)
             output = F.pad(output, [self.pad_pixels] * 4)
@@ -394,10 +416,12 @@ class DBBBlock(nn.Module):
     '''
         RepBlock is a stage block with rep-style basic block
     '''
+
     def __init__(self, in_channels, out_channels, n=1):
         super().__init__()
         self.conv1 = DiverseBranchBlock(in_channels, out_channels)
-        self.block = nn.Sequential(*(DiverseBranchBlock(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
+        self.block = nn.Sequential(
+            *(DiverseBranchBlock(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
 
     def forward(self, x):
         x = self.conv1(x)
@@ -426,12 +450,14 @@ class DiverseBranchBlock(nn.Module):
         assert padding == kernel_size // 2
 
         if deploy:
-            self.dbb_reparam = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride,
-                                      padding=padding, dilation=dilation, groups=groups, bias=True)
+            self.dbb_reparam = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                         stride=stride,
+                                         padding=padding, dilation=dilation, groups=groups, bias=True)
 
         else:
 
-            self.dbb_origin = conv_bn_v2(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, groups=groups)
+            self.dbb_origin = conv_bn_v2(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                         stride=stride, padding=padding, dilation=dilation, groups=groups)
 
             self.dbb_avg = nn.Sequential()
             if groups < out_channels:
@@ -440,25 +466,30 @@ class DiverseBranchBlock(nn.Module):
                                                   stride=1, padding=0, groups=groups, bias=False))
                 self.dbb_avg.add_module('bn', BNAndPadLayer(pad_pixels=padding, num_features=out_channels))
                 self.dbb_avg.add_module('avg', nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=0))
-                self.dbb_1x1 = conv_bn_v2(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=stride,
-                                       padding=0, groups=groups)
+                self.dbb_1x1 = conv_bn_v2(in_channels=in_channels, out_channels=out_channels, kernel_size=1,
+                                          stride=stride,
+                                          padding=0, groups=groups)
             else:
                 self.dbb_avg.add_module('avg', nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding))
 
             self.dbb_avg.add_module('avgbn', nn.BatchNorm2d(out_channels))
 
             if internal_channels_1x1_3x3 is None:
-                internal_channels_1x1_3x3 = in_channels if groups < out_channels else 2 * in_channels   # For mobilenet, it is better to have 2X internal channels
+                internal_channels_1x1_3x3 = in_channels if groups < out_channels else 2 * in_channels  # For mobilenet, it is better to have 2X internal channels
 
             self.dbb_1x1_kxk = nn.Sequential()
             if internal_channels_1x1_3x3 == in_channels:
                 self.dbb_1x1_kxk.add_module('idconv1', IdentityBasedConv1x1(channels=in_channels, groups=groups))
             else:
-                self.dbb_1x1_kxk.add_module('conv1', nn.Conv2d(in_channels=in_channels, out_channels=internal_channels_1x1_3x3,
-                                                            kernel_size=1, stride=1, padding=0, groups=groups, bias=False))
-            self.dbb_1x1_kxk.add_module('bn1', BNAndPadLayer(pad_pixels=padding, num_features=internal_channels_1x1_3x3, affine=True))
-            self.dbb_1x1_kxk.add_module('conv2', nn.Conv2d(in_channels=internal_channels_1x1_3x3, out_channels=out_channels,
-                                                            kernel_size=kernel_size, stride=stride, padding=0, groups=groups, bias=False))
+                self.dbb_1x1_kxk.add_module('conv1',
+                                            nn.Conv2d(in_channels=in_channels, out_channels=internal_channels_1x1_3x3,
+                                                      kernel_size=1, stride=1, padding=0, groups=groups, bias=False))
+            self.dbb_1x1_kxk.add_module('bn1', BNAndPadLayer(pad_pixels=padding, num_features=internal_channels_1x1_3x3,
+                                                             affine=True))
+            self.dbb_1x1_kxk.add_module('conv2',
+                                        nn.Conv2d(in_channels=internal_channels_1x1_3x3, out_channels=out_channels,
+                                                  kernel_size=kernel_size, stride=stride, padding=0, groups=groups,
+                                                  bias=False))
             self.dbb_1x1_kxk.add_module('bn2', nn.BatchNorm2d(out_channels))
 
         #   The experiments reported in the paper used the default initialization of bn.weight (all as 1). But changing the initialization may be useful in some cases.
@@ -481,25 +512,31 @@ class DiverseBranchBlock(nn.Module):
             k_1x1_kxk_first = self.dbb_1x1_kxk.conv1.weight
         k_1x1_kxk_first, b_1x1_kxk_first = transI_fusebn(k_1x1_kxk_first, self.dbb_1x1_kxk.bn1)
         k_1x1_kxk_second, b_1x1_kxk_second = transI_fusebn(self.dbb_1x1_kxk.conv2.weight, self.dbb_1x1_kxk.bn2)
-        k_1x1_kxk_merged, b_1x1_kxk_merged = transIII_1x1_kxk(k_1x1_kxk_first, b_1x1_kxk_first, k_1x1_kxk_second, b_1x1_kxk_second, groups=self.groups)
+        k_1x1_kxk_merged, b_1x1_kxk_merged = transIII_1x1_kxk(k_1x1_kxk_first, b_1x1_kxk_first, k_1x1_kxk_second,
+                                                              b_1x1_kxk_second, groups=self.groups)
 
         k_avg = transV_avg(self.out_channels, self.kernel_size, self.groups)
-        k_1x1_avg_second, b_1x1_avg_second = transI_fusebn(k_avg.to(self.dbb_avg.avgbn.weight.device), self.dbb_avg.avgbn)
+        k_1x1_avg_second, b_1x1_avg_second = transI_fusebn(k_avg.to(self.dbb_avg.avgbn.weight.device),
+                                                           self.dbb_avg.avgbn)
         if hasattr(self.dbb_avg, 'conv'):
             k_1x1_avg_first, b_1x1_avg_first = transI_fusebn(self.dbb_avg.conv.weight, self.dbb_avg.bn)
-            k_1x1_avg_merged, b_1x1_avg_merged = transIII_1x1_kxk(k_1x1_avg_first, b_1x1_avg_first, k_1x1_avg_second, b_1x1_avg_second, groups=self.groups)
+            k_1x1_avg_merged, b_1x1_avg_merged = transIII_1x1_kxk(k_1x1_avg_first, b_1x1_avg_first, k_1x1_avg_second,
+                                                                  b_1x1_avg_second, groups=self.groups)
         else:
             k_1x1_avg_merged, b_1x1_avg_merged = k_1x1_avg_second, b_1x1_avg_second
 
-        return transII_addbranch((k_origin, k_1x1, k_1x1_kxk_merged, k_1x1_avg_merged), (b_origin, b_1x1, b_1x1_kxk_merged, b_1x1_avg_merged))
+        return transII_addbranch((k_origin, k_1x1, k_1x1_kxk_merged, k_1x1_avg_merged),
+                                 (b_origin, b_1x1, b_1x1_kxk_merged, b_1x1_avg_merged))
 
     def switch_to_deploy(self):
         if hasattr(self, 'dbb_reparam'):
             return
         kernel, bias = self.get_equivalent_kernel_bias()
-        self.dbb_reparam = nn.Conv2d(in_channels=self.dbb_origin.conv.in_channels, out_channels=self.dbb_origin.conv.out_channels,
+        self.dbb_reparam = nn.Conv2d(in_channels=self.dbb_origin.conv.in_channels,
+                                     out_channels=self.dbb_origin.conv.out_channels,
                                      kernel_size=self.dbb_origin.conv.kernel_size, stride=self.dbb_origin.conv.stride,
-                                     padding=self.dbb_origin.conv.padding, dilation=self.dbb_origin.conv.dilation, groups=self.dbb_origin.conv.groups, bias=True)
+                                     padding=self.dbb_origin.conv.padding, dilation=self.dbb_origin.conv.dilation,
+                                     groups=self.dbb_origin.conv.groups, bias=True)
         self.dbb_reparam.weight.data = kernel
         self.dbb_reparam.bias.data = bias
         for para in self.parameters():
@@ -540,9 +577,9 @@ class DiverseBranchBlock(nn.Module):
 
 class DetectBackend(nn.Module):
     def __init__(self, weights='yolov6s.pt', device=None, dnn=True):
-
         super().__init__()
-        assert isinstance(weights, str) and Path(weights).suffix == '.pt', f'{Path(weights).suffix} format is not supported.'
+        assert isinstance(weights, str) and Path(
+            weights).suffix == '.pt', f'{Path(weights).suffix} format is not supported.'
         from yolov6.utils.checkpoint import load_checkpoint
         model = load_checkpoint(weights, map_location=device)
         stride = int(model.stride.max())
@@ -559,6 +596,7 @@ class RepBlock(nn.Module):
     '''
         RepBlock is a stage block with rep-style basic block
     '''
+
     def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock):
         super().__init__()
         self.conv1 = block(in_channels, out_channels)

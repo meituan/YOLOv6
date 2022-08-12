@@ -32,8 +32,8 @@ def quant_sensitivity_analyse(model_ptq, evaler):
     quant_sensitivity = list()
     for k, m in model_ptq.named_modules():
         if isinstance(m, quant_nn.QuantConv2d) or \
-           isinstance(m, quant_nn.QuantConvTranspose2d) or \
-           isinstance(m, quant_nn.MaxPool2d):
+                isinstance(m, quant_nn.QuantConvTranspose2d) or \
+                isinstance(m, quant_nn.MaxPool2d):
             module_quant_enable(model_ptq, k)
         else:
             # module can not be quantized, continue
@@ -42,13 +42,14 @@ def quant_sensitivity_analyse(model_ptq, evaler):
         eval_result = evaler.eval(model_ptq)
         print(eval_result)
         print("Quantize Layer {}, result mAP0.5 = {:0.4f}, mAP0.5:0.95 = {:0.4f}".format(k,
-                                                                                          eval_result[0],
-                                                                                          eval_result[1]))
+                                                                                         eval_result[0],
+                                                                                         eval_result[1]))
         quant_sensitivity.append((k, eval_result[0], eval_result[1]))
         # disable this module sensitivity, anlayse next module
         module_quant_disable(model_ptq, k)
 
     return quant_sensitivity
+
 
 def get_yolov6_config(key):
     # hard code
@@ -110,7 +111,7 @@ if __name__ == '__main__':
 
     # Step1: do post training quantization
     if args.calib_weights is None:
-        model_ptq= do_ptq(model, train_loader, args.batch_number, device)
+        model_ptq = do_ptq(model, train_loader, args.batch_number, device)
         torch.save({'model': model_ptq}, args.weights.replace('.pt', '_calib.pt'))
     else:
         model_ptq = load_ptq(model, args.calib_weights, device)
@@ -120,7 +121,7 @@ if __name__ == '__main__':
     if args.sensitivity_file is None:
         quant_sensitivity = quant_sensitivity_analyse(model_ptq, yolov6_evaler)
         qfile = "{}_quant_sensitivity_{}_calib.txt".format(os.path.basename(args.weights).split('.')[0],
-                                                         args.batch_size * args.batch_number)
+                                                           args.batch_size * args.batch_number)
         quant_sensitivity.sort(key=lambda tup: tup[2], reverse=True)
         quant_sensitivity_save(quant_sensitivity, qfile)
     else:

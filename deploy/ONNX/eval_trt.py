@@ -38,14 +38,14 @@ def run(data,
         task='val',
         device='',
         save_dir='',
-        name = ''
+        name=''
         ):
     """
     TensorRT models's evaluation process.
     """
 
-     # task
-    assert task== 'val', f'task type can only be val, however you set it to {task}'
+    # task
+    assert task == 'val', f'task type can only be val, however you set it to {task}'
 
     save_dir = str(increment_name(osp.join(save_dir, name)))
     os.makedirs(save_dir, exist_ok=True)
@@ -57,9 +57,9 @@ def run(data,
 
     # init
     val = Evaler(data, batch_size, img_size, None, \
-                None, device, False, save_dir)
+                 None, device, False, save_dir)
 
-    dataloader,pred_result = val.eval_trt(weights)
+    dataloader, pred_result = val.eval_trt(weights)
     eval_result = val.eval_model(pred_result, dummy_model, dataloader, task)
     return eval_result
 
