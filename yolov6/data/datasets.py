@@ -9,6 +9,7 @@ import random
 import json
 import time
 import hashlib
+from pathlib import Path
 from multiprocessing.pool import Pool
 
 import cv2
