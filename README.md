@@ -103,6 +103,7 @@ Your can also specify a checkpoint path to `--resume` parameter by
 ### Deployment
 
 *  [ONNX](./deploy/ONNX)
+*  [OpenCV Python/C++](./deploy/ONNX/OpenCV)
 *  [OpenVINO](./deploy/OpenVINO)
 *  [Partial Quantization](./tools/partial_quantization)
 
