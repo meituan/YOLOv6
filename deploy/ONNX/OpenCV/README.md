@@ -7,6 +7,7 @@ OpenCV >= 4.5.4
 Only **OpenCV >= 4.5.4** can read onnx model file by dnn module.
 
 ## 1. Usage
+Change work directory to `/path/to/YOLOv6/deploy/ONNX/OpenCV`
 ### 1.1 Python
 
 - YOLOv5&YOLOv6:
@@ -64,7 +65,7 @@ make
 ```
 
 ## 2. Result
-| Model | Speed CPU b1(ms) Python | Speed CPU b1(ms) C++ | mAP<sup>val 0.5:0.95</sup> | params(M) | FLOPS(G) |
+| Model | Speed CPU b1(ms) Python | Speed CPU b1(ms) C++ | mAP<sup>val 0.5:0.95</sup> | params(M) | FLOPs(G) |
 | :-- | :-: | :-: | :-: | :-: | :-: |
 | **YOLOv5n** | 116.47 | 118.89 | 28.0 | 1.9 | 4.5 |
 | **YOLOv5s** | 200.53 | 202.22 | 37.4 | 7.2 | 16.5 |
@@ -81,7 +82,8 @@ make
 
 **Note**:
 - All onnx models are converted from official github([Google Drive](https://drive.google.com/drive/folders/1Nw6M_Y6XLASyB0RxhSI2z_QRtt70Picl?usp=sharing)).
-- For speed, we report the average inference time of 300 runs on the same environment.
+- Speed is test by [dnn::Net::getPerfProfile](https://docs.opencv.org/4.5.5/db/d30/classcv_1_1dnn_1_1Net.html), we report the average inference time of 300 runs on the same environment.
+- The mAP/params/FLOPs are from official github.
 - Test environment: MacOS 11.4 with 2.6 GHz 6-core Intel Core i7, 16GB Memory.
 
 ### Visualization
