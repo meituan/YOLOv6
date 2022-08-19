@@ -18,14 +18,11 @@ class Model(nn.Module):
         super().__init__()
         # Build network
         num_layers = config.model.head.num_layers
+        self.mode = config.training_mode
         self.backbone, self.neck, self.detect = build_network(config, channels, num_classes, anchors, num_layers)
 
         # Init Detect head
-        begin_indices = config.model.head.begin_indices
-        out_indices_head = config.model.head.out_indices
         self.stride = self.detect.stride
-        self.detect.i = begin_indices
-        self.detect.f = out_indices_head
         self.detect.initialize_biases()
 
         # Init weights
@@ -60,15 +57,19 @@ def build_network(config, channels, num_classes, anchors, num_layers):
     num_repeat = [(max(round(i * depth_mul), 1) if i > 1 else i) for i in (num_repeat_backbone + num_repeat_neck)]
     channels_list = [make_divisible(i * width_mul, 8) for i in (channels_list_backbone + channels_list_neck)]
 
+    block = get_block(config.training_mode)
+
     backbone = EfficientRep(
         in_channels=channels,
         channels_list=channels_list,
-        num_repeats=num_repeat
+        num_repeats=num_repeat,
+        block=block
     )
 
     neck = RepPANNeck(
         channels_list=channels_list,
-        num_repeats=num_repeat
+        num_repeats=num_repeat,
+        block=block
     )
 
     head_layers = build_effidehead_layer(channels_list, num_anchors, num_classes)

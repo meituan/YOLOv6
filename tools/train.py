@@ -42,6 +42,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--gpu_count', type=int, default=0)
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume the most recent training')
+    parser.add_argument('--write_trainbatch_tb', action='store_true', help='write train_batch image to tensorboard once an epoch, may slightly slower train speed if open')
 
     return parser
 
@@ -52,7 +53,7 @@ def check_and_init(args):
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
     if args.resume:
         # args.resume can be a checkpoint file path or a boolean value.
-        checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint() 
+        checkpoint_path = args.resume if isinstance(args.resume, str) else find_latest_checkpoint()
         assert os.path.isfile(checkpoint_path), f'the checkpoint path is not exist: {checkpoint_path}'
         LOGGER.info(f'Resume training from the checkpoint file :{checkpoint_path}')
         resume_opt_file_path = Path(checkpoint_path).parent.parent / 'args.yaml'
@@ -71,6 +72,8 @@ def check_and_init(args):
             os.makedirs(args.save_dir)
 
     cfg = Config.fromfile(args.conf_file)
+    if not hasattr(cfg, 'training_mode'):
+        setattr(cfg, 'training_mode', 'repvgg')
     # check device
     device = select_device(args.device)
     # set random seed
@@ -88,7 +91,7 @@ def main(args):
     args.rank, args.local_rank, args.world_size = get_envs()
     cfg, device, args = check_and_init(args)
     # reload envs because args was chagned in check_and_init(args)
-    args.rank, args.local_rank, args.world_size = get_envs() 
+    args.rank, args.local_rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
     if args.local_rank != -1: # if DDP mode
         torch.cuda.set_device(args.local_rank)

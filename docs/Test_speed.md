@@ -37,5 +37,5 @@ python deploy/ONNX/export_onnx.py --weights yolov6n.pt --device 0 --batch [1 or 
 Second, generate an inference trt engine and test speed using `trtexec`:
 
 ```
-trtexec --onnx=yolov6n.onnx --workspace=1024 --avgRuns=1000 --inputIOFormats=fp16:chw --outputIOFormats=fp16:chw
+trtexec --onnx=yolov6n.onnx --workspace=1024 --avgRuns=1000 --inputIOFormats=fp16:chw --outputIOFormats=fp16:chw --fp16
 ```
