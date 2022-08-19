@@ -206,9 +206,9 @@ class TrainValDataset(Dataset):
         )
         NUM_THREADS = min(8, os.cpu_count())
 
-        img_paths = glob.glob(osp.join(img_dir, "*"), recursive=True)
+        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
         img_paths = sorted(
-            p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS
+            p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
         assert img_paths, f"No images found in {img_dir}."
 
@@ -257,9 +257,14 @@ class TrainValDataset(Dataset):
         )
         assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
 
+        # Look for labels in the save relative dir that the images are in
+        def _new_rel_path_with_ext(base_path: str, full_path: str, new_ext: str):
+            rel_path = osp.relpath(full_path, base_path)
+            return osp.join(osp.dirname(rel_path), osp.splitext(osp.basename(rel_path))[0] + new_ext)
+
         img_paths = list(img_info.keys())
         label_paths = sorted(
-            osp.join(label_dir, osp.splitext(osp.basename(p))[0] + ".txt")
+            osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
             for p in img_paths
         )
         assert label_paths, f"No labels found in {label_dir}."
@@ -563,7 +568,7 @@ class LoadData:
     def __init__(self, path):
         p = str(Path(path).resolve())  # os-agnostic absolute path
         if os.path.isdir(p):
-            files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
+            files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
         elif os.path.isfile(p):
             files = [p]  # files
         else:
