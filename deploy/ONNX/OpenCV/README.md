@@ -10,7 +10,7 @@ Only **OpenCV >= 4.5.4** can read onnx model file by dnn module.
 Change work directory to `/path/to/YOLOv6/deploy/ONNX/OpenCV`
 ### 1.1 Python
 
-- YOLOv5&YOLOv6:
+- YOLOv5 & YOLOv6:
 ```Python
 python yolo.py --model /path/to/onnx/yolov5n.onnx --img /path/to/sample.jpg --classesFile /path/to/coco.names
                                      yolov5s.onnx
