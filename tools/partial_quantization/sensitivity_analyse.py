@@ -50,6 +50,7 @@ def quant_sensitivity_analyse(model_ptq, evaler):
 
     return quant_sensitivity
 
+
 def get_yolov6_config(key):
     # hard code
     config_dict = {'yolov6s_reopt.pt': '../../configs/repopt/yolov6s_opt.py'}

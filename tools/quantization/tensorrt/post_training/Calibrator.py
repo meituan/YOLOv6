@@ -76,6 +76,7 @@ def preprocess_yolov6(image, channels=3, height=224, width=224):
 
     return img_data
 
+
 def get_int8_calibrator(calib_cache, calib_data, max_calib_size, calib_batch_size):
     # Use calibration cache if it exists
     if os.path.exists(calib_cache):

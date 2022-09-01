@@ -31,7 +31,12 @@ class Evaler:
                  iou_thres=0.65,
                  device='',
                  half=True,
-                 save_dir=''):
+                 save_dir='',
+                 test_load_size=640,
+                 letterbox_return_int=False,
+                 force_no_pad=False,
+                 not_infer_on_rect=False,
+                 scale_exact=False):
         self.data = data
         self.batch_size = batch_size
         self.img_size = img_size
@@ -40,6 +45,11 @@ class Evaler:
         self.device = device
         self.half = half
         self.save_dir = save_dir
+        self.test_load_size = test_load_size
+        self.letterbox_return_int = letterbox_return_int
+        self.force_no_pad = force_no_pad
+        self.not_infer_on_rect = not_infer_on_rect
+        self.scale_exact = scale_exact
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -65,8 +75,15 @@ class Evaler:
         self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
         if task != 'train':
             pad = 0.0 if task == 'speed' else 0.5
+            eval_hyp = {
+                "test_load_size":self.test_load_size,
+                "letterbox_return_int":self.letterbox_return_int,
+            }
+            if self.force_no_pad:
+                pad = 0.0
+            rect = not self.not_infer_on_rect
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
-                                           self.img_size, self.batch_size, self.stride, check_labels=True, pad=pad, rect=True,
+                                           self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=pad, rect=rect,
                                            data_dict=self.data, task=task)[0]
         return dataloader
 
@@ -88,7 +105,7 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
-            outputs = model(imgs)
+            outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 
             # post-process
@@ -105,8 +122,8 @@ class Evaler:
                 vis_num = min(len(imgs), 8)
                 vis_outputs = outputs[:vis_num]
                 vis_paths = paths[:vis_num]
-
         return pred_results, vis_outputs, vis_paths
+        
 
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
@@ -158,7 +175,7 @@ class Evaler:
                 LOGGER.info("Average {} time: {:.2f} ms".format(n, v))
 
     def box_convert(self, x):
-        # Convert boxes with shape [n, 4] from [x1, y1, x2, y2] to [x, y, w, h] where x1y1=top-left, x2y2=bottom-right
+        '''Convert boxes with shape [n, 4] from [x1, y1, x2, y2] to [x, y, w, h] where x1y1=top-left, x2y2=bottom-right.'''
         y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
         y[:, 0] = (x[:, 0] + x[:, 2]) / 2  # x center
         y[:, 1] = (x[:, 1] + x[:, 3]) / 2  # y center
@@ -167,17 +184,24 @@ class Evaler:
         return y
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
-        # Rescale coords (xyxy) from img1_shape to img0_shape
+        '''Rescale coords (xyxy) from img1_shape to img0_shape.'''
         if ratio_pad is None:  # calculate from img0_shape
-            gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
+            gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
+            if self.scale_exact:
+                gain = [img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1]]
             pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
         else:
-            gain = ratio_pad[0][0]
+            gain = ratio_pad[0]
             pad = ratio_pad[1]
 
         coords[:, [0, 2]] -= pad[0]  # x padding
+        if self.scale_exact:
+            coords[:, [0, 2]] /= gain[1]  # x gain
+        else:
+            coords[:, [0, 2]] /= gain[0]  # raw x gain
         coords[:, [1, 3]] -= pad[1]  # y padding
-        coords[:, :4] /= gain
+        coords[:, [1, 3]] /= gain[0]  # y gain
+
         if isinstance(coords, torch.Tensor):  # faster individually
             coords[:, 0].clamp_(0, img0_shape[1])  # x1
             coords[:, 1].clamp_(0, img0_shape[0])  # y1
@@ -219,15 +243,16 @@ class Evaler:
             raise Exception("task argument error: only support 'train' / 'val' / 'speed' task.")
 
     @staticmethod
-    def reload_thres(conf_thres, iou_thres, task):
-        '''Sets conf and iou threshold for task val/speed'''
+    def check_thres(conf_thres, iou_thres, task):
+        '''Check whether confidence and iou threshold are best for task val/speed'''
         if task != 'train':
             if task == 'val':
-                conf_thres = 0.001
-            if task == 'speed':
-                conf_thres = 0.25
-                iou_thres = 0.45
-        return conf_thres, iou_thres
+                if conf_thres > 0.01:
+                    LOGGER.warning(f'The best conf_thresh when evaluate the model is less than 0.01, while you set it to: {conf_thres}')
+                if iou_thres != 0.65:
+                    LOGGER.warning(f'The best iou_thresh when evaluate the model is 0.65, while you set it to: {iou_thres}')
+            if task == 'speed' and conf_thres < 0.25:
+                LOGGER.warning(f'The best conf_thresh when test the speed of the model is larger than 0.25, while you set it to: {conf_thres}')
 
     @staticmethod
     def reload_device(device, model, task):
