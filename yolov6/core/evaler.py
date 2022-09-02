@@ -27,7 +27,7 @@ class Evaler:
                  data,
                  batch_size=32,
                  img_size=640,
-                 conf_thres=0.001,
+                 conf_thres=0.03,
                  iou_thres=0.65,
                  device='',
                  half=True,

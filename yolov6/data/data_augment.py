@@ -191,6 +191,7 @@ def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
                                   degrees=hyp['degrees'],
                                   translate=hyp['translate'],
                                   scale=hyp['scale'],
-                                  shear=hyp['shear'])
+                                  shear=hyp['shear'],
+                                  new_shape=(img_size, img_size))
 
     return img4, labels4

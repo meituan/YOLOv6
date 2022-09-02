@@ -13,11 +13,10 @@ YOLOv6 is composed of the following methods:
 - Efficient Decoupled Head with SIoU Loss
 
 
-## Coming soon
+## New Features
 
-- [ ] YOLOv6 m/l/x model.
-- [ ] Deployment for MNN/TNN/NCNN/CoreML...
-- [ ] Quantization tools
+- [ ] YOLOv6 m/l model.
+- [ ] Quantization tools 
 
 
 ## Quick Start

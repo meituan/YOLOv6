@@ -191,7 +191,7 @@ class Trainer:
                            batch_size=self.batch_size // self.world_size * 2,
                            img_size=self.img_size,
                            model=self.ema.ema if self.args.calib is False else self.model,
-                           conf_thres=0.01,
+                           conf_thres=0.03,
                            dataloader=self.val_loader,
                            save_dir=self.save_dir,
                            task='train')
