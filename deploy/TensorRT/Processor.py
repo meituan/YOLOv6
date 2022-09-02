@@ -44,7 +44,7 @@ def get_input_shape(engine):
     else:
         raise ValueError('bad dims of binding %s: %s' % (binding, str(binding_dims)))
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32, return_int=False):
+def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=False, stride=32, return_int=False):
     # Resize and pad image while meeting stride-multiple constraints
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -77,8 +77,11 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
 
 
 class Processor():
-    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0')):
+    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0'), return_int=False, scale_exact=False, force_no_pad=False):
         # load tensorrt engine)
+        self.return_int = return_int
+        self.scale_exact = scale_exact
+        self.force_no_pad = force_no_pad
         Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
         self.logger = trt.Logger(trt.Logger.INFO)
         self.runtime = trt.Runtime(self.logger)
@@ -121,16 +124,16 @@ class Processor():
         outputs = self.inference(resized)
         return outputs
 
-    def pre_process(self, img, input_shape=None):
+    def pre_process(self, img, input_shape=None,):
         """Preprocess an image before TRT YOLO inferencing.
         """
         input_shape = input_shape if input_shape is not None else self.input_shape
-        image = letterbox(img, input_shape, auto=False, return_int=True)[0]
+        image, ratio, pad = letterbox(img, input_shape, auto=False, return_int=self.return_int)
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image)).to(self.device).float()
         img = image / 255.  # 0 - 255 to 0.0 - 1.0
-        return img
+        return img, pad
 
     def inference(self, inputs):
         self.binding_addrs['image_arrays'] = int(inputs.data_ptr())
@@ -167,7 +170,7 @@ class Processor():
 
     def post_process(self, outputs, img_shape, conf_thres=0.5, iou_thres=0.6):
         det_t = self.non_max_suppression(outputs, conf_thres, iou_thres, multi_label=True)
-        self.scale_coords(self.input_shape, det_t[0][:, :4], img_shape)
+        self.scale_coords(self.input_shape, det_t[0][:, :4], img_shape[0], img_shape[1])
         return det_t[0]
 
     @staticmethod
@@ -260,15 +263,22 @@ class Processor():
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
         # Rescale coords (xyxy) from img1_shape to img0_shape
         if ratio_pad is None:  # calculate from img0_shape
-            gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
+            gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
+            if self.scale_exact:
+                gain = [img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1]]
             pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
         else:
-            gain = ratio_pad[0][0]
+            gain = ratio_pad[0]
             pad = ratio_pad[1]
 
         coords[:, [0, 2]] -= pad[0]  # x padding
+        if self.scale_exact:
+            coords[:, [0, 2]] /= gain[1]  # x gain
+        else:
+            coords[:, [0, 2]] /= gain[0]  # raw x gain
         coords[:, [1, 3]] -= pad[1]  # y padding
-        coords[:, :4] /= gain
+        coords[:, [1, 3]] /= gain[0]  # y gain
+
         if isinstance(coords, torch.Tensor):  # faster individually
             coords[:, 0].clamp_(0, img0_shape[1])  # x1
             coords[:, 1].clamp_(0, img0_shape[0])  # y1

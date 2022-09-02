@@ -44,11 +44,15 @@ def parse_args():
         '-m', '--model', type=str, default='./weights/yolov5s-simple.trt',
         help=('trt model path'))
     parser.add_argument(
-        '--conf-thres', type=float, default=0.001,
+        '--conf-thres', type=float, default=0.03,
         help='object confidence threshold')
     parser.add_argument(
         '--iou-thres', type=float, default=0.65,
         help='IOU threshold for NMS')
+    parser.add_argument('--test_load_size', type=int, default=634, help='load img resize when test')
+    parser.add_argument('--letterbox_return_int', type=bool, default=True, help='return int offset for letterbox')
+    parser.add_argument('--scale_exact', type=bool, default=True, help='use exact scale size to scale coords')
+    parser.add_argument('--force_no_pad', type=bool, default=True, help='for no extra pad in letterbox')
     args = parser.parse_args()
     return args
 
@@ -61,7 +65,7 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco, batch_size=1, force_load_size=None):
+def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco, batch_size=1, test_load_size=640):
     """Run detection on each jpg and write results to file."""
     results = []
     # pbar = tqdm(jpgs, desc="TRT-Model test in val datasets.")
@@ -75,19 +79,20 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
             idx += 1
             if (idx == len(jpgs)): break
             img = cv2.imread(os.path.join(imgs_dir, jpgs[idx]))
-            shapes.append(img.shape)
+            # shapes.append(img.shape)
             h0, w0 = img.shape[:2] 
-            if force_load_size is not None:
-                r = force_load_size / max(h0, w0)
-                if r != 1:
-                    img = cv2.resize(
-                        img,
-                        (int(w0 * r), int(h0 * r)),
-                        interpolation=cv2.INTER_AREA
-                        # if r < 1 and not self.augment
-                        if r < 1 else cv2.INTER_LINEAR,
-                    )
-            imgs[i] = processor.pre_process(img)
+            r = test_load_size / max(h0, w0)
+            if r != 1:
+                img = cv2.resize(
+                    img,
+                    (int(w0 * r), int(h0 * r)),
+                    interpolation=cv2.INTER_AREA
+                    if r < 1 else cv2.INTER_LINEAR,
+                )
+            h, w = img.shape[:2] 
+            imgs[i], pad = processor.pre_process(img)
+            shape = (h0, w0), ((h / h0, w / w0), pad)
+            shapes.append(shape)
             image_ids.append(int(jpgs[idx].split('.')[0].split('_')[-1]))
         output = processor.inference(imgs)
         for j in range(len(shapes)):
@@ -124,10 +129,10 @@ def main():
     results_file = 'results_{}.json'.format(model_prefix)
 
     # setup processor
-    processor = Processor(model=args.model)
+    processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
     jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
     generate_results(processor, args.imgs_dir, jpgs, results_file, args.conf_thres, args.iou_thres,
-                     non_coco=False, batch_size=args.batch_size, force_load_size=630)
+                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size)
 
     # Run COCO mAP evaluation
     # Reference: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb
