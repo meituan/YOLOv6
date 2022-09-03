@@ -53,6 +53,8 @@ def parse_args():
     parser.add_argument('--letterbox_return_int', type=bool, default=True, help='return int offset for letterbox')
     parser.add_argument('--scale_exact', type=bool, default=True, help='use exact scale size to scale coords')
     parser.add_argument('--force_no_pad', type=bool, default=True, help='for no extra pad in letterbox')
+    parser.add_argument('-v', '--visualize', action="store_true", default=False, help='visualize demo')
+    parser.add_argument('--num_imgs_to_visualize', type=int, default=10, help='number of images to visualize')
     args = parser.parse_args()
     return args
 
@@ -65,14 +67,17 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco, batch_size=1, test_load_size=640):
+def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco, 
+                    batch_size=1, test_load_size=640, visualize=False,  num_imgs_to_visualize=0):
     """Run detection on each jpg and write results to file."""
     results = []
     # pbar = tqdm(jpgs, desc="TRT-Model test in val datasets.")
     pbar = tqdm(range(math.ceil(len(jpgs)/batch_size)), desc="TRT-Model test in val datasets.")
     idx = 0
+    num_visualized = 0
     for _ in pbar:
         imgs = torch.randn((batch_size,3,640,640), dtype=torch.float32, device=torch.device('cuda:0'))
+        source_imgs = []
         image_ids = []
         shapes = []
         for i in range(batch_size):
@@ -90,13 +95,17 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
                     if r < 1 else cv2.INTER_LINEAR,
                 )
             h, w = img.shape[:2] 
-            imgs[i], pad = processor.pre_process(img)
+            imgs[i], pad, img_src = processor.pre_process(img)
+            source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
             shapes.append(shape)
             image_ids.append(int(jpgs[idx].split('.')[0].split('_')[-1]))
         output = processor.inference(imgs)
+
         for j in range(len(shapes)):
             pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres=conf_thres, iou_thres=iou_thres)
+            if visualize and num_visualized < num_imgs_to_visualize:
+                image = source_imgs[i]
             for p in pred:
                 x = float(p[0])
                 y = float(p[1])
@@ -107,6 +116,14 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
                                 'category_id': coco91class[int(p[5])] if not non_coco else int(p[5]),
                                 'bbox': [round(x, 3) for x in [x, y, w, h]],
                                 'score': round(s, 5)})
+
+                if visualize and num_visualized < num_imgs_to_visualize:
+                    cv2.rectangle(image, (int(x), int(y)), (int(x+w), int(y+h)), (255, 0, 0), 1)
+
+            if visualize and num_visualized < num_imgs_to_visualize:
+                print("saving to %d.jpg" % (num_visualized))
+                err_code = cv2.imwrite("./%d.jpg"%num_visualized, image)
+                num_visualized += 1
 
     with open(results_file, 'w') as f:
         f.write(json.dumps(results, indent=4))
@@ -132,7 +149,9 @@ def main():
     processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
     jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
     generate_results(processor, args.imgs_dir, jpgs, results_file, args.conf_thres, args.iou_thres,
-                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size)
+                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size, 
+                     visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize)
+
 
     # Run COCO mAP evaluation
     # Reference: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb

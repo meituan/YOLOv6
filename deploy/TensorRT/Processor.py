@@ -120,20 +120,20 @@ class Processor():
 
     def detect(self, img):
         """Detect objects in the input image."""
-        resized = self.pre_process(img, self.input_shape)
+        resized, _, _ = self.pre_process(img, self.input_shape)
         outputs = self.inference(resized)
         return outputs
 
-    def pre_process(self, img, input_shape=None,):
+    def pre_process(self, img_src, input_shape=None,):
         """Preprocess an image before TRT YOLO inferencing.
         """
         input_shape = input_shape if input_shape is not None else self.input_shape
-        image, ratio, pad = letterbox(img, input_shape, auto=False, return_int=self.return_int)
+        image, ratio, pad = letterbox(img_src, input_shape, auto=False, return_int=self.return_int)
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image)).to(self.device).float()
-        img = image / 255.  # 0 - 255 to 0.0 - 1.0
-        return img, pad
+        image = image / 255.  # 0 - 255 to 0.0 - 1.0
+        return image, pad, img_src
 
     def inference(self, inputs):
         self.binding_addrs['image_arrays'] = int(inputs.data_ptr())
