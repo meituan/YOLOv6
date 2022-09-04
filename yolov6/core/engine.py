@@ -223,7 +223,9 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
-                                        distill_feat = self.args.distill_feat)
+                                        distill_weight = self.cfg.model.head.distill_weight,
+                                        distill_feat = self.args.distill_feat,
+                                        )
 
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:

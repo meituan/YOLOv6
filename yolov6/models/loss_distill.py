@@ -30,6 +30,10 @@ class ComputeLoss:
                      'dfl': 0.5,
                      'cwd': 10.0},
                  distill_feat = False,
+                 distill_weight={
+                     'class': 1.0,
+                     'dfl': 1.0,
+                     }
                  ):
         
         self.fpn_strides = fpn_strides
@@ -50,6 +54,7 @@ class ComputeLoss:
         self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type).cuda()
         self.loss_weight = loss_weight
         self.distill_feat = distill_feat
+        self.distill_weight = distill_weight
         
     def __call__(
         self,
@@ -129,12 +134,12 @@ class ComputeLoss:
         else:
             d_loss_cw = torch.tensor(0.).to(feats[0].device)
         import math
-        distill_weight = ((1 - math.cos(epoch_num * math.pi / max_epoch)) / 2) * (0.01- 1) + 1
-        d_loss_dfl *= distill_weight
-        d_loss_cls *= distill_weight
-        d_loss_cw *= distill_weight
-        loss_cls_all = loss_cls + d_loss_cls
-        loss_dfl_all = loss_dfl + d_loss_dfl 
+        distill_weightdecay = ((1 - math.cos(epoch_num * math.pi / max_epoch)) / 2) * (0.01- 1) + 1
+        d_loss_dfl *= distill_weightdecay
+        d_loss_cls *= distill_weightdecay
+        d_loss_cw *= distill_weightdecay
+        loss_cls_all = loss_cls + d_loss_cls * self.distill_weight['class']
+        loss_dfl_all = loss_dfl + d_loss_dfl * self.distill_weight['dfl']
         loss = self.loss_weight['class'] * loss_cls_all + \
                self.loss_weight['iou'] * loss_iou + \
                self.loss_weight['dfl'] * loss_dfl_all + \
