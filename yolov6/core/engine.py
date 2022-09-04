@@ -451,6 +451,8 @@ class Trainer:
             # Save calibrated checkpoint
             output_model_path = os.path.join(cfg.ptq.calib_output_path, '{}_calib_{}.pt'.
                                              format(os.path.splitext(os.path.basename(cfg.model.pretrained))[0], cfg.ptq.calib_method))
+            if cfg.ptq.sensitive_layers_skip is True:
+                output_model_path = output_model_path.replace('.pt', '_partial.pt')
             LOGGER.info('Saving calibrated model to {}... '.format(output_model_path))
             if not os.path.exists(cfg.ptq.calib_output_path):
                 os.mkdir(cfg.ptq.calib_output_path)
@@ -466,7 +468,9 @@ class Trainer:
     def quant_setup(self, model, cfg, device):
         if self.args.quant:
             from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
-            qat_init_model_manu(model, cfg)
+            qat_init_model_manu(model, cfg, self.args)
+            # workaround
+            model.neck.upsample_enable_quant()
             # if self.main_process:
             #     print(model)
             # QAT

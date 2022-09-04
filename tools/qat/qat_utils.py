@@ -58,7 +58,7 @@ def ptq_calibrate(model, train_loader, cfg):
         collect_stats(model, train_loader, cfg.ptq.calib_batches)
         compute_amax(model, method=cfg.ptq.histogram_amax_method, percentile=cfg.ptq.histogram_amax_percentile)
 
-def qat_init_model_manu(model, cfg):
+def qat_init_model_manu(model, cfg, args):
     # print(model)
     conv2d_weight_default_desc = tensor_quant.QUANT_DESC_8BIT_CONV2D_WEIGHT_PER_CHANNEL
     conv2d_input_default_desc = QuantDescriptor(num_bits=cfg.ptq.num_bits, calib_method=cfg.ptq.calib_method)
@@ -70,6 +70,10 @@ def qat_init_model_manu(model, cfg):
         if 'proj_conv' in k:
             print("Skip Layer {}".format(k))
             continue
+        if args.calib is True and cfg.ptq.sensitive_layers_skip is True:
+            if k in cfg.ptq.sensitive_layers_list:
+                print("Skip Layer {}".format(k))
+                continue
         # print(k, m)
         if isinstance(m, nn.Conv2d):
             # print("in_channel = {}".format(m.in_channels))

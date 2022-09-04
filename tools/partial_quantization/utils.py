@@ -58,8 +58,8 @@ def concat_quant_amax_fuse(ops_list):
         elif hasattr(op, '_input_quantizer'):
             op_amax = op._input_quantizer._amax.detach().item()
         else:
-            print("Not quantable op")
-            exit(0)
+            print("Not quantable op, skip")
+            return
         print("op amax = {:7.4f}, amax = {:7.4f}".format(op_amax, amax))
         if amax < op_amax:
             amax = op_amax

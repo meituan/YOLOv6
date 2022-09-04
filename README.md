@@ -13,11 +13,13 @@ YOLOv6 is composed of the following methods:
 - Efficient Decoupled Head with SIoU Loss
 
 
-## New Features
+## What's New
 
-- [ ] YOLOv6 m/l model.
-- [ ] Quantization tools 
+- ⭐️ Release YOLOv6 m/l model and update s/tiny/nano model
+- 🚀 Quantization tools 
 
+## Coming Soon
+- 📃 Technical report
 
 ## Quick Start
 
@@ -31,13 +33,12 @@ pip install -r requirements.txt
 
 ### Inference
 
-First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.1.0)
+First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.2.0)
 
 Second, run inference with `tools/infer.py`
 
 ```shell
-python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir
-                                yolov6n.pt
+python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 ```
 
 ### Training
@@ -46,15 +47,64 @@ Single GPU
 
 ```shell
 python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
-                                        configs/yolov6n.py
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s.py --data data/coco.yaml --device 0,1,2,3,4,5,6,7
-                                                                                        configs/yolov6n.py
 ```
+
+
+
+<details>
+<summary>Reproduce our results on COCO</summary>
+
+For nano model
+```shell
+python -m torch.distributed.launch --nproc_per_node 4 tools/train.py \
+									--batch 128 \
+									--conf configs/yolov6n.py \
+									--data data/coco.yaml \
+									--epoch 300 \
+									--device 0,1,2,3,4,5,6,7 \
+									--name yolov6n_coco
+```
+
+For s/tiny model
+```shell
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
+									--batch 256 \
+									--conf configs/yolov6s.py \ # configs/yolov6_tiny.py
+									--data data/coco.yaml \
+									--epoch 300 \
+									--device 0,1,2,3,4,5,6,7 \
+									--name yolov6s_coco # yolov6_tiny_coco
+```
+
+For m/l model
+```shell
+# Step 1: Training a base model
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
+									--batch 256 \
+									--conf configs/yolov6m.py \ # configs/yolov6l.py
+									--data data/coco.yaml \
+									--epoch 300 \
+									--device 0,1,2,3,4,5,6,7 \
+									--name yolov6m_coco # yolov6l_coco
+                                                                                      
+# Step 2: Self-distillation training
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
+									--batch 256 \
+									--conf configs/yolov6m.py \ # configs/yolov6l.py
+									--data data/coco.yaml \
+									--epoch 300 \
+									--device 0,1,2,3,4,5,6,7 \
+									--distill \
+									--teacher_model_path runs/train/yolov6m_coco/weights/best_ckpt.pt \ # # yolov6l_coco
+									--name yolov6m_coco # yolov6l_coco
+```
+</details>
 
 - conf: select config file to specify network/optimizer/hyperparameters
 - data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
@@ -81,23 +131,32 @@ Reproduce mAP on COCO val2017 dataset
 
 ```shell
 python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val
-                                                                yolov6n.pt
 ```
 
-### Resume
+<details>
+<summary>Evaluation on 640x640 images</summary>
+```shell
+python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --test_load_size 634  --letterbox_return_int  --scale_exact --force_no_pad  --not_infer_on_rect
+```
+
+</details>
+
+<details>
+<summary>Resume training</summary>
+
 If your training process is corrupted, you can resume training by
 ```
-# single GPU traning.
-python tools/train.py --resume
 # multi GPU training.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
 Your can also specify a checkpoint path to `--resume` parameter by
 ```
-# remember replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
+# remember to replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
 --resume /path/to/your/checkpoint/path
 
 ```
+
+</details>
 
 ### Deployment
 
@@ -112,22 +171,25 @@ Your can also specify a checkpoint path to `--resume` parameter by
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
 *  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
+*  [Tutorial of QAT for YOLOv6](./docs/tutorial_repopt.md)
 
 
 ## Benchmark
 
 
-| Model           | Size        | mAP<sup>val<br/>0.5:0.95 | Speed<sup>V100<br/>fp16 b32 <br/>(ms) | Speed<sup>V100<br/>fp32 b32 <br/>(ms) | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
-| :-------------- | ----------- | :----------------------- | :------------------------------------ | :------------------------------------ | ---------------------------------------- | ----------------------------------------- | --------------- | -------------- |
-| [**YOLOv6-n**](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6n.pt)    | 416<br/>640 | 30.8<br/>35.0            | 0.3<br/>0.5                           | 0.4<br/>0.7                           | 1100<br/>788                             | 2716<br/>1242                             | 4.3<br/>4.3     | 4.7<br/>11.1   |
-| [**YOLOv6-tiny**](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6t.pt) | 640         | 41.3                     | 0.9                                   | 1.5                                   | 425                                      | 602                                       | 15.0            | 36.7           |
-| [**YOLOv6-s**](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6s.pt)    | 640         | 43.1                     | 1.0                                   | 1.7                                   | 373                                      | 520                                       | 17.2            | 44.2           |
-
+| Model                                                        | Size | mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
+| :----------------------------------------------------------- | ---- | :----------------------- | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
+| [**YOLOv6-n**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 36.2                     | 802                                     | 1234                                     | 4.3                  | 11.1                |
+| [**YOLOv6-tiny**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.9                     | 449                                     | 659                                      | 15.0                 | 36.7                |
+| [**YOLOv6-s**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.9                     | 358                                     | 495                                      | 17.2                 | 44.2                |
+| [**YOLOv6-m**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.6                     | 179                                     | 233                                      | 34.3                 | 82.2                |
+| [**YOLOv6-l_relu**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.0                     | 113                                     | 149                                      | 58.5                 | 144.0               |
+| [**YOLOv6-l**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.2                     | 98                                      | 118                                      | 58.5                 | 144.0               |
 
 - Comparisons of the mAP and speed of different object detectors are tested on [COCO val2017](https://cocodataset.org/#download) dataset.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
 - Params and FLOPs of YOLOv6 are estimated on deployed model.
-- Speed results of other methods are tested in our environment using official codebase and model if not found from the corresponding official release.
+- Speed results are tested on T4 with TensorRT 7.2 Cuda 10.2 Cudnn 8.0.2.
 
  ## Third-party resources
  * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)

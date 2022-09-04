@@ -10,7 +10,8 @@ pip install onnx>=1.10.0
 python ./deploy/ONNX/export_onnx.py \
     --weights yolov6s.pt \
     --img 640 \
-    --batch 1
+    --batch 1 \
+    --simplify
 ```
 
 
@@ -34,15 +35,19 @@ python ./deploy/ONNX/export_onnx.py \
 
 ## Download
 
-* [YOLOv6-nano](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6n.onnx)
-* [YOLOv6-tiny](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6t.onnx)
-* [YOLOv6-s](https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6s.onnx)
+* [YOLOv6-Nano](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.onnx)
+* [YOLOv6-Tiny](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.onnx)
+* [YOLOv6-S](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.onnx)
+* [YOLOv6-M](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.onnx)
+* [YOLOv6-L-SiLU](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_silu.onnx)
+* [YOLOv6-L](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.onnx)
+
 
 ## End2End export
 
 Now YOLOv6 supports end to end detect for onnxruntime and TensorRT !
 
-If you want to deploy in TensorRT, make sure you have installed TensorRT >= 8.0.0 !
+If you want to deploy in TensorRT, make sure you have installed TensorRT !
 
 ### onnxruntime backend
 #### Usage
