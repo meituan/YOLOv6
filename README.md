@@ -3,23 +3,20 @@
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
 
-<img src="assets/picture.png" width="800">
+<img src="assets/speed_comparision_v2.png" width="1000">
 
-YOLOv6-nano achieves 35.0 mAP on COCO val2017 dataset with 1242 FPS on T4 using TensorRT FP16 for bs32 inference, and YOLOv6-s achieves 43.1 mAP on COCO val2017 dataset with 520 FPS on T4 using TensorRT FP16 for bs32 inference.
+YOLOv6 has a series of models for various industrial scenarios, including nano/tiny/s/m/l, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
-YOLOv6 is composed of the following methods:
-
-- Hardware-friendly Design for Backbone and Neck
-- Efficient Decoupled Head with SIoU Loss
+YOLOv6-N hits 35.6% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.4% AP with 358 FPS, while the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 595 FPS. YOLOv6-Tiny/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
 
 
 ## What's New
 
-- ⭐️ Release YOLOv6 m/l model and update s/tiny/nano model
-- 🚀 Quantization tools 
+- A series of models with excellent performance ⭐️ [Benchmark](#Benchmark)
+- Customized quantization tools 🚀 [Quantization Tutorial](./docs/tutorial_repopt.md)
 
 ## Coming Soon
-- 📃 Technical report
+- Technical report 📃 
 
 ## Quick Start
 
@@ -66,7 +63,7 @@ python -m torch.distributed.launch --nproc_per_node 4 tools/train.py \
 									--batch 128 \
 									--conf configs/yolov6n.py \
 									--data data/coco.yaml \
-									--epoch 300 \
+									--epoch 400 \
 									--device 0,1,2,3,4,5,6,7 \
 									--name yolov6n_coco
 ```
@@ -77,7 +74,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 256 \
 									--conf configs/yolov6s.py \ # configs/yolov6_tiny.py
 									--data data/coco.yaml \
-									--epoch 300 \
+									--epoch 400 \
 									--device 0,1,2,3,4,5,6,7 \
 									--name yolov6s_coco # yolov6_tiny_coco
 ```
@@ -124,22 +121,19 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 │   ├── README.txt
 ```
 
-
 ### Evaluation
 
-Reproduce mAP on COCO val2017 dataset
+Reproduce mAP on COCO val2017 dataset with 640×640 resolution
 
-```shell
-python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val
-```
-
-<details>
-<summary>Evaluation on 640x640 images</summary>
 ```shell
 python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --test_load_size 634  --letterbox_return_int  --scale_exact --force_no_pad  --not_infer_on_rect
 ```
+- test_load_size: load img size when testing, recommended value for each models can be found here
+- letterbox_return_int: return int offset for letterbox
+- scale_exact: use exact scale size to scale coords
+- force_no_pad: force no extra pad in letterbox
+- not_infer_on_rect: not to use rect image size when inferring
 
-</details>
 
 <details>
 <summary>Resume training</summary>
@@ -171,7 +165,6 @@ Your can also specify a checkpoint path to `--resume` parameter by
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
 *  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
-*  [Tutorial of QAT for YOLOv6](./docs/tutorial_repopt.md)
 
 
 ## Benchmark
@@ -179,17 +172,19 @@ Your can also specify a checkpoint path to `--resume` parameter by
 
 | Model                                                        | Size | mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
 | :----------------------------------------------------------- | ---- | :----------------------- | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-n**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 36.2                     | 802                                     | 1234                                     | 4.3                  | 11.1                |
-| [**YOLOv6-tiny**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.9                     | 449                                     | 659                                      | 15.0                 | 36.7                |
-| [**YOLOv6-s**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.9                     | 358                                     | 495                                      | 17.2                 | 44.2                |
-| [**YOLOv6-m**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.6                     | 179                                     | 233                                      | 34.3                 | 82.2                |
-| [**YOLOv6-l_relu**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.0                     | 113                                     | 149                                      | 58.5                 | 144.0               |
-| [**YOLOv6-l**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.2                     | 98                                      | 118                                      | 58.5                 | 144.0               |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 36.3                     | 802                                     | 1234                                     | 4.3                  | 11.1                |
+| [**YOLOv6-Tiny**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 41.1                     | 449                                     | 659                                      | 15.0                 | 36.7                |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.8                     | 358                                     | 495                                      | 17.2                 | 44.2                |
+| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                     | 179                                     | 233                                      | 34.3                 | 82.2                |
+| [**YOLOv6-L-SiLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_silu.pt) | 640  | 51.4                     | 113                                     | 149                                      | 58.5                 | 144.0               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.3                     | 98                                      | 118                                      | 58.5                 | 144.0               |
 
-- Comparisons of the mAP and speed of different object detectors are tested on [COCO val2017](https://cocodataset.org/#download) dataset.
+- Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
-- Params and FLOPs of YOLOv6 are estimated on deployed model.
-- Speed results are tested on T4 with TensorRT 7.2 Cuda 10.2 Cudnn 8.0.2.
+- Params and FLOPs of YOLOv6 are estimated on deployed models.
+- For N/Tiny/S models, we use more training epochs strategy.
+- For M/L/L-SiLU models, we adopt self-distillation methods to further improve the performance.
+
 
  ## Third-party resources
  * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
