@@ -1,4 +1,5 @@
 # YOLOv6
+Implementation of paper - YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications (Coming Soon)
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
@@ -12,13 +13,11 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5
 
 ## What's New
 
-- We release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
-- We use [TAL](https://arxiv.org/abs/2108.07755) label assignment with 2x faster training and ~1% higher accuracy.
-- We fix the degration of performance when evaluating on 640x640 inputs by adjusting the image preprocessing method. 
-- We adopt a customized quantization method to boost the performance. 🚀 [Quantization Tutorial](./tools/qat/README.md)
+- Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
+- 2x faster training time.
+- Fix the degration of performance when evaluating on 640x640 inputs by adjusting the image preprocessing method. 
+- Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 
-## Coming Soon
-- Technical report 📃 
 
 ## Quick Start
 
