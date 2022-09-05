@@ -12,7 +12,7 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5
 
 ## What's New
 
-- We release M/L models and update N/T/S models with enhanced performance at the same speed.⭐️ [Benchmark](#Benchmark)
+- We release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
 - We use [TAL](https://arxiv.org/abs/2108.07755) label assignment with 2x faster training and ~1% higher accuracy.
 - We fix the degration of performance when evaluating on 640x640 inputs by adjusting the image preprocessing method. 
 - We adopt a customized quantization method to boost the performance. 🚀 [Quantization Tutorial](./tools/qat/README.md)
@@ -164,6 +164,7 @@ Your can also specify a checkpoint path to `--resume` parameter by
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
 *  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
+*  [Tutorial of QAT for YOLOv6](./tools/qat/README.md)
 
 
 ## Benchmark
