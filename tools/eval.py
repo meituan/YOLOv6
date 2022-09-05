@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 from yolov6.core.evaler import Evaler
 from yolov6.utils.events import LOGGER
 from yolov6.utils.general import increment_name
-
+from yolov6.utils.config import Config
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Evalating', add_help=add_help)
@@ -33,7 +33,23 @@ def get_args_parser(add_help=True):
     parser.add_argument('--scale_exact', default=False, action='store_true', help='use exact scale size to scale coords')
     parser.add_argument('--force_no_pad', default=False, action='store_true', help='for no extra pad in letterbox')
     parser.add_argument('--not_infer_on_rect', default=False, action='store_true', help='default to use rect image size to boost infer')
+    parser.add_argument('--reproduce_640_eval', default=False, action='store_true', help='whether to reproduce 640 infer result, overwrite some config')
+    parser.add_argument('--eval_config_file', type=str, default='./configs/experiment/eval_640_repro.py', help='config file for repro 640 infer result')
     args = parser.parse_args()
+
+    # load params for reproduce 640 eval result
+    if args.reproduce_640_eval:
+        assert os.path.exists(args.eval_config_file), print("Reproduce config file {} does not exist".format(args.eval_config_file))
+        eval_params = Config.fromfile(args.eval_config_file).eval_params
+        eval_model_name = os.path.splitext(os.path.basename(args.weights))[0]
+        if eval_model_name not in eval_params:
+            eval_model_name = "default"
+        args.test_load_size = eval_params[eval_model_name]["test_load_size"]
+        args.letterbox_return_int = eval_params[eval_model_name]["letterbox_return_int"]
+        args.scale_exact = eval_params[eval_model_name]["scale_exact"]
+        args.force_no_pad = eval_params[eval_model_name]["force_no_pad"]
+        args.not_infer_on_rect = eval_params[eval_model_name]["not_infer_on_rect"]
+
     LOGGER.info(args)
     return args
 
@@ -56,7 +72,9 @@ def run(data,
         letterbox_return_int=False,
         force_no_pad=False,
         not_infer_on_rect=False,
-        scale_exact=False
+        scale_exact=False,
+        reproduce_640_eval=False,
+        eval_config_file='./configs/experiment/eval_640_repro.py'
         ):
     """ Run the evaluation process
 

@@ -7,13 +7,15 @@ YOLOv6 is a single-stage object detection framework dedicated to industrial appl
 
 YOLOv6 has a series of models for various industrial scenarios, including nano/tiny/s/m/l, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
-YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5% AP with 358 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 595 FPS(trt8.4). YOLOv6-Tiny/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
+YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5% AP with 358 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 595 FPS with TensorRT 8.4 on T4. YOLOv6-Tiny/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
 
 
 ## What's New
 
-- A series of models with excellent performance ⭐️ [Benchmark](#Benchmark)
-- Customized quantization tools 🚀 [Quantization Tutorial](./docs/tutorial_repopt.md)
+- We release M/L models and update N/T/S models with enhanced performance at the same speed.⭐️ [Benchmark](#Benchmark)
+- We use TAL label assignment with 2x faster training and ~1% higher accuracy.
+- We fix the degration of performance without gray borders by adjusting the image preprocessing method.
+- Customized quantization tools 🚀 [Quantization Tutorial](./tools/qat/README.md)
 
 ## Coming Soon
 - Technical report 📃 
@@ -128,13 +130,8 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 Reproduce mAP on COCO val2017 dataset with 640×640 resolution
 
 ```shell
-python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --test_load_size 634  --letterbox_return_int  --scale_exact --force_no_pad  --not_infer_on_rect
+python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --reproduce_640_eval
 ```
-- test_load_size: load img size when testing, recommended value for each models can be found here
-- letterbox_return_int: return int offset for letterbox
-- scale_exact: use exact scale size to scale coords
-- force_no_pad: force no extra pad in letterbox
-- not_infer_on_rect: not to use rect image size when inferring
 
 
 <details>
@@ -174,12 +171,12 @@ Your can also specify a checkpoint path to `--resume` parameter by
 
 | Model                                                        | Size | mAP<sup>val<br/>0.5:0.95        | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
 | :----------------------------------------------------------- | ---- | :------------------------------ | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 35.9<sup>300e<br/>36.3<sup>400e | 802                                     | 1234                                     | 4.3                  | 11.1                |
-| [**YOLOv6-T**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.3<sup>300e<br/>41.1<sup>400e | 449                                     | 659                                      | 15.0                 | 36.7                |
-| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.5<sup>300e<br/>43.8<sup>400e | 358                                     | 495                                      | 17.2                 | 44.2                |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 35.9<sup>300e</sup><br/>36.3<sup>400e | 802                                     | 1234                                     | 4.3                  | 11.1                |
+| [**YOLOv6-T**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.3<sup>300e</sup><br/>41.1<sup>400e | 449                                     | 659                                      | 15.0                 | 36.7                |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.5<sup>300e</sup><br/>43.8<sup>400e | 358                                     | 495                                      | 17.2                 | 44.2                |
 | [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                            | 179                                     | 233                                      | 34.3                 | 82.2                |
 | [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                            | 113                                     | 149                                      | 58.5                 | 144.0               |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                            | 98                                      | 118                                      | 58.5                 | 144.0               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                            | 98                                      | 121                                      | 58.5                 | 144.0               |
 
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
