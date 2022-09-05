@@ -251,8 +251,8 @@ class Evaler:
                     LOGGER.warning(f'The best conf_thresh when evaluate the model is less than 0.03, while you set it to: {conf_thres}')
                 if iou_thres != 0.65:
                     LOGGER.warning(f'The best iou_thresh when evaluate the model is 0.65, while you set it to: {iou_thres}')
-            if task == 'speed' and conf_thres < 0.5:
-                LOGGER.warning(f'The best conf_thresh when test the speed of the model is larger than 0.5, while you set it to: {conf_thres}')
+            if task == 'speed' and conf_thres < 0.4:
+                LOGGER.warning(f'The best conf_thresh when test the speed of the model is larger than 0.4, while you set it to: {conf_thres}')
 
     @staticmethod
     def reload_device(device, model, task):
