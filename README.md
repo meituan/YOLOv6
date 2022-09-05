@@ -7,7 +7,7 @@ YOLOv6 is a single-stage object detection framework dedicated to industrial appl
 
 YOLOv6 has a series of models for various industrial scenarios, including nano/tiny/s/m/l, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
-YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5% AP with 358 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 595 FPS with TensorRT 8.4 on T4. YOLOv6-Tiny/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
+YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5% AP with 358 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 595 FPS on T4. YOLOv6-Tiny/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
 
 
 ## What's New
