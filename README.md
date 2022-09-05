@@ -15,7 +15,7 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5
 
 - Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
 - 2x faster training time.
-- Fix the degration of performance when evaluating on 640x640 inputs by adjusting the image preprocessing method. 
+- Fix the degration of performance when evaluating on 640x640 inputs. 
 - Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 
 
