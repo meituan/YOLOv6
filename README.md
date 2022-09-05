@@ -178,8 +178,8 @@ Your can also specify a checkpoint path to `--resume` parameter by
 | [**YOLOv6-T**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.3<sup>300e<br/>41.1<sup>400e | 449                                     | 659                                      | 15.0                 | 36.7                |
 | [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.5<sup>300e<br/>43.8<sup>400e | 358                                     | 495                                      | 17.2                 | 44.2                |
 | [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                            | 179                                     | 233                                      | 34.3                 | 82.2                |
-| [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.5                            | 113                                     | 149                                      | 58.5                 | 144.0               |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.3                            | 98                                      | 118                                      | 58.5                 | 144.0               |
+| [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                            | 113                                     | 149                                      | 58.5                 | 144.0               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                            | 98                                      | 118                                      | 58.5                 | 144.0               |
 
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
