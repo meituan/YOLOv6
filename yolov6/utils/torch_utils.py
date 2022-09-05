@@ -29,7 +29,7 @@ def torch_distributed_zero_first(local_rank: int):
 
 
 def time_sync():
-    # Waits for all kernels in all streams on a CUDA device to complete if cuda is available.
+    '''Waits for all kernels in all streams on a CUDA device to complete if cuda is available.'''
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     return time.time()
@@ -39,7 +39,7 @@ def initialize_weights(model):
     for m in model.modules():
         t = type(m)
         if t is nn.Conv2d:
-            pass  # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            pass
         elif t is nn.BatchNorm2d:
             m.eps = 1e-3
             m.momentum = 0.03
@@ -48,7 +48,7 @@ def initialize_weights(model):
 
 
 def fuse_conv_and_bn(conv, bn):
-    # Fuse convolution and batchnorm layers https://tehnokv.com/posts/fusing-batchnorm-and-conv/
+    '''Fuse convolution and batchnorm layers https://tehnokv.com/posts/fusing-batchnorm-and-conv/.'''
     fusedconv = (
         nn.Conv2d(
             conv.in_channels,
@@ -83,10 +83,11 @@ def fuse_conv_and_bn(conv, bn):
 
 
 def fuse_model(model):
-    from yolov6.layers.common import Conv
+    '''Fuse convolution and batchnorm layers of the model.'''
+    from yolov6.layers.common import Conv, SimConv, Conv_C3
 
     for m in model.modules():
-        if type(m) is Conv and hasattr(m, "bn"):
+        if (type(m) is Conv or type(m) is SimConv or type(m) is Conv_C3) and hasattr(m, "bn"):
             m.conv = fuse_conv_and_bn(m.conv, m.bn)  # update conv
             delattr(m, "bn")  # remove batchnorm
             m.forward = m.forward_fuse  # update forward

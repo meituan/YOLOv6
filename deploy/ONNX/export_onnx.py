@@ -50,7 +50,6 @@ if __name__ == '__main__':
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
-
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
 
@@ -69,6 +68,10 @@ if __name__ == '__main__':
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
                         max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
 
+    print("===================")
+    print(model)
+    print("===================")
+    
     y = model(img)  # dry run
 
     # ONNX export

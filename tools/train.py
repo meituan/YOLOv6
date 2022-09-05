@@ -24,7 +24,7 @@ from yolov6.utils.general import increment_name, find_latest_checkpoint
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
     parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='path of dataset')
-    parser.add_argument('--conf-file', default='./configs/yolov6s.py', type=str, help='experiments description file')
+    parser.add_argument('--conf-file', default='./configs/yolov6n.py', type=str, help='experiments description file')
     parser.add_argument('--img-size', default=640, type=int, help='train, val image size (pixels)')
     parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
@@ -43,7 +43,14 @@ def get_args_parser(add_help=True):
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume the most recent training')
     parser.add_argument('--write_trainbatch_tb', action='store_true', help='write train_batch image to tensorboard once an epoch, may slightly slower train speed if open')
-
+    parser.add_argument('--stop_aug_last_n_epoch', default=15, type=int, help='stop strong aug at last n epoch, neg value not stop, default 15')
+    parser.add_argument('--save_ckpt_on_last_n_epoch', default=-1, type=int, help='save last n epoch even not best or last, neg value not save')
+    parser.add_argument('--distill', action='store_true', help='distill or not')
+    parser.add_argument('--distill_feat', action='store_true', help='distill featmap or not')
+    parser.add_argument('--quant', action='store_true', help='quant or not')
+    parser.add_argument('--calib', action='store_true', help='run ptq')
+    parser.add_argument('--teacher_model_path', type=str, default=None, help='teacher model path')
+    parser.add_argument('--temperature', type=int, default=20, help='distill temperature')
     return parser
 
 
@@ -102,6 +109,10 @@ def main(args):
 
     # Start
     trainer = Trainer(args, cfg, device)
+    # PTQ
+    if args.quant and args.calib:
+        trainer.calibrate(cfg)
+        return
     trainer.train()
 
     # End

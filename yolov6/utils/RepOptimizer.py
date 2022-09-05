@@ -6,12 +6,14 @@ from ..layers.common import RealVGGBlock, LinearAddBlock
 from torch.optim.sgd import SGD
 from yolov6.utils.events import LOGGER
 
+
 def extract_blocks_into_list(model, blocks):
    for module in model.children():
         if isinstance(module, LinearAddBlock) or isinstance(module, RealVGGBlock):
             blocks.append(module)
         else:
             extract_blocks_into_list(module, blocks)
+
 
 def extract_scales(model):
     blocks = []
@@ -26,12 +28,14 @@ def extract_scales(model):
         print('extract scales: ', scales[-1][-2].mean(), scales[-1][-1].mean())
     return scales
 
+
 def check_keywords_in_name(name, keywords=()):
     isin = False
     for keyword in keywords:
         if keyword in name:
             isin = True
     return isin
+
 
 def set_weight_decay(model, skip_list=(), skip_keywords=(), echo=False):
     has_decay = []
@@ -57,6 +61,7 @@ def set_weight_decay(model, skip_list=(), skip_keywords=(), echo=False):
     return [{'params': has_decay},
             {'params': no_decay, 'weight_decay': 0.}]
 
+
 def get_optimizer_param(args, cfg, model):
     """ Build optimizer from cfg file."""
     accumulate = max(1, round(64 / args.batch_size))
@@ -74,8 +79,9 @@ def get_optimizer_param(args, cfg, model):
             {'params': g_w, 'weight_decay': cfg.solver.weight_decay},
             {'params': g_b}]
 
+
 class RepVGGOptimizer(SGD):
-    #   scales is a list, scales[i] is a triple (scale_identity.weight, scale_1x1.weight, scale_conv.weight) or a two-tuple (scale_1x1.weight, scale_conv.weight) (if the block has no scale_identity)
+    '''scales is a list, scales[i] is a triple (scale_identity.weight, scale_1x1.weight, scale_conv.weight) or a two-tuple (scale_1x1.weight, scale_conv.weight) (if the block has no scale_identity)'''
     def __init__(self, model, scales,
                  args, cfg, momentum=0, dampening=0,
                  weight_decay=0, nesterov=True,
@@ -126,7 +132,6 @@ class RepVGGOptimizer(SGD):
                     conv3x3.weight.data += F.pad(identity * identity_scale_weight.view(-1, 1, 1, 1), [1, 1, 1, 1])
                 else:
                     conv3x3.weight.data += F.pad(identity, [1, 1, 1, 1])
-
 
     def generate_gradient_masks(self, scales_by_idx, conv3x3_by_idx, cpu_mode=False):
         self.grad_mask_map = {}

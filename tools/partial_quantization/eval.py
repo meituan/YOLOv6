@@ -18,7 +18,8 @@ class EvalerWrapper(object):
             os.makedirs(save_dir)
 
         # reload thres/device/half/data according task
-        conf_thres, iou_thres = Evaler.reload_thres(conf_thres=0.001, iou_thres=0.65, task=task)
+        conf_thres = 0.001
+        iou_thres = 0.65
         device = Evaler.reload_device(device, None, task)
         data = Evaler.reload_dataset(data) if isinstance(data, str) else data
 
@@ -42,7 +43,7 @@ class EvalerWrapper(object):
             model.half()
 
         with torch.no_grad():
-            pred_result = self.val.predict_model(model, self.val_loader, self.task)
+            pred_result, vis_outputs, vis_paths = self.val.predict_model(model, self.val_loader, self.task)
             eval_result = self.val.eval_model(pred_result, model, self.val_loader, self.task)
 
         return eval_result
