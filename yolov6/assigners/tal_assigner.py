@@ -26,7 +26,7 @@ class TaskAlignedAssigner(nn.Module):
                 gt_labels,
                 gt_bboxes,
                 mask_gt):
-        r"""This code referenced to
+        """This code referenced to
            https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
 
         Args:
