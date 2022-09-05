@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -29,8 +26,8 @@ class TaskAlignedAssigner(nn.Module):
                 gt_labels,
                 gt_bboxes,
                 mask_gt):
-        r"""This code is based on
-            https://github.com/fcjian/TOOD/blob/master/mmdet/core/bbox/assigners/task_aligned_assigner.py
+        r"""This code referenced to
+           https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
 
         Args:
             pd_scores (Tensor): shape(bs, num_total_anchors, num_classes)
