@@ -1,6 +1,6 @@
 # YOLOv6l model
 model = dict(
-    type='YOLOv6l',
+    type='YOLOv6l_relu',
     pretrained=None,
     depth_multiple=1.0,  
     width_multiple=1.0,

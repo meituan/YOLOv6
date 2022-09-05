@@ -35,8 +35,8 @@ python ./deploy/ONNX/export_onnx.py \
 
 ## Download
 
-* [YOLOv6-Nano](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.onnx)
-* [YOLOv6-Tiny](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.onnx)
+* [YOLOv6-N](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.onnx)
+* [YOLOv6-T](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.onnx)
 * [YOLOv6-S](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.onnx)
 * [YOLOv6-M](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.onnx)
 * [YOLOv6-L-ReLU](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.onnx)

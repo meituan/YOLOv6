@@ -74,11 +74,11 @@ For s/tiny model
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 256 \
-									--conf configs/yolov6s.py \ # configs/yolov6_tiny.py
+									--conf configs/yolov6s.py \ # configs/yolov6t.py
 									--data data/coco.yaml \
 									--epoch 400 \
 									--device 0,1,2,3,4,5,6,7 \
-									--name yolov6s_coco # yolov6_tiny_coco
+									--name yolov6s_coco # yolov6t_coco
 ```
 
 For m/l model

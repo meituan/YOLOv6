@@ -59,4 +59,5 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.1,
 )
-training_mode = "conv_silu"
+training_mode = "conv_silu" 
+# use normal conv to speed up training and further improve accuracy.
