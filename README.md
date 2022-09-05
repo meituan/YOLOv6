@@ -13,7 +13,7 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 802 FPS on T4. YOLOv6-S strikes 43.5
 ## What's New
 
 - We release M/L models and update N/T/S models with enhanced performance at the same speed.⭐️ [Benchmark](#Benchmark)
-- We use TAL label assignment with 2x faster training and ~1% higher accuracy.
+- We use [TAL](https://arxiv.org/abs/2108.07755) label assignment with 2x faster training and ~1% higher accuracy.
 - We fix the degration of performance without gray borders by adjusting the image preprocessing method.
 - Customized quantization tools 🚀 [Quantization Tutorial](./tools/qat/README.md)
 
