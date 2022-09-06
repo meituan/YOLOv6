@@ -218,14 +218,15 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type)
-        self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
-                                        ori_img_size=self.img_size,
-                                        use_dfl=self.cfg.model.head.use_dfl,
-                                        reg_max=self.cfg.model.head.reg_max,
-                                        iou_type=self.cfg.model.head.iou_type,
-                                        distill_weight = self.cfg.model.head.distill_weight,
-                                        distill_feat = self.args.distill_feat,
-                                        )
+        if self.args.distill:                             
+            self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
+                                                            ori_img_size=self.img_size,
+                                                            use_dfl=self.cfg.model.head.use_dfl,
+                                                            reg_max=self.cfg.model.head.reg_max,
+                                                            iou_type=self.cfg.model.head.iou_type,
+                                                            distill_weight = self.cfg.model.head.distill_weight,
+                                                            distill_feat = self.args.distill_feat,
+                                                            )
 
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
