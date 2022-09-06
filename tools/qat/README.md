@@ -17,7 +17,7 @@ pip install --extra-index-url=https://pypi.ngc.nvidia.com --trusted-host pypi.ng
 ```
 
 ## Training with RepOptimizer
-Firstly, train a `YOLOv6-S RepOpt` as follows.   
+Firstly, train a `YOLOv6-S RepOpt` as follows, or download our realeased [checkpoint](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_reopt.pt) and [scales](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_scale.pt).
 *  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
 ## PTQ
 We perform PTQ to get the range of activations and weights.
@@ -62,8 +62,9 @@ python3 qat_export.py --weights yolov6s_v2_reopt_43.1.pt --quant-weights yolov6s
 To build a TRT engine,
 
 ```python
-trtexec --workspace=1024 --percentile=99 --streams=1 --int8 --fp16 --avgRuns=10 --onnx=yolov6s_v2_reopt_qat_43.0_bs1.sim.onnx --saveEngine=yolov6s_v2_reopt_qat_43.0_bs1.sim.trt
+trtexec --workspace=1024 --percentile=99 --streams=1 --int8 --fp16 --avgRuns=10 --onnx=yolov6s_v2_reopt_qat_43.0_bs1.sim.onnx --calib=yolov6s_v2_reopt_qat_43.0_remove_qdq_bs1_calibration_addscale.cache --saveEngine=yolov6s_v2_reopt_qat_43.0_bs1.sim.trt
 ```
+You can directly build engine with [yolov6s_v2_quant.onnx](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_reopt_qat_43.0_remove_qdq_bs1.sim.onnx) and [yolov6s_v2_calibration.cache](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_reopt_qat_43.0_remove_qdq_bs1_calibration_addscale.cache)
 
 ## Performance Comparison
 
