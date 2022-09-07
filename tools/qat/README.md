@@ -72,5 +72,5 @@ We release our quantized and graph-optimized YOLOv6-S (v0.2.0) model. The follow
 
 | Model           | Size        | Precision        |mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt b1 <br/>(fps) | Speed<sup>T4<br/>trt b32 <br/>(fps) |
 | :-------------- | ----------- | ----------- |:----------------------- | ---------------------------------------- | -----------------------------------|
-| [**YOLOv6-S RepOpt**] | 640 | INT8         |43.3                     | 596     | 844  |
+| [**YOLOv6-S RepOpt**] | 640 | INT8         |43.3                     | 596     | 869  |
 | [**YOLOv6-S**] | 640         | FP16         |43.4                     | 377    | 541 |
