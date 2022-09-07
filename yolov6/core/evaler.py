@@ -94,6 +94,15 @@ class Evaler:
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc="Inferencing model in val datasets.", ncols=NCOLS)
+
+        # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
+        metric_and_plot = True if task == "val" else False
+        if metric_and_plot:
+            stats, ap = [], []
+            seen = 0
+            iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
+            niou = iouv.numel()
+
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
 
             # pre-process
@@ -114,6 +123,10 @@ class Evaler:
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
 
+            if metric_and_plot:
+                import copy
+                eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
+
             # save result
             pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
 
@@ -122,6 +135,88 @@ class Evaler:
                 vis_num = min(len(imgs), 8)
                 vis_outputs = outputs[:vis_num]
                 vis_paths = paths[:vis_num]
+            
+            if not metric_and_plot:
+                continue
+
+            # Statistics per image 
+            # code mainly based on https://github.com/WongKinYiu/yolov7/blob/main/test.py
+            for si, pred in enumerate(eval_outputs):
+                labels = targets[targets[:, 0] == si, 1:]
+                nl = len(labels)
+                tcls = labels[:, 0].tolist() if nl else []  # target class
+                seen += 1
+
+                if len(pred) == 0:
+                    if nl:
+                        stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
+                    continue
+
+                # Predictions
+                predn = pred.clone()
+                self.scale_coords(imgs[si].shape[1:], predn[:, :4], shapes[si][0], shapes[si][1])  # native-space pred
+
+                # Assign all predictions as incorrect
+                correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
+                if nl:
+                    detected = []  # target indices
+                    tcls_tensor = labels[:, 0]
+
+                    # target boxes
+                    from yolov6.utils.nms import xywh2xyxy
+
+                    tbox = xywh2xyxy(labels[:, 1:5])
+                    tbox[:, [0, 2]] *= imgs[si].shape[1:][0]
+                    tbox[:, [1, 3]] *= imgs[si].shape[1:][1]
+
+                    self.scale_coords(imgs[si].shape[1:], tbox, shapes[si][0], shapes[si][1])  # native-space labels
+
+                    # Per target class
+                    for cls in torch.unique(tcls_tensor):
+                        ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # target indices
+                        pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # prediction indices
+
+                        # Search for detections
+                        if pi.shape[0] and ti.shape[0]:
+                            # Prediction to target ious
+                            from yolov6.utils.general import box_iou
+                            ious, ious_i = box_iou(predn[pi, :4], tbox[ti]).max(1)  # best ious, indices
+
+                            # Append detections
+                            detected_set = set()
+                            for j in (ious > iouv[0]).nonzero(as_tuple=False):
+                                d = ti[ious_i[j]]  # detected target
+                                if d.item() not in detected_set:
+                                    detected_set.add(d.item())
+                                    detected.append(d)
+                                    correct[pi[j]] = ious[j] > iouv  # iou_thres is 1xn
+                                    # if len(detected) == nl:  # all targets already located in image
+                                    if len(detected_set) == ti.shape[0]:  # all targets already located in image
+                                        break
+
+                # Append statistics (correct, conf, pcls, tcls)
+                stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+        
+        if metric_and_plot:
+            # Compute statistics
+            stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+            if len(stats) and stats[0].any():
+
+                from yolov6.utils.metrics import ap_per_class
+                p, r, ap, f1, ap_class = ap_per_class(*stats, plot=metric_and_plot, save_dir=self.save_dir, names=model.names)
+                AP50_F1_max_idx = f1.mean(0).argmax()
+                LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
+                ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
+                mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
+                nt = np.bincount(stats[3].astype(np.int64), minlength=model.nc)  # number of targets per class
+            else:
+                nt = torch.zeros(1)
+
+            # Print results
+            s = ('%10s' + '%12s' * 6) % ('Class', 'Images', 'Labels', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
+            LOGGER.info(s)
+            pf = '%10s' + '%12i' * 2 + '%12.3g' * 4  # print format
+            LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, map50, map))
         return pred_results, vis_outputs, vis_paths
         
 
