@@ -1,5 +1,5 @@
 # YOLOv6
-Implementation of paper - YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications (Coming Soon)
+Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
