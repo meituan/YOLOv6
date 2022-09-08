@@ -14,4 +14,3 @@ pycocotools>=2.0
 onnx>=1.10.0  # ONNX export
 onnx-simplifier>=0.3.6 # ONNX simplifier
 thop  # FLOPs computation
-pytorch_quantization>=2.1.1
