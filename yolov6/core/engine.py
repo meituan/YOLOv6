@@ -187,14 +187,41 @@ class Trainer:
             write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
             
     def eval_model(self):
-        results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                           batch_size=self.batch_size // self.world_size * 2,
-                           img_size=self.img_size,
-                           model=self.ema.ema if self.args.calib is False else self.model,
-                           conf_thres=0.03,
-                           dataloader=self.val_loader,
-                           save_dir=self.save_dir,
-                           task='train')
+        if not hasattr(self.cfg, "eval_params"):
+            results, vis_outputs, vis_paths = eval.run(self.data_dict,
+                            batch_size=self.batch_size // self.world_size * 2,
+                            img_size=self.img_size,
+                            model=self.ema.ema if self.args.calib is False else self.model,
+                            conf_thres=0.03,
+                            dataloader=self.val_loader,
+                            save_dir=self.save_dir,
+                            task='train')
+        else:
+            def get_cfg_value(cfg_dict, value_str, default_value):
+                if value_str in cfg_dict and cfg_dict[value_str] is not None:
+                    return cfg_dict[value_str]
+                else:
+                    return default_value
+            eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
+            results, vis_outputs, vis_paths = eval.run(self.data_dict,
+                            batch_size=get_cfg_value(self.cfg.eval_params, "batch_size", self.batch_size // self.world_size * 2),
+                            img_size=eval_img_size,
+                            model=self.ema.ema if self.args.calib is False else self.model,
+                            conf_thres=get_cfg_value(self.cfg.eval_params, "conf_thres", 0.03),
+                            dataloader=self.val_loader,
+                            save_dir=self.save_dir,
+                            task='train',
+                            test_load_size=get_cfg_value(self.cfg.eval_params, "test_load_size", eval_img_size),
+                            letterbox_return_int=get_cfg_value(self.cfg.eval_params, "letterbox_return_int", False),
+                            force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad", False),
+                            not_infer_on_rect=get_cfg_value(self.cfg.eval_params, "not_infer_on_rect", False),
+                            scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact", False),
+                            verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
+                            do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
+                            do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
+                            plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
+                            plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                            )
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
         self.evaluate_results = results[:2]
