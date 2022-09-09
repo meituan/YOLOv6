@@ -36,7 +36,14 @@ class Evaler:
                  letterbox_return_int=False,
                  force_no_pad=False,
                  not_infer_on_rect=False,
-                 scale_exact=False):
+                 scale_exact=False,
+                 verbose=False,
+                 do_coco_metric=True,
+                 do_pr_metric=False,
+                 plot_curve=True,
+                 plot_confusion_matrix=False
+                 ):
+        assert do_pr_metric or do_coco_metric, 'ERROR: at least set one val metric'
         self.data = data
         self.batch_size = batch_size
         self.img_size = img_size
@@ -50,6 +57,11 @@ class Evaler:
         self.force_no_pad = force_no_pad
         self.not_infer_on_rect = not_infer_on_rect
         self.scale_exact = scale_exact
+        self.verbose = verbose
+        self.do_coco_metric = do_coco_metric
+        self.do_pr_metric = do_pr_metric
+        self.plot_curve = plot_curve
+        self.plot_confusion_matrix = plot_confusion_matrix
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -96,12 +108,14 @@ class Evaler:
         pbar = tqdm(dataloader, desc="Inferencing model in val datasets.", ncols=NCOLS)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
-        metric_and_plot = True if task == "val" else False
-        if metric_and_plot:
+        if self.do_pr_metric:
             stats, ap = [], []
             seen = 0
             iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
             niou = iouv.numel()
+            if self.plot_confusion_matrix:
+                from yolov6.utils.metrics import ConfusionMatrix
+                confusion_matrix = ConfusionMatrix(nc=model.nc)
 
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
 
@@ -123,7 +137,7 @@ class Evaler:
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
 
-            if metric_and_plot:
+            if self.do_pr_metric:
                 import copy
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
             
@@ -136,7 +150,7 @@ class Evaler:
                 vis_outputs = outputs[:vis_num]
                 vis_paths = paths[:vis_num]
             
-            if not metric_and_plot:
+            if not self.do_pr_metric:
                 continue
 
             # Statistics per image 
@@ -175,30 +189,44 @@ class Evaler:
                     from yolov6.utils.metrics import process_batch
 
                     correct = process_batch(predn, labelsn, iouv)
+                    if self.plot_confusion_matrix:
+                        confusion_matrix.process_batch(predn, labelsn)
 
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
         
-        if metric_and_plot:
+        if self.do_pr_metric:
             # Compute statistics
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
 
                 from yolov6.utils.metrics import ap_per_class
-                p, r, ap, f1, ap_class = ap_per_class(*stats, plot=metric_and_plot, save_dir=self.save_dir, names=model.names)
+                p, r, ap, f1, ap_class = ap_per_class(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
                 AP50_F1_max_idx = f1.mean(0).argmax()
                 LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
                 ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
                 mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
                 nt = np.bincount(stats[3].astype(np.int64), minlength=model.nc)  # number of targets per class
-            else:
-                nt = torch.zeros(1)
+                
+                # Print results
+                s = ('%-16s' + '%12s' * 7) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
+                LOGGER.info(s)
+                pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
+                LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, f1.mean(0)[AP50_F1_max_idx], map50, map))
 
-            # Print results
-            s = ('%s' + '%12s' * 4) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou')
-            LOGGER.info(s)
-            pf = '%s' + '%12i' * 2 + '%12.3g' * 2  # print format
-            LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr))
+                self.pr_metric_result = (map50, map)
+
+                # Print results per class
+                if self.verbose and model.nc > 1:
+                    for i, c in enumerate(ap_class):
+                        LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx], 
+                                           f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
+                
+                if self.plot_confusion_matrix:
+                    confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
+            else:
+                LOGGER.info("Calculate metric failed, might check dataset.")
+                self.pr_metric_result = (0.0, 0.0)
         
         return pred_results, vis_outputs, vis_paths
         
@@ -212,6 +240,8 @@ class Evaler:
         LOGGER.info(f'\nEvaluating speed.')
         self.eval_speed(task)
 
+        if not self.do_coco_metric and self.do_pr_metric:
+            return self.pr_metric_result
         LOGGER.info(f'\nEvaluating mAP by pycocotools.')
         if task != 'speed' and len(pred_results):
             if 'anno_path' in self.data:
@@ -235,6 +265,52 @@ class Evaler:
                 cocoEval.params.imgIds = imgIds
             cocoEval.evaluate()
             cocoEval.accumulate()
+
+            #print each class ap from pycocotool result
+            if self.verbose:
+                
+                import copy
+                val_dataset_img_count = cocoEval.cocoGt.imgToAnns.__len__()
+                val_dataset_anns_count = 0
+                label_count_dict = {"images":set(), "anns":0}
+                label_count_dicts = [copy.deepcopy(label_count_dict) for _ in range(model.nc)]
+                for _, ann_i in cocoEval.cocoGt.anns.items():
+                    if ann_i["ignore"]:
+                        continue
+                    val_dataset_anns_count += 1
+                    nc_i = self.coco80_to_coco91_class().index(ann_i['category_id'])
+                    label_count_dicts[nc_i]["images"].add(ann_i["image_id"])
+                    label_count_dicts[nc_i]["anns"] += 1
+                
+                s = ('%-16s' + '%12s' * 7) % ('Class', 'Labeled_images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
+                LOGGER.info(s)
+                #IOU , all p, all cats, all gt, maxdet 100
+                coco_p = cocoEval.eval['precision']
+                coco_p_all = coco_p[:, :, :, 0, 2]
+                map = np.mean(coco_p_all[coco_p_all>-1])
+
+                coco_p_iou50 = coco_p[0, :, :, 0, 2]
+                map50 = np.mean(coco_p_iou50[coco_p_iou50>-1])
+                mp = np.array([np.mean(coco_p_iou50[ii][coco_p_iou50[ii]>-1]) for ii in range(coco_p_iou50.shape[0])])
+                mr = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
+                mf1 = 2 * mp * mr / (mp + mr + 1e-16)
+                i = mf1.argmax()  # max F1 index
+
+                pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
+                LOGGER.info(pf % ('all', val_dataset_img_count, val_dataset_anns_count, mp[i], mr[i], mf1[i], map50, map))
+                
+                #compute each class best f1 and corresponding p and r
+                for nc_i in range(model.nc):
+                    coco_p_c = coco_p[:, :, nc_i, 0, 2]
+                    map = np.mean(coco_p_c[coco_p_c>-1])
+
+                    coco_p_c_iou50 = coco_p[0, :, nc_i, 0, 2]
+                    map50 = np.mean(coco_p_c_iou50[coco_p_c_iou50>-1])
+                    p = coco_p_c_iou50
+                    r = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
+                    f1 = 2 * p * r / (p + r + 1e-16)
+                    i = f1.argmax()
+                    LOGGER.info(pf % (model.names[nc_i], len(label_count_dicts[nc_i]["images"]), label_count_dicts[nc_i]["anns"], p[i], r[i], f1[i], map50, map))
             cocoEval.summarize()
             map, map50 = cocoEval.stats[:2]  # update results (mAP@0.5:0.95, mAP@0.5)
             # Return results

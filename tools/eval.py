@@ -15,6 +15,11 @@ from yolov6.utils.events import LOGGER
 from yolov6.utils.general import increment_name
 from yolov6.utils.config import Config
 
+def boolean_string(s):
+    if s not in {'False', 'True'}:
+        raise ValueError('Not a valid boolean string')
+    return s == 'True'
+
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Evalating', add_help=add_help)
     parser.add_argument('--data', type=str, default='./data/coco.yaml', help='dataset.yaml path')
@@ -35,6 +40,11 @@ def get_args_parser(add_help=True):
     parser.add_argument('--not_infer_on_rect', default=False, action='store_true', help='default to use rect image size to boost infer')
     parser.add_argument('--reproduce_640_eval', default=False, action='store_true', help='whether to reproduce 640 infer result, overwrite some config')
     parser.add_argument('--eval_config_file', type=str, default='./configs/experiment/eval_640_repro.py', help='config file for repro 640 infer result')
+    parser.add_argument('--do_coco_metric', default=True, type=boolean_string, help='whether to use pycocotool to metric, set False to close')
+    parser.add_argument('--do_pr_metric', default=True, type=boolean_string, help='whether to calculate precision, recall and F1, n, set False to close')
+    parser.add_argument('--plot_curve', default=True, type=boolean_string, help='whether to save plots in savedir when do pr metric, set False to close')
+    parser.add_argument('--plot_confusion_matrix', default=False, action='store_true', help='whether to save confusion matrix plots when do pr metric, might cause no harm warning print')
+    parser.add_argument('--verbose', default=False, action='store_true', help='whether to print metric on each class')
     args = parser.parse_args()
 
     # load params for reproduce 640 eval result
@@ -74,7 +84,12 @@ def run(data,
         not_infer_on_rect=False,
         scale_exact=False,
         reproduce_640_eval=False,
-        eval_config_file='./configs/experiment/eval_640_repro.py'
+        eval_config_file='./configs/experiment/eval_640_repro.py',
+        verbose=False,
+        do_coco_metric=True,
+        do_pr_metric=False,
+        plot_curve=False,
+        plot_confusion_matrix=False
         ):
     """ Run the evaluation process
 
@@ -102,7 +117,8 @@ def run(data,
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
-                test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect, scale_exact)
+                test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect, scale_exact,
+                verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
 
