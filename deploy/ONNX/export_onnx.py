@@ -29,10 +29,12 @@ if __name__ == '__main__':
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
-    parser.add_argument('--max-wh', type=int, default=None, help='None for trt int for ort')
+    parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
+    parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
+    parser.add_argument('--max-wh', type=int, default=None, help='None for tensorrt nms, int value for onnx-runtime nms')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='conf threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.4, help='conf threshold for NMS')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     args = parser.parse_args()
     args.img_size *= 2 if len(args.img_size) == 1 else 1  # expand
@@ -41,14 +43,13 @@ if __name__ == '__main__':
 
     # Check device
     cuda = args.device != 'cpu' and torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device(f'cuda:{args.device}' if cuda else 'cpu')
     assert not (device.type == 'cpu' and args.half), '--half only compatible with GPU export, i.e. use --device 0'
     # Load PyTorch model
     model = load_checkpoint(args.weights, map_location=device, inplace=True, fuse=True)  # load FP32 model
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
-
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
 
@@ -64,9 +65,13 @@ if __name__ == '__main__':
             m.inplace = args.inplace
     if args.end2end:
         from yolov6.models.end2end import End2End
-        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,
-                        score_thres=args.conf_thres, max_wh=args.max_wh, device=device)
+        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
+                        max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
 
+    print("===================")
+    print(model)
+    print("===================")
+    
     y = model(img)  # dry run
 
     # ONNX export
@@ -77,7 +82,7 @@ if __name__ == '__main__':
             torch.onnx.export(model, img, f, verbose=False, opset_version=12,
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
-                              input_names=['image_arrays'],
+                              input_names=['images'],
                               output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
                               if args.end2end and args.max_wh is None else ['outputs'],)
             f.seek(0)
