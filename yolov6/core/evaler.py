@@ -105,7 +105,7 @@ class Evaler:
         '''
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
-        pbar = tqdm(dataloader, desc="Inferencing model in val datasets.", ncols=NCOLS)
+        pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.", ncols=NCOLS)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
@@ -248,8 +248,8 @@ class Evaler:
                 anno_json = self.data['anno_path']
             else:
                 # generated coco format labels in dataset initialization
-                dataset_root = os.path.dirname(os.path.dirname(self.data['val']))
-                base_name = os.path.basename(self.data['val'])
+                dataset_root = os.path.dirname(os.path.dirname(self.data[task]))
+                base_name = os.path.basename(self.data[task])
                 anno_json = os.path.join(dataset_root, 'annotations', f'instances_{base_name}.json')
             pred_json = os.path.join(self.save_dir, "predictions.json")
             LOGGER.info(f'Saving {pred_json}...')
@@ -393,14 +393,14 @@ class Evaler:
 
     @staticmethod
     def check_task(task):
-        if task not in ['train', 'val', 'speed']:
-            raise Exception("task argument error: only support 'train' / 'val' / 'speed' task.")
+        if task not in ['train', 'val', 'test', 'speed']:
+            raise Exception("task argument error: only support 'train' / 'val' / 'test' / 'speed' task.")
 
     @staticmethod
     def check_thres(conf_thres, iou_thres, task):
         '''Check whether confidence and iou threshold are best for task val/speed'''
         if task != 'train':
-            if task == 'val':
+            if task == 'val' or task == 'test':
                 if conf_thres > 0.03:
                     LOGGER.warning(f'The best conf_thresh when evaluate the model is less than 0.03, while you set it to: {conf_thres}')
                 if iou_thres != 0.65:
@@ -424,11 +424,11 @@ class Evaler:
         return device
 
     @staticmethod
-    def reload_dataset(data):
+    def reload_dataset(data, task):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
-        val = data.get('val')
-        if not os.path.exists(val):
+        path = data.get(task, 'val')
+        if not os.path.exists(path):
             raise Exception('Dataset not found.')
         return data
 

@@ -28,7 +28,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.03, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.65, help='NMS IoU threshold')
-    parser.add_argument('--task', default='val', help='val, or speed')
+    parser.add_argument('--task', default='val', help='val, test, or speed')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--half', default=False, action='store_true', help='whether to use fp16 infer')
     parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
@@ -112,7 +112,7 @@ def run(data,
     Evaler.check_thres(conf_thres, iou_thres, task)
     device = Evaler.reload_device(device, model, task)
     half = device.type != 'cpu' and half
-    data = Evaler.reload_dataset(data) if isinstance(data, str) else data
+    data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
 
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
