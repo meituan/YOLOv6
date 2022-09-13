@@ -65,7 +65,7 @@ python -m torch.distributed.launch --nproc_per_node 4 tools/train.py \
 									--conf configs/yolov6n.py \
 									--data data/coco.yaml \
 									--epoch 400 \
-									--device 0,1,2,3,4,5,6,7 \
+									--device 0,1,2,3 \
 									--name yolov6n_coco
 ```
 
