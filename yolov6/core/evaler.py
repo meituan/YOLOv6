@@ -424,7 +424,7 @@ class Evaler:
         return device
 
     @staticmethod
-    def reload_dataset(data, task):
+    def reload_dataset(data, task='val'):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
         path = data.get(task, 'val')
