@@ -255,6 +255,6 @@ class End2End(nn.Module):
         if self.with_preprocess:
             x = x[:,[2,1,0],...]
             x = x * (1/255)
-        x = self.model(x)
+        x, _ = self.model(x)
         x = self.end2end(x)
         return x
