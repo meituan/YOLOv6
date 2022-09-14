@@ -97,7 +97,8 @@ class Trainer:
             self.train_before_loop()
             for self.epoch in range(self.start_epoch, self.max_epoch):
                 self.train_in_loop(self.epoch)
-
+            self.strip_model()
+            
         except Exception as _:
             LOGGER.error('ERROR in training loop or eval/save model.')
             raise
@@ -281,12 +282,14 @@ class Trainer:
             self.pbar.set_description(('%10s' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
                                                                 *(self.mean_loss)))
 
-    # Empty cache if training finished
-    def train_after_loop(self):
+    def strip_model(self):
         if self.main_process:
             LOGGER.info(f'\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours.')
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
             strip_optimizer(save_ckpt_dir, self.epoch)  # strip optimizers for saved pt model
+
+    # Empty cache if training finished
+    def train_after_loop(self):
         if self.device != 'cpu':
             torch.cuda.empty_cache()
 
