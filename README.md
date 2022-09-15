@@ -155,15 +155,13 @@ Your can also specify a checkpoint path to `--resume` parameter by
 *  [ONNX](./deploy/ONNX)
 *  [OpenCV Python/C++](./deploy/ONNX/OpenCV)
 *  [OpenVINO](./deploy/OpenVINO)
-*  [Partial Quantization](./tools/partial_quantization)
 *  [TensorRT](./deploy/TensorRT)
 
 ### Tutorials
 
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
-*  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
-*  [Tutorial of QAT for YOLOv6](./tools/qat/README.md)
+*  [Tutorial of Quantization for YOLOv6](./docs/Tutorial%20of%20Quantization.md)
 
 
 ## Benchmark
