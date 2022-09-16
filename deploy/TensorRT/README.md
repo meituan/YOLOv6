@@ -79,3 +79,26 @@ python3 deploy/TensorRT/eval_yolo_trt.py -v -m model.trt \
 --annotations /workdir/datasets/coco/annotations/instances_val2017.json \
 --conf-thres 0.40 --iou-thres 0.45
 ```
+
+
+# YOLOV6 Tensorrt Conversion & Infernce in Python
+
+for custom model change classe from utils.py 
+
+
+Download the onnx weight 
+
+```!wget https://github.com/meituan/YOLOv6/releases/download/0.1.0/yolov6s.onnx```
+### include NMS Plugin
+converting .onnx into .trt format ,it has support of --end2end /(using nms)
+``` !python export.py -o yolov6s.onnx -e yolov6s.trt --end2end ```
+##### image inference
+```!python trt.py -e yolov6s.trt  -i src/1.jpg -o yolov6s-1.jpg --end2end```
+##### video inference
+```!python trt.py -e yolov6s.trt  -v yourvideopath/video.mp4 -o op_video.avi --end2end```
+### exclude NMS Plugin
+```!python export.py -o yolov6s.onnx -e yolov6s.trt```
+##### image inference
+```!python trt.py -e yolov6s.trt  -i data/images/image1.jpg  -o yolov6s-1.jpg```
+##### video inference
+```!python trt.py -e yolov6s.trt  -v yourvideopath/video.mp4 -o op_video.avi ```
