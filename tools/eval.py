@@ -41,7 +41,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--reproduce_640_eval', default=False, action='store_true', help='whether to reproduce 640 infer result, overwrite some config')
     parser.add_argument('--eval_config_file', type=str, default='./configs/experiment/eval_640_repro.py', help='config file for repro 640 infer result')
     parser.add_argument('--do_coco_metric', default=True, type=boolean_string, help='whether to use pycocotool to metric, set False to close')
-    parser.add_argument('--do_pr_metric', default=True, type=boolean_string, help='whether to calculate precision, recall and F1, n, set False to close')
+    parser.add_argument('--do_pr_metric', default=False, type=boolean_string, help='whether to calculate precision, recall and F1, n, set False to close')
     parser.add_argument('--plot_curve', default=True, type=boolean_string, help='whether to save plots in savedir when do pr metric, set False to close')
     parser.add_argument('--plot_confusion_matrix', default=False, action='store_true', help='whether to save confusion matrix plots when do pr metric, might cause no harm warning print')
     parser.add_argument('--verbose', default=False, action='store_true', help='whether to print metric on each class')
