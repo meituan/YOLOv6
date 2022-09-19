@@ -1,10 +1,16 @@
-# YOLOv6
+<p align="center">
+  <img src="assets/banner-YOLO.png" align="middle" width = "1000" />
+</p>
+
+
 Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 ## Introduction
 
 YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
 
-<img src="assets/speed_comparision_v2.png" width="1000">
+<p align="center">
+  <img src="assets/speed_comparision_v2.png" align="middle" width = "1000" />
+</p>
 
 YOLOv6 has a series of models for various industrial scenarios, including N/T/S/M/L, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
