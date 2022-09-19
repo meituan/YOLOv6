@@ -179,8 +179,8 @@ class Evaler:
 
                     # target boxes
                     tbox = xywh2xyxy(labels[:, 1:5])
-                    tbox[:, [0, 2]] *= imgs[si].shape[1:][0]
-                    tbox[:, [1, 3]] *= imgs[si].shape[1:][1]
+                    tbox[:, [0, 2]] *= imgs[si].shape[1:][1]
+                    tbox[:, [1, 3]] *= imgs[si].shape[1:][0]
 
                     self.scale_coords(imgs[si].shape[1:], tbox, shapes[si][0], shapes[si][1])  # native-space labels
 
