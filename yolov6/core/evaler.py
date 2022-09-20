@@ -278,7 +278,7 @@ class Evaler:
                     if ann_i["ignore"]:
                         continue
                     val_dataset_anns_count += 1
-                    nc_i = self.coco80_to_coco91_class().index(ann_i['category_id'])
+                    nc_i = self.coco80_to_coco91_class().index(ann_i['category_id']) if self.is_coco else ann_i['category_id']
                     label_count_dicts[nc_i]["images"].add(ann_i["image_id"])
                     label_count_dicts[nc_i]["anns"] += 1
                 
