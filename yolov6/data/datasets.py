@@ -116,7 +116,7 @@ class TrainValDataset(Dataset):
             else:
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
                   
-            shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
+            shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
             if labels.size:
