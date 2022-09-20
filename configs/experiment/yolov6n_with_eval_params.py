@@ -54,11 +54,14 @@ data_aug = dict(
     mixup=0.0,
 )
 
+# Eval params when eval model.
+# If eval_params item is list, eg conf_thres=[0.03, 0.03], 
+# first will be used in train.py and second will be used in eval.py.
 eval_params = dict(
+    batch_size=None,  #None mean will be the same as batch on one device * 2
     img_size=None,  #None mean will be the same as train image size
     conf_thres=0.03,
     iou_thres=0.65,
-    task='train',
 
     #pading and scale coord 
     test_load_size=None, #None mean will be the same as test image size
