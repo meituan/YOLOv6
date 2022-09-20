@@ -27,10 +27,7 @@ op_concat_fusion_list = [
     ('detect.reg_convs.1.conv', 'detect.cls_convs.1.conv'),
     ('detect.reg_convs.2.conv', 'detect.cls_convs.2.conv'),
 ]
-def get_yolov6_config(key):
-    # config_dict = {'yolov6s_v2_reopt.pt': '../../configs/repopt/yolov6s_opt_qat.py'}
-    # return config_dict[key]
-    return '../../configs/repopt/yolov6s_opt_qat.py'
+
 # python3 qat_export.py --weights yolov6s_v2_reopt.pt --quant-weights yolov6s_v2_reopt_qat_43.0.pt --export-batch-size 1
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
