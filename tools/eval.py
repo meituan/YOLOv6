@@ -45,7 +45,26 @@ def get_args_parser(add_help=True):
     parser.add_argument('--plot_curve', default=True, type=boolean_string, help='whether to save plots in savedir when do pr metric, set False to close')
     parser.add_argument('--plot_confusion_matrix', default=False, action='store_true', help='whether to save confusion matrix plots when do pr metric, might cause no harm warning print')
     parser.add_argument('--verbose', default=False, action='store_true', help='whether to print metric on each class')
+    parser.add_argument('--config-file', default='', type=str, help='experiments description file, lower priority than reproduce_640_eval')
     args = parser.parse_args()
+
+    if args.config_file:
+        assert os.path.exists(args.config_file), print("Config file {} does not exist".format(args.config_file))
+        cfg = Config.fromfile(args.config_file)
+        if not hasattr(cfg, 'eval_params'):
+            LOGGER.info("Config file doesn't has eval params config.")
+        else:
+            eval_params=cfg.eval_params
+            for key, value in eval_params.items():
+                if key not in args.__dict__:
+                    LOGGER.info(f"Unrecognized config {key}, continue")
+                    continue
+                if isinstance(value, list):
+                    if value[1] is not None:
+                        args.__dict__[key] = value[1]
+                else:
+                    if value is not None:
+                        args.__dict__[key] = value
 
     # load params for reproduce 640 eval result
     if args.reproduce_640_eval:
@@ -59,6 +78,12 @@ def get_args_parser(add_help=True):
         args.scale_exact = eval_params[eval_model_name]["scale_exact"]
         args.force_no_pad = eval_params[eval_model_name]["force_no_pad"]
         args.not_infer_on_rect = eval_params[eval_model_name]["not_infer_on_rect"]
+        #force params
+        args.img_size = 640
+        args.conf_thres = 0.03
+        args.iou_thres = 0.65
+        args.task = "val"
+        args.do_coco_metric = True
 
     LOGGER.info(args)
     return args
@@ -89,7 +114,8 @@ def run(data,
         do_coco_metric=True,
         do_pr_metric=False,
         plot_curve=False,
-        plot_confusion_matrix=False
+        plot_confusion_matrix=False,
+        config_file=None,
         ):
     """ Run the evaluation process
 
