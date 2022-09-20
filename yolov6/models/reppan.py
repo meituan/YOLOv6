@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from yolov6.layers.common import RepBlock, RepVGGBlock, BottleRep, BepC3, SimConv, Transpose
 
-_QUANT=False
+# _QUANT=False
 class RepPANNeck(nn.Module):
     """RepPANNeck Module
     EfficientRep is the default backbone of this model.
@@ -94,8 +94,8 @@ class RepPANNeck(nn.Module):
         conv2d_input_default_desc = QuantDescriptor(num_bits=8, calib_method='histogram')
         self.upsample_feat0_quant = quant_nn.TensorQuantizer(conv2d_input_default_desc)
         self.upsample_feat1_quant = quant_nn.TensorQuantizer(conv2d_input_default_desc)
-        global _QUANT
-        _QUANT = True
+        # global _QUANT
+        self._QUANT = True
 
     def forward(self, input):
 
@@ -103,14 +103,14 @@ class RepPANNeck(nn.Module):
 
         fpn_out0 = self.reduce_layer0(x0)
         upsample_feat0 = self.upsample0(fpn_out0)
-        if _QUANT:
+        if hasattr(self, '_QUANT') and self._QUANT is True:
             upsample_feat0 = self.upsample_feat0_quant(upsample_feat0)
         f_concat_layer0 = torch.cat([upsample_feat0, x1], 1)
         f_out0 = self.Rep_p4(f_concat_layer0)
 
         fpn_out1 = self.reduce_layer1(f_out0)
         upsample_feat1 = self.upsample1(fpn_out1)
-        if _QUANT:
+        if hasattr(self, '_QUANT') and self._QUANT is True:
             upsample_feat1 = self.upsample_feat1_quant(upsample_feat1)
         f_concat_layer1 = torch.cat([upsample_feat1, x2], 1)
         pan_out2 = self.Rep_p3(f_concat_layer1)
