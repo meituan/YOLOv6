@@ -34,13 +34,17 @@ class Inferer:
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
+        self.half = half
+
+        # Switch model to deploy status
+        self.model_switch(self.model.model, self.img_size)
 
         # Half precision
-        if half & (self.device.type != 'cpu'):
+        if self.half & (self.device.type != 'cpu'):
             self.model.model.half()
         else:
             self.model.model.float()
-            half = False
+            self.half = False
 
         if self.device.type != 'cpu':
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
@@ -49,8 +53,7 @@ class Inferer:
         self.files = LoadData(source)
         self.source = source
 
-        # Switch model to deploy status
-        self.model_switch(self.model.model, self.img_size)
+        
 
     def model_switch(self, model, img_size):
         ''' Model switch to deploy status '''
