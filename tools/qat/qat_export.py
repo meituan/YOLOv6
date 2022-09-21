@@ -28,7 +28,9 @@ op_concat_fusion_list = [
     ('detect.reg_convs.2.conv', 'detect.cls_convs.2.conv'),
 ]
 
-# python3 qat_export.py --weights yolov6s_v2_reopt.pt --quant-weights yolov6s_v2_reopt_qat_43.0.pt --export-batch-size 1
+# python3 qat_export.py --weights yolov6s_v2_reopt.pt --quant-weights yolov6s_v2_reopt_qat_43.0.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6s_opt_qat.py
+# python3 qat_export.py --weights v6s_t.pt --quant-weights yolov6t_v2_reopt_qat_40.1.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6_tiny_opt_qat.py
+# python3 qat_export.py --weights v6s_n.pt --quant-weights yolov6n_v2_reopt_qat_34.9.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6n_opt_qat.py
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='./yolov6s_v2_reopt.pt', help='weights path')
@@ -36,11 +38,8 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--conf', type=str, default='../../configs/repopt/yolov6s_opt_qat.py', help='model config')
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
-    parser.add_argument('--calib', action='store_true', help='indicate calibrated model')
     parser.add_argument('--fuse-bn', action='store_true', help='fuse bn')
     parser.add_argument('--graph-opt', action='store_true', help='enable graph optimizer')
-    parser.add_argument('--skip-qat-sensitive', action='store_true', help='skip qat sensitive layers')
-    parser.add_argument('--skip-ptq-sensitive', action='store_true', help='skip ptq sensitive layers')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0, 1, 2, 3 or cpu')
     parser.add_argument('--eval-yaml', type=str, default='../partial_quantization/eval.yaml', help='evaluation config')

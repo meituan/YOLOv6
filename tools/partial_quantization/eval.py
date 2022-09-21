@@ -18,7 +18,7 @@ class EvalerWrapper(object):
             os.makedirs(save_dir)
 
         # reload thres/device/half/data according task
-        conf_thres = 0.001
+        conf_thres = 0.03
         iou_thres = 0.65
         device = Evaler.reload_device(device, None, task)
         data = Evaler.reload_dataset(data) if isinstance(data, str) else data
