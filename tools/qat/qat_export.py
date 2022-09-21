@@ -28,6 +28,25 @@ op_concat_fusion_list = [
     ('detect.reg_convs.2.conv', 'detect.cls_convs.2.conv'),
 ]
 
+def zero_scale_fix(model, device):
+
+    for k, m in model.named_modules():
+        # print(k, m)
+        if isinstance(m, quant_nn.QuantConv2d) or \
+            isinstance(m, quant_nn.QuantConvTranspose2d):
+            # print(m)
+            # print(m._weight_quantizer._amax)
+            weight_amax = m._weight_quantizer._amax.detach().cpu().numpy()
+            # print(weight_amax)
+            print(k)
+            ones = np.ones_like(weight_amax)
+            print("zero scale number = {}".format(np.sum(weight_amax == 0.0)))
+            weight_amax = np.where(weight_amax == 0.0, ones, weight_amax)
+            m._weight_quantizer._amax.copy_(torch.from_numpy(weight_amax).to(device))
+        else:
+            # module can not be quantized, continue
+            continue
+
 # python3 qat_export.py --weights yolov6s_v2_reopt.pt --quant-weights yolov6s_v2_reopt_qat_43.0.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6s_opt_qat.py
 # python3 qat_export.py --weights v6s_t.pt --quant-weights yolov6t_v2_reopt_qat_40.1.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6_tiny_opt_qat.py
 # python3 qat_export.py --weights v6s_n.pt --quant-weights yolov6n_v2_reopt_qat_34.9.pt --export-batch-size 1 --conf ../../configs/repopt/yolov6n_opt_qat.py
@@ -39,6 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--conf', type=str, default='../../configs/repopt/yolov6s_opt_qat.py', help='model config')
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
     parser.add_argument('--calib', action='store_true', default=False, help='calibrated model')
+    parser.add_argument('--scale-fix', action='store_true', help='enable scale fix')
     parser.add_argument('--fuse-bn', action='store_true', help='fuse bn')
     parser.add_argument('--graph-opt', action='store_true', help='enable graph optimizer')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
@@ -72,6 +92,8 @@ if __name__ == '__main__':
     ckpt = torch.load(args.quant_weights)
     model.load_state_dict(ckpt['model'].float().state_dict())
     model.to(device)
+    if args.scale_fix:
+        zero_scale_fix(model, device)
     if args.graph_opt:
         # concat amax fusion
         for sub_fusion_list in op_concat_fusion_list:
