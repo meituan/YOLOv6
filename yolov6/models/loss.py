@@ -1,411 +1,208 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-# The code is based on
-# https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/models/yolo_head.py
-# Copyright (c) Megvii, Inc. and its affiliates.
-
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from yolov6.utils.figure_iou import IOUloss, pairwise_bbox_iou
+from yolov6.assigners.anchor_generator import generate_anchors
+from yolov6.utils.general import dist2bbox, bbox2dist, xywh2xyxy
+from yolov6.utils.figure_iou import IOUloss
+from yolov6.assigners.atss_assigner import ATSSAssigner
+from yolov6.assigners.tal_assigner import TaskAlignedAssigner
 
 
 class ComputeLoss:
-    '''Loss computation func.
-    This func contains SimOTA and siou loss.
-    '''
-    def __init__(self,
-                 reg_weight=5.0,
-                 iou_weight=3.0,
-                 cls_weight=1.0,
-                 center_radius=2.5,
-                 eps=1e-7,
-                 in_channels=[256, 512, 1024],
-                 strides=[8, 16, 32],
-                 n_anchors=1,
-                 iou_type='ciou'
+    '''Loss computation func.'''
+    def __init__(self, 
+                 fpn_strides=[8, 16, 32],
+                 grid_cell_size=5.0,
+                 grid_cell_offset=0.5,
+                 num_classes=80,
+                 ori_img_size=640,
+                 warmup_epoch=4,
+                 use_dfl=True,
+                 reg_max=16,
+                 iou_type='giou',
+                 loss_weight={
+                     'class': 1.0,
+                     'iou': 2.5,
+                     'dfl': 0.5}
                  ):
+        
+        self.fpn_strides = fpn_strides
+        self.grid_cell_size = grid_cell_size
+        self.grid_cell_offset = grid_cell_offset
+        self.num_classes = num_classes
+        self.ori_img_size = ori_img_size
+        
+        self.warmup_epoch = warmup_epoch
+        self.warmup_assigner = ATSSAssigner(9, num_classes=self.num_classes)
+        self.formal_assigner = TaskAlignedAssigner(topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0)
 
-        self.reg_weight = reg_weight
-        self.iou_weight = iou_weight
-        self.cls_weight = cls_weight
-
-        self.center_radius = center_radius
-        self.eps = eps
-        self.n_anchors = n_anchors
-        self.strides = strides
-        self.grids = [torch.zeros(1)] * len(in_channels)
-
-        # Define criteria
-        self.l1_loss = nn.L1Loss(reduction="none")
-        self.bcewithlog_loss = nn.BCEWithLogitsLoss(reduction="none")
-        self.iou_loss = IOUloss(iou_type=iou_type, reduction="none")
-
+        self.use_dfl = use_dfl
+        self.reg_max = reg_max
+        self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False)
+        self.iou_type = iou_type
+        self.varifocal_loss = VarifocalLoss().cuda()
+        self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type).cuda()
+        self.loss_weight = loss_weight       
+        
     def __call__(
         self,
         outputs,
-        targets
+        targets,
+        epoch_num
     ):
-        dtype = outputs[0].type()
-        device = targets.device
-        loss_cls, loss_obj, loss_iou, loss_l1 = torch.zeros(1, device=device), torch.zeros(1, device=device), \
-            torch.zeros(1, device=device), torch.zeros(1, device=device)
-        num_classes = outputs[0].shape[-1] - 5
-
-        outputs, outputs_origin, gt_bboxes_scale, xy_shifts, expanded_strides = self.get_outputs_and_grids(
-            outputs, self.strides, dtype, device)
-
-        total_num_anchors = outputs.shape[1]
-        bbox_preds = outputs[:, :, :4]  # [batch, n_anchors_all, 4]
-        bbox_preds_org = outputs_origin[:, :, :4]  # [batch, n_anchors_all, 4]
-        obj_preds = outputs[:, :, 4].unsqueeze(-1)  # [batch, n_anchors_all, 1]
-        cls_preds = outputs[:, :, 5:]  # [batch, n_anchors_all, n_cls]
+        
+        feats, pred_scores, pred_distri = outputs
+        anchors, anchor_points, n_anchors_list, stride_tensor = \
+               generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
+   
+        assert pred_scores.type() == pred_distri.type()
+        gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        batch_size = pred_scores.shape[0]
 
         # targets
-        batch_size = bbox_preds.shape[0]
-        targets_list = np.zeros((batch_size, 1, 5)).tolist()
+        targets =self.preprocess(targets, batch_size, gt_bboxes_scale)
+        gt_labels = targets[:, :, :1]
+        gt_bboxes = targets[:, :, 1:] #xyxy
+        mask_gt = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
+        
+        # pboxes
+        anchor_points_s = anchor_points / stride_tensor
+        pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri) #xyxy
+
+        if epoch_num < self.warmup_epoch:
+            target_labels, target_bboxes, target_scores, fg_mask = \
+                self.warmup_assigner(
+                    anchors,
+                    n_anchors_list,
+                    gt_labels,
+                    gt_bboxes,
+                    mask_gt,
+                    pred_bboxes.detach() * stride_tensor)
+        else:
+            target_labels, target_bboxes, target_scores, fg_mask = \
+                self.formal_assigner(
+                    pred_scores.detach(),
+                    pred_bboxes.detach() * stride_tensor,
+                    anchor_points,
+                    gt_labels,
+                    gt_bboxes,
+                    mask_gt)
+
+        # rescale bbox
+        target_bboxes /= stride_tensor
+
+        # cls loss
+        target_labels = torch.where(fg_mask > 0, target_labels, torch.full_like(target_labels, self.num_classes))
+        one_hot_label = F.one_hot(target_labels.long(), self.num_classes + 1)[..., :-1]
+        loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
+            
+        target_scores_sum = target_scores.sum()
+        loss_cls /= target_scores_sum
+        
+        # bbox loss
+        loss_iou, loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, anchor_points_s, target_bboxes, 
+                                            target_scores, target_scores_sum, fg_mask)
+        
+        loss = self.loss_weight['class'] * loss_cls + \
+               self.loss_weight['iou'] * loss_iou + \
+               self.loss_weight['dfl'] * loss_dfl
+       
+        return loss, \
+            torch.cat(((self.loss_weight['iou'] * loss_iou).unsqueeze(0), 
+                         (self.loss_weight['dfl'] * loss_dfl).unsqueeze(0),
+                         (self.loss_weight['class'] * loss_cls).unsqueeze(0))).detach()
+     
+    def preprocess(self, targets, batch_size, scale_tensor):
+        targets_list = np.zeros((batch_size, 1, 5)).tolist() 
         for i, item in enumerate(targets.cpu().numpy().tolist()):
             targets_list[int(item[0])].append(item[1:])
         max_len = max((len(l) for l in targets_list))
-
         targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0]]*(max_len - len(l)), targets_list)))[:,1:,:]).to(targets.device)
-        num_targets_list = (targets.sum(dim=2) > 0).sum(dim=1)  # number of objects
+        batch_target = targets[:, :, 1:5].mul_(scale_tensor)
+        targets[..., 1:] = xywh2xyxy(batch_target)
+        return targets
+        
+    def bbox_decode(self, anchor_points, pred_dist):
+        if self.use_dfl:
+            batch_size, n_anchors, _ = pred_dist.shape
+            pred_dist = F.softmax(pred_dist.view(batch_size, n_anchors, 4, self.reg_max + 1), dim=-1).matmul(self.proj.to(pred_dist.device))
+        return dist2bbox(pred_dist, anchor_points)
 
-        num_fg, num_gts = 0, 0
-        cls_targets, reg_targets, l1_targets, obj_targets, fg_masks = [], [], [], [], []
 
-        for batch_idx in range(batch_size):
-            num_gt = int(num_targets_list[batch_idx])
-            num_gts += num_gt
-            if num_gt == 0:
-                cls_target = outputs.new_zeros((0, num_classes))
-                reg_target = outputs.new_zeros((0, 4))
-                l1_target = outputs.new_zeros((0, 4))
-                obj_target = outputs.new_zeros((total_num_anchors, 1))
-                fg_mask = outputs.new_zeros(total_num_anchors).bool()
-            else:
+class VarifocalLoss(nn.Module):
+    def __init__(self):
+        super(VarifocalLoss, self).__init__()
 
-                gt_bboxes_per_image = targets[batch_idx, :num_gt, 1:5].mul_(gt_bboxes_scale)
-                gt_classes = targets[batch_idx, :num_gt, 0]
-                bboxes_preds_per_image = bbox_preds[batch_idx]
-                cls_preds_per_image = cls_preds[batch_idx]
-                obj_preds_per_image = obj_preds[batch_idx]
+    def forward(self, pred_score,gt_score, label, alpha=0.75, gamma=2.0):
 
-                try:
-                    (
-                        gt_matched_classes,
-                        fg_mask,
-                        pred_ious_this_matching,
-                        matched_gt_inds,
-                        num_fg_img,
-                    ) = self.get_assignments(
-                        batch_idx,
-                        num_gt,
-                        total_num_anchors,
-                        gt_bboxes_per_image,
-                        gt_classes,
-                        bboxes_preds_per_image,
-                        cls_preds_per_image,
-                        obj_preds_per_image,
-                        expanded_strides,
-                        xy_shifts,
-                        num_classes
-                    )
-
-                except RuntimeError:
-                    print(
-                        "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
-                           CPU mode is applied in this batch. If you want to avoid this issue, \
-                           try to reduce the batch size or image size."
-                    )
-                    torch.cuda.empty_cache()
-                    print("------------CPU Mode for This Batch-------------")
-
-                    _gt_bboxes_per_image = gt_bboxes_per_image.cpu().float()
-                    _gt_classes = gt_classes.cpu().float()
-                    _bboxes_preds_per_image = bboxes_preds_per_image.cpu().float()
-                    _cls_preds_per_image = cls_preds_per_image.cpu().float()
-                    _obj_preds_per_image = obj_preds_per_image.cpu().float()
-
-                    _expanded_strides = expanded_strides.cpu().float()
-                    _xy_shifts = xy_shifts.cpu()
-
-                    (
-                        gt_matched_classes,
-                        fg_mask,
-                        pred_ious_this_matching,
-                        matched_gt_inds,
-                        num_fg_img,
-                    ) = self.get_assignments(
-                        batch_idx,
-                        num_gt,
-                        total_num_anchors,
-                        _gt_bboxes_per_image,
-                        _gt_classes,
-                        _bboxes_preds_per_image,
-                        _cls_preds_per_image,
-                        _obj_preds_per_image,
-                        _expanded_strides,
-                        _xy_shifts,
-                        num_classes
-                    )
-
-                    gt_matched_classes = gt_matched_classes.cuda()
-                    fg_mask = fg_mask.cuda()
-                    pred_ious_this_matching = pred_ious_this_matching.cuda()
-                    matched_gt_inds = matched_gt_inds.cuda()
-
-                torch.cuda.empty_cache()
-                num_fg += num_fg_img
-                if num_fg_img > 0:
-                    cls_target = F.one_hot(
-                        gt_matched_classes.to(torch.int64), num_classes
-                    ) * pred_ious_this_matching.unsqueeze(-1)
-                    obj_target = fg_mask.unsqueeze(-1)
-                    reg_target = gt_bboxes_per_image[matched_gt_inds]
-
-                    l1_target = self.get_l1_target(
-                        outputs.new_zeros((num_fg_img, 4)),
-                        gt_bboxes_per_image[matched_gt_inds],
-                        expanded_strides[0][fg_mask],
-                        xy_shifts=xy_shifts[0][fg_mask],
-                    )
-
-            cls_targets.append(cls_target)
-            reg_targets.append(reg_target)
-            obj_targets.append(obj_target)
-            l1_targets.append(l1_target)
-            fg_masks.append(fg_mask)
-
-        cls_targets = torch.cat(cls_targets, 0)
-        reg_targets = torch.cat(reg_targets, 0)
-        obj_targets = torch.cat(obj_targets, 0)
-        l1_targets = torch.cat(l1_targets, 0)
-        fg_masks = torch.cat(fg_masks, 0)
-
-        num_fg = max(num_fg, 1)
-        # loss
-        loss_iou += (self.iou_loss(bbox_preds.view(-1, 4)[fg_masks].T, reg_targets)).sum() / num_fg
-        loss_l1 += (self.l1_loss(bbox_preds_org.view(-1, 4)[fg_masks], l1_targets)).sum() / num_fg
-
-        loss_obj += (self.bcewithlog_loss(obj_preds.view(-1, 1), obj_targets*1.0)).sum() / num_fg
-        loss_cls += (self.bcewithlog_loss(cls_preds.view(-1, num_classes)[fg_masks], cls_targets)).sum() / num_fg
-
-        total_losses = self.reg_weight * loss_iou + loss_l1 + loss_obj + loss_cls
-        return total_losses, torch.cat((self.reg_weight * loss_iou, loss_l1, loss_obj, loss_cls)).detach()
-
-    def decode_output(self, output, k, stride, dtype, device):
-        grid = self.grids[k].to(device)
-        batch_size = output.shape[0]
-        hsize, wsize = output.shape[2:4]
-        if grid.shape[2:4] != output.shape[2:4]:
-            yv, xv = torch.meshgrid([torch.arange(hsize), torch.arange(wsize)])
-            grid = torch.stack((xv, yv), 2).view(1, 1, hsize, wsize, 2).type(dtype).to(device)
-            self.grids[k] = grid
-
-        output = output.reshape(batch_size, self.n_anchors * hsize * wsize, -1)
-        output_origin = output.clone()
-        grid = grid.view(1, -1, 2)
-
-        output[..., :2] = (output[..., :2] + grid) * stride
-        output[..., 2:4] = torch.exp(output[..., 2:4]) * stride
-
-        return output, output_origin, grid, hsize, wsize
-
-    def get_outputs_and_grids(self, outputs, strides, dtype, device):
-        xy_shifts = []
-        expanded_strides = []
-        outputs_new = []
-        outputs_origin = []
-
-        for k, output in enumerate(outputs):
-            output, output_origin, grid, feat_h, feat_w = self.decode_output(
-                output, k, strides[k], dtype, device)
-
-            xy_shift = grid
-            expanded_stride = torch.full((1, grid.shape[1], 1), strides[k], dtype=grid.dtype, device=grid.device)
-
-            xy_shifts.append(xy_shift)
-            expanded_strides.append(expanded_stride)
-            outputs_new.append(output)
-            outputs_origin.append(output_origin)
-
-        xy_shifts = torch.cat(xy_shifts, 1)  # [1, n_anchors_all, 2]
-        expanded_strides = torch.cat(expanded_strides, 1) # [1, n_anchors_all, 1]
-        outputs_origin = torch.cat(outputs_origin, 1)
-        outputs = torch.cat(outputs_new, 1)
-
-        feat_h *= strides[-1]
-        feat_w *= strides[-1]
-        gt_bboxes_scale = torch.Tensor([[feat_w, feat_h, feat_w, feat_h]]).type_as(outputs)
-
-        return outputs, outputs_origin, gt_bboxes_scale, xy_shifts, expanded_strides
-
-    def get_l1_target(self, l1_target, gt, stride, xy_shifts, eps=1e-8):
-
-        l1_target[:, 0:2] = gt[:, 0:2] / stride - xy_shifts
-        l1_target[:, 2:4] = torch.log(gt[:, 2:4] / stride + eps)
-        return l1_target
-
-    @torch.no_grad()
-    def get_assignments(
-        self,
-        batch_idx,
-        num_gt,
-        total_num_anchors,
-        gt_bboxes_per_image,
-        gt_classes,
-        bboxes_preds_per_image,
-        cls_preds_per_image,
-        obj_preds_per_image,
-        expanded_strides,
-        xy_shifts,
-        num_classes
-    ):
-
-        fg_mask, is_in_boxes_and_center = self.get_in_boxes_info(
-            gt_bboxes_per_image,
-            expanded_strides,
-            xy_shifts,
-            total_num_anchors,
-            num_gt,
-        )
-
-        bboxes_preds_per_image = bboxes_preds_per_image[fg_mask]
-        cls_preds_ = cls_preds_per_image[fg_mask]
-        obj_preds_ = obj_preds_per_image[fg_mask]
-        num_in_boxes_anchor = bboxes_preds_per_image.shape[0]
-
-        # cost
-        pair_wise_ious = pairwise_bbox_iou(gt_bboxes_per_image, bboxes_preds_per_image, box_format='xywh')
-        pair_wise_ious_loss = -torch.log(pair_wise_ious + 1e-8)
-
-        gt_cls_per_image = (
-            F.one_hot(gt_classes.to(torch.int64), num_classes)
-            .float()
-            .unsqueeze(1)
-            .repeat(1, num_in_boxes_anchor, 1)
-        )
-
+        weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
         with torch.cuda.amp.autocast(enabled=False):
-            cls_preds_ = (
-                cls_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
-                * obj_preds_.float().sigmoid_().unsqueeze(0).repeat(num_gt, 1, 1)
-            )
-            pair_wise_cls_loss = F.binary_cross_entropy(
-                cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
-            ).sum(-1)
-        del cls_preds_, obj_preds_
+            loss = (F.binary_cross_entropy(pred_score.float(), gt_score.float(), reduction='none') * weight).sum()
 
-        cost = (
-            self.cls_weight * pair_wise_cls_loss
-            + self.iou_weight * pair_wise_ious_loss
-            + 100000.0 * (~is_in_boxes_and_center)
-        )
+        return loss
 
-        (
-            num_fg,
-            gt_matched_classes,
-            pred_ious_this_matching,
-            matched_gt_inds,
-        ) = self.dynamic_k_matching(cost, pair_wise_ious, gt_classes, num_gt, fg_mask)
 
-        del pair_wise_cls_loss, cost, pair_wise_ious, pair_wise_ious_loss
+class BboxLoss(nn.Module):
+    def __init__(self, num_classes, reg_max, use_dfl=False, iou_type='giou'):
+        super(BboxLoss, self).__init__()
+        self.num_classes = num_classes
+        self.iou_loss = IOUloss(box_format='xyxy', iou_type=iou_type, eps=1e-10)
+        self.reg_max = reg_max
+        self.use_dfl = use_dfl
 
-        return (
-            gt_matched_classes,
-            fg_mask,
-            pred_ious_this_matching,
-            matched_gt_inds,
-            num_fg,
-        )
+    def forward(self, pred_dist, pred_bboxes, anchor_points,
+                target_bboxes, target_scores, target_scores_sum, fg_mask):
+        
+        # select positive samples mask
+        num_pos = fg_mask.sum()
+        if num_pos > 0:
+            # iou loss
+            bbox_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 4])
+            pred_bboxes_pos = torch.masked_select(pred_bboxes,
+                                                  bbox_mask).reshape([-1, 4])
+            target_bboxes_pos = torch.masked_select(
+                target_bboxes, bbox_mask).reshape([-1, 4])
+            bbox_weight = torch.masked_select(
+                target_scores.sum(-1), fg_mask).unsqueeze(-1)
+            loss_iou = self.iou_loss(pred_bboxes_pos,
+                                     target_bboxes_pos) * bbox_weight
+            loss_iou = loss_iou.sum() / target_scores_sum
+            
+            # dfl loss
+            if self.use_dfl:
+                dist_mask = fg_mask.unsqueeze(-1).repeat(
+                    [1, 1, (self.reg_max + 1) * 4])
+                pred_dist_pos = torch.masked_select(
+                    pred_dist, dist_mask).reshape([-1, 4, self.reg_max + 1])
+                target_ltrb = bbox2dist(anchor_points, target_bboxes, self.reg_max)
+                target_ltrb_pos = torch.masked_select(
+                    target_ltrb, bbox_mask).reshape([-1, 4])
+                loss_dfl = self._df_loss(pred_dist_pos,
+                                        target_ltrb_pos) * bbox_weight
+                loss_dfl = loss_dfl.sum() / target_scores_sum
+            else:
+                loss_dfl = torch.tensor(0.).to(pred_dist.device)
 
-    def get_in_boxes_info(
-        self,
-        gt_bboxes_per_image,
-        expanded_strides,
-        xy_shifts,
-        total_num_anchors,
-        num_gt,
-    ):
-        expanded_strides_per_image = expanded_strides[0]
-        xy_shifts_per_image = xy_shifts[0] * expanded_strides_per_image
-        xy_centers_per_image = (
-            (xy_shifts_per_image + 0.5 * expanded_strides_per_image)
-            .unsqueeze(0)
-            .repeat(num_gt, 1, 1)
-        )  # [n_anchor, 2] -> [n_gt, n_anchor, 2]
+        else:
+            loss_iou = torch.tensor(0.).to(pred_dist.device)
+            loss_dfl = torch.tensor(0.).to(pred_dist.device)
 
-        gt_bboxes_per_image_lt = (
-            (gt_bboxes_per_image[:, 0:2] - 0.5 * gt_bboxes_per_image[:, 2:4])
-            .unsqueeze(1)
-            .repeat(1, total_num_anchors, 1)
-        )
-        gt_bboxes_per_image_rb = (
-            (gt_bboxes_per_image[:, 0:2] + 0.5 * gt_bboxes_per_image[:, 2:4])
-            .unsqueeze(1)
-            .repeat(1, total_num_anchors, 1)
-        )  # [n_gt, 2] -> [n_gt, n_anchor, 2]
+        return loss_iou, loss_dfl
 
-        b_lt = xy_centers_per_image - gt_bboxes_per_image_lt
-        b_rb = gt_bboxes_per_image_rb - xy_centers_per_image
-        bbox_deltas = torch.cat([b_lt, b_rb], 2)
+    def _df_loss(self, pred_dist, target):
+        target_left = target.to(torch.long)
+        target_right = target_left + 1
+        weight_left = target_right.to(torch.float) - target
+        weight_right = 1 - weight_left
+        loss_left = F.cross_entropy(
+            pred_dist.view(-1, self.reg_max + 1), target_left.view(-1), reduction='none').view(
+            target_left.shape) * weight_left
+        loss_right = F.cross_entropy(
+            pred_dist.view(-1, self.reg_max + 1), target_right.view(-1), reduction='none').view(
+            target_left.shape) * weight_right
+        return (loss_left + loss_right).mean(-1, keepdim=True)
 
-        is_in_boxes = bbox_deltas.min(dim=-1).values > 0.0
-        is_in_boxes_all = is_in_boxes.sum(dim=0) > 0
-
-        # in fixed center
-        gt_bboxes_per_image_lt = (gt_bboxes_per_image[:, 0:2]).unsqueeze(1).repeat(
-            1, total_num_anchors, 1
-        ) - self.center_radius * expanded_strides_per_image.unsqueeze(0)
-        gt_bboxes_per_image_rb = (gt_bboxes_per_image[:, 0:2]).unsqueeze(1).repeat(
-            1, total_num_anchors, 1
-        ) + self.center_radius * expanded_strides_per_image.unsqueeze(0)
-
-        c_lt = xy_centers_per_image - gt_bboxes_per_image_lt
-        c_rb = gt_bboxes_per_image_rb - xy_centers_per_image
-        center_deltas = torch.cat([c_lt, c_rb], 2)
-        is_in_centers = center_deltas.min(dim=-1).values > 0.0
-        is_in_centers_all = is_in_centers.sum(dim=0) > 0
-
-        # in boxes and in centers
-        is_in_boxes_anchor = is_in_boxes_all | is_in_centers_all
-
-        is_in_boxes_and_center = (
-            is_in_boxes[:, is_in_boxes_anchor] & is_in_centers[:, is_in_boxes_anchor]
-        )
-        return is_in_boxes_anchor, is_in_boxes_and_center
-
-    def dynamic_k_matching(self, cost, pair_wise_ious, gt_classes, num_gt, fg_mask):
-        matching_matrix = torch.zeros_like(cost, dtype=torch.uint8)
-        ious_in_boxes_matrix = pair_wise_ious
-        n_candidate_k = min(10, ious_in_boxes_matrix.size(1))
-        topk_ious, _ = torch.topk(ious_in_boxes_matrix, n_candidate_k, dim=1)
-        dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1)
-        dynamic_ks = dynamic_ks.tolist()
-
-        for gt_idx in range(num_gt):
-            _, pos_idx = torch.topk(
-                cost[gt_idx], k=dynamic_ks[gt_idx], largest=False
-            )
-            matching_matrix[gt_idx][pos_idx] = 1
-        del topk_ious, dynamic_ks, pos_idx
-
-        anchor_matching_gt = matching_matrix.sum(0)
-        if (anchor_matching_gt > 1).sum() > 0:
-            _, cost_argmin = torch.min(cost[:, anchor_matching_gt > 1], dim=0)
-            matching_matrix[:, anchor_matching_gt > 1] *= 0
-            matching_matrix[cost_argmin, anchor_matching_gt > 1] = 1
-        fg_mask_inboxes = matching_matrix.sum(0) > 0
-        num_fg = fg_mask_inboxes.sum().item()
-        fg_mask[fg_mask.clone()] = fg_mask_inboxes
-        matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
-        gt_matched_classes = gt_classes[matched_gt_inds]
-
-        pred_ious_this_matching = (matching_matrix * pair_wise_ious).sum(0)[
-            fg_mask_inboxes
-        ]
-
-        return num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds

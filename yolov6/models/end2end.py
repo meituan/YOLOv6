@@ -74,7 +74,6 @@ class TRT8_NMS(torch.autograd.Function):
         nums, boxes, scores, classes = out
         return nums, boxes, scores, classes
 
-
 class TRT7_NMS(torch.autograd.Function):
     '''TensorRT NMS operation'''
     @staticmethod
@@ -101,7 +100,6 @@ class TRT7_NMS(torch.autograd.Function):
         det_scores = torch.randn(batch_size, keepTopK)
         det_classes = torch.randint(0, numClasses, (batch_size, keepTopK)).float()
         return num_det, det_boxes, det_scores, det_classes
-
     @staticmethod
     def symbolic(g,
                  boxes,
@@ -170,7 +168,6 @@ class ONNX_ORT(nn.Module):
         X = X.unsqueeze(1).float()
         return torch.cat([X, resBoxes, resClasses, resScores], 1)
 
-
 class ONNX_TRT7(nn.Module):
     '''onnx module with TensorRT NMS operation.'''
     def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None ,device=None):
@@ -192,7 +189,6 @@ class ONNX_TRT7(nn.Module):
         self.convert_matrix = torch.tensor([[1, 0, 1, 0], [0, 1, 0, 1], [-0.5, 0, 0.5, 0], [0, -0.5, 0, 0.5]],
                                            dtype=torch.float32,
                                            device=self.device)
-
     def forward(self, x):
         box = x[:, :, :4]
         conf = x[:, :, 4:5]
@@ -260,5 +256,9 @@ class End2End(nn.Module):
             x = x[:,[2,1,0],...]
             x = x * (1/255)
         x = self.model(x)
+        if isinstance(x, list):
+            x = x[0]
+        else:
+            x = x
         x = self.end2end(x)
         return x

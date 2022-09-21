@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--max-wh', type=int, default=None, help='None for tensorrt nms, int value for onnx-runtime nms')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='conf threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.4, help='conf threshold for NMS')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     args = parser.parse_args()
     args.img_size *= 2 if len(args.img_size) == 1 else 1  # expand
@@ -51,7 +51,6 @@ if __name__ == '__main__':
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
-
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
 
@@ -91,6 +90,10 @@ if __name__ == '__main__':
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
                         max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
 
+    print("===================")
+    print(model)
+    print("===================")
+    
     y = model(img)  # dry run
 
     # ONNX export
