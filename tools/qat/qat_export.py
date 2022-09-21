@@ -68,7 +68,7 @@ if __name__ == '__main__':
     cfg = Config.fromfile(args.conf)
     # init qat model
     qat_init_model_manu(model, cfg, args)
-    model.neck.upsample_enable_quant()
+    model.neck.upsample_enable_quant(cfg.ptq.num_bits, cfg.ptq.calib_method)
     ckpt = torch.load(args.quant_weights)
     model.load_state_dict(ckpt['model'].float().state_dict())
     model.to(device)
