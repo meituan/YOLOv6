@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
+    parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
     parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
@@ -63,6 +64,27 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
+    dynamic_axes = None
+    if args.dynamic_batch:
+        args.batch_size = 'batch'
+        dynamic_axes = {
+            'images' :{
+                0:'batch',
+            },}
+        if args.end2end and args.max_wh is None:
+            output_axes = {
+                'num_dets': {0: 'batch'},
+                'det_boxes': {0: 'batch'},
+                'det_scores': {0: 'batch'},
+                'det_classes': {0: 'batch'},
+            }
+        else:
+            output_axes = {
+                'outputs': {0: 'batch'},
+            }
+        dynamic_axes.update(output_axes)
+
+
     if args.end2end:
         from yolov6.models.end2end import End2End
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
@@ -84,7 +106,8 @@ if __name__ == '__main__':
                               do_constant_folding=True,
                               input_names=['images'],
                               output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
-                              if args.end2end and args.max_wh is None else ['outputs'],)
+                              if args.end2end and args.max_wh is None else ['outputs'],
+                              dynamic_axes=dynamic_axes)
             f.seek(0)
             # Checks
             onnx_model = onnx.load(f)  # load onnx model
@@ -113,5 +136,14 @@ if __name__ == '__main__':
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
     if args.end2end:
         if args.max_wh is None:
+            info = f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}'
+            if args.dynamic_batch:
+                LOGGER.info('Dynamic batch export should define min/opt/max batchsize\n'+
+                            'We set min/opt/max = 1/16/32 default!')
+                wandh = 'x'.join(list(map(str,args.img_size)))
+                info += (f' --minShapes=images:1x3x{wandh}'+
+                f' --optShapes=images:16x3x{wandh}'+
+                f' --maxShapes=images:32x3x{wandh}'+
+                f' --shapes=images:16x3x{wandh}')
             LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
-            LOGGER.info(f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}')
+            LOGGER.info(info)
