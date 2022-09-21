@@ -32,6 +32,8 @@ from yolov6.utils.events import LOGGER
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
 VID_FORMATS = ["mp4", "mov", "avi", "mkv"]
+IMG_FORMATS.extend([f.upper() for f in IMG_FORMATS])
+VID_FORMATS.extend([f.upper() for f in VID_FORMATS])
 # Get orientation exif tag
 for k, v in ExifTags.TAGS.items():
     if v == "Orientation":
