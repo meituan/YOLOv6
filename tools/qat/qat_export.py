@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
     parser.add_argument('--conf', type=str, default='../../configs/repopt/yolov6s_opt_qat.py', help='model config')
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
+    parser.add_argument('--calib', action='store_true', default=False, help='calibrated model')
     parser.add_argument('--fuse-bn', action='store_true', help='fuse bn')
     parser.add_argument('--graph-opt', action='store_true', help='enable graph optimizer')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
