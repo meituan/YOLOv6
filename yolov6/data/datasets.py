@@ -59,7 +59,7 @@ class TrainValDataset(Dataset):
         data_dict=None,
         task="train",
     ):
-        assert task.lower() in ("train", "val", "speed"), f"Not supported task: {task}"
+        assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
         t1 = time.time()
         self.__dict__.update(locals())
         self.main_process = self.rank in (-1, 0)
