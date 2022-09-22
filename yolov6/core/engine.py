@@ -506,7 +506,7 @@ class Trainer:
             from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
             qat_init_model_manu(model, cfg, self.args)
             # workaround
-            model.neck.upsample_enable_quant()
+            model.neck.upsample_enable_quant(cfg.ptq.num_bits, cfg.ptq.calib_method)
             # if self.main_process:
             #     print(model)
             # QAT

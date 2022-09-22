@@ -86,12 +86,12 @@ class RepPANNeck(nn.Module):
             stride=2
         )
 
-    def upsample_enable_quant(self):
+    def upsample_enable_quant(self, num_bits, calib_method):
         print("Insert fakequant after upsample")
         # Insert fakequant after upsample op to build TensorRT engine
         from pytorch_quantization import nn as quant_nn
         from pytorch_quantization.tensor_quant import QuantDescriptor
-        conv2d_input_default_desc = QuantDescriptor(num_bits=8, calib_method='histogram')
+        conv2d_input_default_desc = QuantDescriptor(num_bits=num_bits, calib_method=calib_method)
         self.upsample_feat0_quant = quant_nn.TensorQuantizer(conv2d_input_default_desc)
         self.upsample_feat1_quant = quant_nn.TensorQuantizer(conv2d_input_default_desc)
         # global _QUANT

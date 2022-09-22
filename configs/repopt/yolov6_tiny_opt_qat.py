@@ -63,7 +63,7 @@ ptq = dict(
     num_bits = 8,
     calib_batches = 4,
     # 'max', 'histogram'
-    calib_method = 'histogram',
+    calib_method = 'max',
     # 'entropy', 'percentile', 'mse'
     histogram_amax_method='entropy',
     histogram_amax_percentile=99.99,
@@ -73,7 +73,7 @@ ptq = dict(
 )
 
 qat = dict(
-    calib_pt = './assets/v6s_t_calib_histogram.pt',
+    calib_pt = './assets/v6s_t_calib_max.pt',
     sensitive_layers_skip = False,
     sensitive_layers_list=[],
 )
