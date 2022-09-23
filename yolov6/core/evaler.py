@@ -248,6 +248,7 @@ class Evaler:
                 anno_json = self.data['anno_path']
             else:
                 # generated coco format labels in dataset initialization
+                task = 'val' if task == 'train' else task
                 dataset_root = os.path.dirname(os.path.dirname(self.data[task]))
                 base_name = os.path.basename(self.data[task])
                 anno_json = os.path.join(dataset_root, 'annotations', f'instances_{base_name}.json')
@@ -427,6 +428,7 @@ class Evaler:
     def reload_dataset(data, task='val'):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
+        task = 'val' if task == 'train' else task
         path = data.get(task, 'val')
         if not os.path.exists(path):
             raise Exception('Dataset not found.')
