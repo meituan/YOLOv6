@@ -187,12 +187,12 @@ Your can also specify a checkpoint path to `--resume` parameter by
 
 | Model                 | Size | Precision | mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt b1 <br/>(fps) | Speed<sup>T4<br/>trt b32 <br/>(fps) |
 | :-------------------- | ---- | --------- | :----------------------- | ---------------------------------- | ----------------------------------- |
-| [**YOLOv6-N RepOpt**] | 640  | INT8      | 34.8                     | 1114                               | 1828                                |
-| [**YOLOv6-N**]        | 640  | FP16      | 35.9                     | 802                                | 1234                                |
-| [**YOLOv6-T RepOpt**] | 640  | INT8      | 39.8                     | 741                                | 1167                                |
-| [**YOLOv6-T**]        | 640  | FP16      | 40.3                     | 449                                | 659                                 |
-| [**YOLOv6-S RepOpt**] | 640  | INT8      | 43.3                     | 619                                | 924                                 |
-| [**YOLOv6-S**]        | 640  | FP16      | 43.5                     | 377                                | 541                                 |
+| **YOLOv6-N RepOpt** | 640  | INT8      | 34.8                     | 1114                               | 1828                                |
+| **YOLOv6-N**        | 640  | FP16      | 35.9                     | 802                                | 1234                                |
+| **YOLOv6-T RepOpt** | 640  | INT8      | 39.8                     | 741                                | 1167                                |
+| **YOLOv6-T**        | 640  | FP16      | 40.3                     | 449                                | 659                                 |
+| **YOLOv6-S RepOpt** | 640  | INT8      | 43.3                     | 619                                | 924                                 |
+| **YOLOv6-S**        | 640  | FP16      | 43.5                     | 377                                | 541                                 |
 
 - Speed is tested with TensorRT 8.4 on T4.
 - Precision is figured on models for 300 epochs.
