@@ -265,10 +265,20 @@ class TrainValDataset(Dataset):
                 json.dump(cache_info, f)
 
         # check and load anns
-        label_dir = osp.join(
+        base_dir = osp.basename(img_dir)
+        if base_dir != "":
+            label_dir = osp.join(
             osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
-        )
-        assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
+            )
+            assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
+        else:
+            sub_dirs= []
+            label_dir = img_dir
+            for rootdir, dirs, files in os.walk(label_dir):
+                for subdir in dirs:
+                    sub_dirs.append(subdir)
+            assert "labels" in sub_dirs, f"Could not find a labels directory!"
+
 
         # Look for labels in the save relative dir that the images are in
         def _new_rel_path_with_ext(base_path: str, full_path: str, new_ext: str):
