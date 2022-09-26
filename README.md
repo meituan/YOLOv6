@@ -3,10 +3,10 @@
 </p>
 
 
-Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
-## Introduction
 
-YOLOv6 is a single-stage object detection framework dedicated to industrial applications, with hardware-friendly efficient design and high performance.
+## YOLOv6
+
+Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 
 <p align="center">
   <img src="assets/speed_comparision_v2.png" align="middle" width = "1000" />
@@ -50,19 +50,19 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 Single GPU
 
 ```shell
-python tools/train.py --batch 32 --conf configs/yolov6s.py --data data/coco.yaml --device 0
+python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
-python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s.py --data data/coco.yaml --device 0,1,2,3,4,5,6,7
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
 
 
 
 <details>
-<summary>Reproduce our results on COCO</summary>
+<summary>Reproduce our results on COCO ⭐️</summary>
 
 For nano model
 ```shell
@@ -112,7 +112,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 ```
 </details>
 
-- conf: select config file to specify network/optimizer/hyperparameters
+- conf: select config file to specify network/optimizer/hyperparameters. Pretrained model path is recommended to be specified in the config file with the `pretrained` parameter if training on your custom dataset.
 - data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
 - make sure your dataset structure as follows:
 ```
@@ -132,12 +132,15 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 ### Evaluation
 
-Reproduce mAP on COCO val2017 dataset with 640×640 resolution
+Reproduce mAP on COCO val2017 dataset with 640×640 resolution ⭐️
 
 ```shell
 python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --reproduce_640_eval
 ```
-
+- verbose: set True to print mAP of each classes.
+- do_coco_metric: set True / False to enable / disable pycocotools evaluation method.
+- do_pr_metric: set True / False to print or not to print the precision and recall metrics.
+- config-file: specify a config file to define all the eval params, for example: [yolov6n_with_eval_params.py](configs/experiment/yolov6n_with_eval_params.py)
 
 <details>
 <summary>Resume training</summary>
@@ -175,11 +178,25 @@ Your can also specify a checkpoint path to `--resume` parameter by
 | :----------------------------------------------------------- | ---- | :------------------------------------ | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
 | [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 35.9<sup>300e</sup><br/>36.3<sup>400e | 802                                     | 1234                                     | 4.3                  | 11.1                |
 | [**YOLOv6-T**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.3<sup>300e</sup><br/>41.1<sup>400e | 449                                     | 659                                      | 15.0                 | 36.7                |
-| [**YOLOv6-S-RepOpt**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_reopt.pt) | 640  | 43.3<sup>300e</sup>                   | 596<sup>int8                            | 869<sup>int8                             | 17.2                 | 44.2                |
 | [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.5<sup>300e</sup><br/>43.8<sup>400e | 358                                     | 495                                      | 17.2                 | 44.2                |
 | [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                                  | 179                                     | 233                                      | 34.3                 | 82.2                |
 | [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                                  | 113                                     | 149                                      | 58.5                 | 144.0               |
 | [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                                  | 98                                      | 121                                      | 58.5                 | 144.0               |
+
+### Quantized model 🚀 
+
+| Model           | Size        | Precision        |mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt b1 <br/>(fps) | Speed<sup>T4<br/>trt b32 <br/>(fps) |
+| :-------------- | ----------- | ----------- |:----------------------- | ---------------------------------------- | -----------------------------------|
+| [**YOLOv6-S RepOpt**] | 640 | INT8         |43.3                     | 619     | 924  |
+| [**YOLOv6-S**] | 640         | FP16         |43.5                     | 377    | 541 |
+| [**YOLOv6-T RepOpt**] | 640 | INT8         |39.8                     | 741     | 1167  |
+| [**YOLOv6-T**] | 640         | FP16         |40.3                     | 449    | 659 |
+| [**YOLOv6-N RepOpt**] | 640 | INT8         |34.8                     | 1114     | 1828  |
+| [**YOLOv6-N**] | 640         | FP16         |35.9                     | 802    | 1234 |
+
+- Speed is tested with TensorRT 8.4 on T4.
+- Precision is figured on models for 300 epochs.
+
 <details>
 <summary>Legacy models</summary>
 
