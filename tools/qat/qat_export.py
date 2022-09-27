@@ -59,6 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
     parser.add_argument('--calib', action='store_true', default=False, help='calibrated model')
     parser.add_argument('--scale-fix', action='store_true', help='enable scale fix')
+    parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--fuse-bn', action='store_true', help='fuse bn')
     parser.add_argument('--graph-opt', action='store_true', help='enable graph optimizer')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
@@ -101,6 +102,10 @@ if __name__ == '__main__':
             concat_quant_amax_fuse(ops)
     qat_mAP = yolov6_evaler.eval(model)
     print(qat_mAP)
+    if args.end2end:
+        from yolov6.models.end2end import End2End
+        model = End2End(model, max_obj=100, iou_thres=0.65,score_thres=0.1,
+                        max_wh=None, device=device, trt_version=8, with_preprocess=False)
     # ONNX export
     quant_nn.TensorQuantizer.use_fb_fake_quant = True
     if args.export_batch_size is None:
@@ -108,7 +113,18 @@ if __name__ == '__main__':
         export_file = args.quant_weights.replace('.pt', '_dynamic.onnx')  # filename
         if args.graph_opt:
             export_file = export_file.replace('.onnx', '_graph_opt.onnx')
-        dynamic_axes = {"image_arrays": {0: "batch"}, "outputs": {0: "batch"}}
+        if args.end2end:
+            export_file = export_file.replace('.onnx', '_e2e.onnx')
+        dynamic_axes = {
+            "image_arrays": {0: "batch"},
+        }
+        if args.end2end:
+            dynamic_axes["num_dets"] = {0: "batch"}
+            dynamic_axes["det_boxes"] = {0: "batch"}
+            dynamic_axes["det_scores"] = {0: "batch"}
+            dynamic_axes["det_classes"] = {0: "batch"}
+        else:
+            dynamic_axes["outputs"] = {0: "batch"}
         torch.onnx.export(model,
                           img,
                           export_file,
@@ -117,7 +133,8 @@ if __name__ == '__main__':
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
                           input_names=['image_arrays'],
-                          output_names=['outputs'],
+                          output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
+                          if args.end2end else ['outputs'],
                           dynamic_axes=dynamic_axes
                          )
     else:
@@ -125,6 +142,8 @@ if __name__ == '__main__':
         export_file = args.quant_weights.replace('.pt', '_bs{}.onnx'.format(args.export_batch_size))  # filename
         if args.graph_opt:
             export_file = export_file.replace('.onnx', '_graph_opt.onnx')
+        if args.end2end:
+            export_file = export_file.replace('.onnx', '_e2e.onnx')
         torch.onnx.export(model,
                           img,
                           export_file,
@@ -133,5 +152,6 @@ if __name__ == '__main__':
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
                           input_names=['image_arrays'],
-                          output_names=['outputs']
+                          output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
+                          if args.end2end else ['outputs'],
                           )
