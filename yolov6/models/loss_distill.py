@@ -65,7 +65,8 @@ class ComputeLoss:
         targets,
         epoch_num,
         max_epoch,
-        temperature
+        temperature,
+        step_num
     ):
         
         feats, pred_scores, pred_distri = outputs
@@ -109,6 +110,10 @@ class ComputeLoss:
                     gt_labels,
                     gt_bboxes,
                     mask_gt)
+
+        #Dynamic release GPU memory
+        if step_num % 10 == 0:
+            torch.cuda.empty_cache()
 
         # rescale bbox
         target_bboxes /= stride_tensor

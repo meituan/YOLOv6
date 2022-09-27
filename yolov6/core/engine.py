@@ -110,7 +110,7 @@ class Trainer:
         try:
             self.prepare_for_steps()
             for self.step, self.batch_data in self.pbar:
-                self.train_in_steps(epoch_num)
+                self.train_in_steps(epoch_num, self.step)
                 self.print_details()
         except Exception as _:
             LOGGER.error('ERROR in training steps.')
@@ -122,7 +122,7 @@ class Trainer:
             raise
 
     # Training loop for batchdata
-    def train_in_steps(self, epoch_num):
+    def train_in_steps(self, epoch_num, step_num):
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
@@ -137,9 +137,9 @@ class Trainer:
                     t_preds, t_featmaps = self.teacher_model(images)
                 temperature = self.args.temperature
                 total_loss, loss_items = self.compute_loss_distill(preds, t_preds, s_featmaps, t_featmaps, targets, \
-                                                                   epoch_num, self.max_epoch, temperature)
+                                                                   epoch_num, self.max_epoch, temperature, step_num)
             else:
-                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num)
+                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num)
             if self.rank != -1:
                 total_loss *= self.world_size
         # backward
