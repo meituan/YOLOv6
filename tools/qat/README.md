@@ -18,7 +18,7 @@ pip install --extra-index-url=https://pypi.ngc.nvidia.com --trusted-host pypi.ng
 
 ## Training with RepOptimizer
 Firstly, train a `YOLOv6-S RepOpt` as follows, or download our realeased [checkpoint](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_reopt.pt) and [scales](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s_v2_scale.pt).
-*  [Tutorial of RepOpt for YOLOv6](./docs/tutorial_repopt.md)
+*  [Tutorial of RepOpt for YOLOv6](https://github.com/meituan/YOLOv6/blob/main/docs/tutorial_repopt.md)
 ## PTQ
 We perform PTQ to get the range of activations and weights.
 ```python
