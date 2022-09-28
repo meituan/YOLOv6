@@ -396,6 +396,7 @@ class Trainer:
     def get_optimizer(self, args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
+        cfg.solver.lr0 *= args.batch_size / (self.world_size * 32) # rescale lr0 related to batchsize
         optimizer = build_optimizer(cfg, model)
         return optimizer
 
