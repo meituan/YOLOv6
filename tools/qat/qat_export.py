@@ -59,10 +59,16 @@ if __name__ == '__main__':
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
     parser.add_argument('--calib', action='store_true', default=False, help='calibrated model')
     parser.add_argument('--scale-fix', action='store_true', help='enable scale fix')
-    parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--fuse-bn', action='store_true', help='fuse bn')
     parser.add_argument('--graph-opt', action='store_true', help='enable graph optimizer')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
+    parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
+    parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
+    parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
+    parser.add_argument('--max-wh', type=int, default=None, help='None for tensorrt nms, int value for onnx-runtime nms')
+    parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
+    parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.4, help='conf threshold for NMS')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0, 1, 2, 3 or cpu')
     parser.add_argument('--eval-yaml', type=str, default='../partial_quantization/eval.yaml', help='evaluation config')
     args = parser.parse_args()
@@ -104,8 +110,8 @@ if __name__ == '__main__':
     print(qat_mAP)
     if args.end2end:
         from yolov6.models.end2end import End2End
-        model = End2End(model, max_obj=100, iou_thres=0.65,score_thres=0.1,
-                        max_wh=None, device=device, trt_version=8, with_preprocess=False)
+        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
+                        max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
     # ONNX export
     quant_nn.TensorQuantizer.use_fb_fake_quant = True
     if args.export_batch_size is None:
