@@ -28,12 +28,16 @@ from pytorch_quantization import nn as quant_nn
 #     ('neck.upsample0.upsample_transpose', 'neck.Rep_n4.conv1.rbr_reparam')
 # ]
 
-opt_concat_fusion_list = [
+op_concat_fusion_list = [
     ('backbone.ERBlock_5.2.m', 'backbone.ERBlock_5.2.cv2.conv'),
-    ('backbone.ERBlock_5.0.conv', 'neck.Rep_p4.conv1.conv'),
-    ('backbone.ERBlock_4.0.conv', 'neck.Rep_p3.conv1.conv'),
+    ('backbone.ERBlock_5.0.conv', 'neck.Rep_p4.conv1.conv', 'neck.upsample_feat0_quant'),
+    ('backbone.ERBlock_4.0.conv', 'neck.Rep_p3.conv1.conv', 'neck.upsample_feat1_quant'),
     ('neck.upsample1.upsample_transpose', 'neck.Rep_n3.conv1.conv'),
-    ('neck.upsample0.upsample_transpose', 'neck.Rep_n4.conv1.conv')
+    ('neck.upsample0.upsample_transpose', 'neck.Rep_n4.conv1.conv'),
+    #
+    ('detect.reg_convs.0.conv', 'detect.cls_convs.0.conv'),
+    ('detect.reg_convs.1.conv', 'detect.cls_convs.1.conv'),
+    ('detect.reg_convs.2.conv', 'detect.cls_convs.2.conv'),
 ]
 
 if __name__ == '__main__':
@@ -42,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--calib-weights', type=str, default='./yolov6s_reopt_calib.pt', help='calib weights path')
     parser.add_argument('--data-root', type=str, default=None, help='train data path')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
+    parser.add_argument('--conf', type=str, default='../../configs/repopt/yolov6s_opt_qat.py', help='model config')
     parser.add_argument('--export-batch-size', type=int, default=None, help='export batch size')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0, 1, 2, 3 or cpu')
