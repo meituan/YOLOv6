@@ -42,12 +42,12 @@ def compute_amax(model, **kwargs):
     # Load calib result
     for name, module in model.named_modules():
         if isinstance(module, quant_nn.TensorQuantizer):
+            print(F"{name:40}: {module}")
             if module._calibrator is not None:
                 if isinstance(module._calibrator, calib.MaxCalibrator):
                     module.load_calib_amax()
                 else:
                     module.load_calib_amax(**kwargs)
-            print(F"{name:40}: {module}")
 
 
 def quantable_op_check(k, quantable_ops):
@@ -72,6 +72,10 @@ def quant_model_init(model, device):
     convtrans2d_input_default_desc = QuantDescriptor(num_bits=8, calib_method='histogram')
 
     for k, m in model_ptq.named_modules():
+        if 'proj_conv' in k:
+            print("Skip Layer {}".format(k))
+            continue
+
         if isinstance(m, nn.Conv2d):
             in_channels = m.in_channels
             out_channels = m.out_channels

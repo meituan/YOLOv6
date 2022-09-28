@@ -50,25 +50,19 @@ def quant_sensitivity_analyse(model_ptq, evaler):
 
     return quant_sensitivity
 
-
-def get_yolov6_config(key):
-    # hard code
-    config_dict = {'yolov6s_reopt.pt': '../../configs/repopt/yolov6s_opt.py'}
-    return config_dict[key]
-
-
+# python3 sensitivity_analyse.py --weights ../../assets/yolov6s_v2_reopt.pt --batch-size 32 --batch-number 4 --conf ../../configs/repopt/yolov6s_opt.py --data-root /path
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='./yolov6s.pt', help='weights path')
+    parser.add_argument('--weights', type=str, default='./yolov6s_v2_reopt.pt', help='weights path')
     parser.add_argument('--data-root', type=str, default=None, help='train data path')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')  # height, width
+    parser.add_argument('--conf', type=str, default='../../configs/repopt/yolov6s_opt.py', help='model config')
     parser.add_argument('--batch-size', type=int, default=128, help='batch size')
     parser.add_argument('--batch-number', type=int, default=1, help='batch number')
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0, 1, 2, 3 or cpu')
     parser.add_argument('--calib-weights', type=str, default=None, help='weights with calibration parameter')
-    parser.add_argument('--sensitivity-file', type=str, default=None, help='quantization sensitivity file')
     parser.add_argument('--data-yaml', type=str, default='../../data/coco.yaml', help='data config')
     parser.add_argument('--eval-yaml', type=str, default='./eval.yaml', help='evaluation config')
     args = parser.parse_args()
@@ -97,7 +91,8 @@ if __name__ == '__main__':
     orig_mAP = yolov6_evaler.eval(model)
     print("Full Precision model mAP0.5={:.4f}, mAP0.5_0.95={:0.4f}".format(orig_mAP[0], orig_mAP[1]))
 
-    cfg = Config.fromfile(get_yolov6_config(os.path.basename(args.weights)))
+    # Step1: create dataloder
+    cfg = Config.fromfile(args.conf)
     data_cfg = load_yaml(args.data_yaml)
     train_loader, _ = create_dataloader(
         args.data_root,
@@ -109,7 +104,7 @@ if __name__ == '__main__':
         shuffle=True,
         data_dict=data_cfg)
 
-    # Step1: do post training quantization
+    # Step2: do post training quantization
     if args.calib_weights is None:
         model_ptq= do_ptq(model, train_loader, args.batch_number, device)
         torch.save({'model': model_ptq}, args.weights.replace('.pt', '_calib.pt'))
@@ -117,15 +112,13 @@ if __name__ == '__main__':
         model_ptq = load_ptq(model, args.calib_weights, device)
     quant_mAP = yolov6_evaler.eval(model_ptq)
     print("Post Training Quantization model mAP0.5={:.4f}, mAP0.5_0.95={:0.4f}".format(quant_mAP[0], quant_mAP[1]))
-    # Step2: do sensitivity analysis and save sensistivity results
-    if args.sensitivity_file is None:
-        quant_sensitivity = quant_sensitivity_analyse(model_ptq, yolov6_evaler)
-        qfile = "{}_quant_sensitivity_{}_calib.txt".format(os.path.basename(args.weights).split('.')[0],
-                                                         args.batch_size * args.batch_number)
-        quant_sensitivity.sort(key=lambda tup: tup[2], reverse=True)
-        quant_sensitivity_save(quant_sensitivity, qfile)
-    else:
-        quant_sensitivity = quant_sensitivity_load(args.sensitivity_file)
+
+    # Step3: do sensitivity analysis and save sensistivity results
+    quant_sensitivity = quant_sensitivity_analyse(model_ptq, yolov6_evaler)
+    qfile = "{}_quant_sensitivity_{}_calib.txt".format(os.path.basename(args.weights).split('.')[0],
+                                                     args.batch_size * args.batch_number)
+    quant_sensitivity_save(quant_sensitivity, qfile)
+
 
     quant_sensitivity.sort(key=lambda tup: tup[2], reverse=True)
     for sensitivity in quant_sensitivity:
