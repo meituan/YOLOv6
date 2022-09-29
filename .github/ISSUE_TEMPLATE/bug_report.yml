@@ -25,14 +25,14 @@ body:
         Please select the part of YOLOv6 where you found the bug.(请选择bug所在的模块)
       multiple: true
       options:
-        - "Training"（训练）
-        - "Evaluation" （评估）
-        - "Inference" （推理及结果可视化）
-        - "Export"（模型导出）
-        - "Quantization(including QAT, PTQ ...)"（量化部分，包括QAT训练，PTQ等）
-        - "Multi-GPU"（多卡训练）
-        - "TensorRT"（TRT部署）
-        - "Other"（其他）
+        - "Training（训练）"
+        - "Evaluation（评估）" 
+        - "Inference（推理及结果可视化）" 
+        - "Export（模型导出）"
+        - "Quantization(including QAT, PTQ ...)（量化部分，包括QAT训练，PTQ等）"
+        - "Multi-GPU（多卡训练）"
+        - "TensorRT（TRT部署）"
+        - "Other（其他）"
     validations:
       required: false
 
