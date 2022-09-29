@@ -1,12 +1,3 @@
----
-name: Question
-about: Ask a YOLOv6 question
-title: ''
-labels: question
-assignees: ''
-
----
-
 name: ❓ Question
 description: Ask a YOLOv6 question
 # title: " "
