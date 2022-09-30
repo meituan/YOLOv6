@@ -33,7 +33,7 @@ body:
       description: |
         Describe the use case of your feature request. It will help us understand and prioritize the feature request.
       placeholder: |
-        How would this feature be used, and who would use it?（请描述一下这个新功能的应用场景和用户群？）
+        How would this feature be used, and who would use it?（请描述一下这个新功能的应用场景？）
 
   - type: textarea
     attributes:
