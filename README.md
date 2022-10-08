@@ -35,6 +35,12 @@ cd YOLOv6
 pip install -r requirements.txt
 ```
 
+### Docker
+```shell
+docker build -t yolov6 .
+docker run --gpus all --shm-size 2g --rm -it -v $(pwd):/workspace yolov6
+
+```
 ### Inference
 
 First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.2.0)
