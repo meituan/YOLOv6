@@ -92,24 +92,74 @@ class ComputeLoss:
         t_anchor_points_s = t_anchor_points / t_stride_tensor
         t_pred_bboxes = self.bbox_decode(t_anchor_points_s, t_pred_distri) #xyxy
 
-        if epoch_num < self.warmup_epoch:
-            target_labels, target_bboxes, target_scores, fg_mask = \
-                self.warmup_assigner(
-                    anchors,
-                    n_anchors_list,
-                    gt_labels,
-                    gt_bboxes,
-                    mask_gt,
-                    pred_bboxes.detach() * stride_tensor)
-        else:
-            target_labels, target_bboxes, target_scores, fg_mask = \
-                self.formal_assigner(
-                    pred_scores.detach(),
-                    pred_bboxes.detach() * stride_tensor,
-                    anchor_points,
-                    gt_labels,
-                    gt_bboxes,
-                    mask_gt)
+        try:
+            if epoch_num < self.warmup_epoch:
+                target_labels, target_bboxes, target_scores, fg_mask = \
+                    self.warmup_assigner(
+                        anchors,
+                        n_anchors_list,
+                        gt_labels,
+                        gt_bboxes,
+                        mask_gt,
+                        pred_bboxes.detach() * stride_tensor)
+            else:
+                target_labels, target_bboxes, target_scores, fg_mask = \
+                    self.formal_assigner(
+                        pred_scores.detach(),
+                        pred_bboxes.detach() * stride_tensor,
+                        anchor_points,
+                        gt_labels,
+                        gt_bboxes,
+                        mask_gt)
+        
+        except RuntimeError:
+            print(
+                "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
+                    CPU mode is applied in this batch. If you want to avoid this issue, \
+                    try to reduce the batch size or image size."
+            )
+            torch.cuda.empty_cache()
+            print("------------CPU Mode for This Batch-------------")
+            if epoch_num < self.warmup_epoch:
+                _anchors = anchors.cpu().float()
+                _n_anchors_list = n_anchors_list
+                _gt_labels = gt_labels.cpu().float()
+                _gt_bboxes = gt_bboxes.cpu().float()
+                _mask_gt = mask_gt.cpu().float()
+                _pred_bboxes = pred_bboxes.detach().cpu().float()
+                _stride_tensor = stride_tensor.cpu().float()
+
+                target_labels, target_bboxes, target_scores, fg_mask = \
+                    self.warmup_assigner(
+                        _anchors,
+                        _n_anchors_list,
+                        _gt_labels,
+                        _gt_bboxes,
+                        _mask_gt,
+                        _pred_bboxes * _stride_tensor)
+                
+            else:
+                _pred_scores = pred_scores.detach().cpu().float()
+                _pred_bboxes = pred_bboxes.detach().cpu().float()
+                _anchor_points = anchor_points.cpu().float()
+                _gt_labels = gt_labels.cpu().float()
+                _gt_bboxes = gt_bboxes.cpu().float()
+                _mask_gt = mask_gt.cpu().float()
+                _stride_tensor = stride_tensor.cpu().float()
+
+                target_labels, target_bboxes, target_scores, fg_mask = \
+                    self.formal_assigner(
+                        _pred_scores,
+                        _pred_bboxes * _stride_tensor,
+                        _anchor_points,
+                        _gt_labels,
+                        _gt_bboxes,
+                        _mask_gt)
+
+            target_labels = target_labels.cuda()
+            target_bboxes = target_bboxes.cuda()
+            target_scores = target_scores.cuda()
+            fg_mask = fg_mask.cuda()
 
         #Dynamic release GPU memory
         if step_num % 10 == 0:
