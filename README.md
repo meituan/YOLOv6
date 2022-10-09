@@ -63,14 +63,13 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
 - Params and FLOPs of YOLOv6 are estimated on deployed models.
-- For N/T/S models, we use more training epochs strategy.
-- For M/L/L-ReLU models, we adopt self-distillation methods to further improve the performance.
+
 
 
 
 ## Quick Start
 
-<details open>
+<details>
 <summary> Install</summary>
 
 
