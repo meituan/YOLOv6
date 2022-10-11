@@ -139,13 +139,12 @@ class TRT7_NMS(torch.autograd.Function):
 
 class ONNX_ORT(nn.Module):
     '''onnx module with ONNX-Runtime NMS operation.'''
-    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=640, device=None):
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, device=None):
         super().__init__()
         self.device = device if device else torch.device("cpu")
         self.max_obj = torch.tensor([max_obj]).to(device)
         self.iou_threshold = torch.tensor([iou_thres]).to(device)
         self.score_threshold = torch.tensor([score_thres]).to(device)
-        self.max_wh = max_wh
         self.convert_matrix = torch.tensor([[1, 0, 1, 0], [0, 1, 0, 1], [-0.5, 0, 0.5, 0], [0, -0.5, 0, 0.5]],
                                            dtype=torch.float32,
                                            device=self.device)
@@ -191,9 +190,8 @@ class ONNX_ORT(nn.Module):
 
 class ONNX_TRT7(nn.Module):
     '''onnx module with TensorRT NMS operation.'''
-    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None ,device=None):
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, device=None):
         super().__init__()
-        assert max_wh is None
         self.device = device if device else torch.device('cpu')
         self.shareLocation = 1
         self.backgroundLabelId = -1
@@ -236,9 +234,8 @@ class ONNX_TRT7(nn.Module):
 
 class ONNX_TRT8(nn.Module):
     '''onnx module with TensorRT NMS operation.'''
-    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None ,device=None):
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, device=None):
         super().__init__()
-        assert max_wh is None
         self.device = device if device else torch.device('cpu')
         self.background_class = -1,
         self.box_coding = 1,
@@ -262,14 +259,14 @@ class ONNX_TRT8(nn.Module):
 
 class End2End(nn.Module):
     '''export onnx or tensorrt model with NMS operation.'''
-    def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=None, device=None, trt_version=8, with_preprocess=False):
+    def __init__(self, model, max_obj=100, iou_thres=0.45, score_thres=0.25, device=None, ort=False,  trt_version=8, with_preprocess=False):
         super().__init__()
         device = device if device else torch.device('cpu')
         self.with_preprocess = with_preprocess
         self.model = model.to(device)
         TRT = ONNX_TRT8 if trt_version >= 8  else ONNX_TRT7
-        self.patch_model = TRT if max_wh is None else ONNX_ORT
-        self.end2end = self.patch_model(max_obj, iou_thres, score_thres, max_wh, device)
+        self.patch_model = ONNX_ORT if ort else TRT
+        self.end2end = self.patch_model(max_obj, iou_thres, score_thres, device)
         self.end2end.eval()
 
     def forward(self, x):
