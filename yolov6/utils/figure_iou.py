@@ -37,7 +37,7 @@ class IOUloss:
             if self.box_format == 'xyxy':
                 b1_x1, b1_y1, b1_x2, b1_y2 = torch.split(box1, 1, dim=-1)
                 b2_x1, b2_y1, b2_x2, b2_y2 = torch.split(box2, 1, dim=-1)
-       
+
             elif self.box_format == 'xywh':
                 b1_x1, b1_y1, b1_w, b1_h = torch.split(box1, 1, dim=-1)
                 b2_x1, b2_y1, b2_w, b2_h = torch.split(box2, 1, dim=-1)

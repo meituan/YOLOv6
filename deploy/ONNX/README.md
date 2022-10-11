@@ -133,6 +133,6 @@ python deploy/ONNX/eval_trt.py --weights yolov6s.engine --batch-size=1 --data da
 
 YOLOv6 support dynamic batch export and inference, you can refer to:
 
-[export ONNX model with dynamic batch ](YOLOv6-Dynamic-Batch-onnxruntime.ipynb) 
+[export ONNX model with dynamic batch ](YOLOv6-Dynamic-Batch-onnxruntime.ipynb)
 
 [export TensorRT model with dynamic batch](YOLOv6-Dynamic-Batch-tensorrt.ipynb)

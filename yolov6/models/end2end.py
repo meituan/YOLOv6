@@ -168,16 +168,11 @@ class ONNX_ORT(nn.Module):
         dets = torch.cat([selected_box, selected_score], dim=1)
 
         batched_dets = dets.unsqueeze(0).repeat(batch, 1, 1)
-        batch_template = torch.arange(
-            0, batch, dtype=batch_inds.dtype, device=batch_inds.device)
-        batched_dets = batched_dets.where(
-            (batch_inds == batch_template.unsqueeze(1)).unsqueeze(-1),
-            batched_dets.new_zeros(1))
+        batch_template = torch.arange(0, batch, dtype=batch_inds.dtype, device=batch_inds.device)
+        batched_dets = batched_dets.where((batch_inds == batch_template.unsqueeze(1)).unsqueeze(-1),batched_dets.new_zeros(1))
 
         batched_labels = cls_inds.unsqueeze(0).repeat(batch, 1)
-        batched_labels = batched_labels.where(
-            (batch_inds == batch_template.unsqueeze(1)),
-            batched_labels.new_ones(1) * -1)
+        batched_labels = batched_labels.where((batch_inds == batch_template.unsqueeze(1)),batched_labels.new_ones(1) * -1)
 
         N = batched_dets.shape[0]
 

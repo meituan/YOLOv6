@@ -67,7 +67,7 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco, 
+def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco,
                     batch_size=1, test_load_size=640, visualize=False,  num_imgs_to_visualize=0):
     """Run detection on each jpg and write results to file."""
     results = []
@@ -85,7 +85,7 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
             if (idx == len(jpgs)): break
             img = cv2.imread(os.path.join(imgs_dir, jpgs[idx]))
             # shapes.append(img.shape)
-            h0, w0 = img.shape[:2] 
+            h0, w0 = img.shape[:2]
             r = test_load_size / max(h0, w0)
             if r != 1:
                 img = cv2.resize(
@@ -94,7 +94,7 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
                     interpolation=cv2.INTER_AREA
                     if r < 1 else cv2.INTER_LINEAR,
                 )
-            h, w = img.shape[:2] 
+            h, w = img.shape[:2]
             imgs[i], pad, img_src = processor.pre_process(img)
             source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
@@ -149,7 +149,7 @@ def main():
     processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
     jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
     generate_results(processor, args.imgs_dir, jpgs, results_file, args.conf_thres, args.iou_thres,
-                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size, 
+                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size,
                      visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize)
 
 

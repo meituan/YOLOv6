@@ -70,7 +70,7 @@ Then run the demo:
 ```shell
 ./yolov6 ../you.engine -i image_path
 ```
-# Testing on image 
+# Testing on image
 You can do testing on images using .trt weights, just give path of image directory & its annotation path
 
 ```

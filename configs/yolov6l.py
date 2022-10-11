@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6l',
     pretrained=None,
-    depth_multiple=1.0,  
+    depth_multiple=1.0,
     width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',
@@ -43,12 +43,12 @@ solver=dict(
     weight_decay=0.0005,
     warmup_epochs=3.0,
     warmup_momentum=0.8,
-    warmup_bias_lr=0.1       
+    warmup_bias_lr=0.1
 )
- 
+
 data_aug = dict(
-    hsv_h=0.015,  
-    hsv_s=0.7, 
+    hsv_h=0.015,
+    hsv_s=0.7,
     hsv_v=0.4,
     degrees=0.0,
     translate=0.1,
@@ -59,5 +59,5 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.1,
 )
-training_mode = "conv_silu" 
+training_mode = "conv_silu"
 # use normal conv to speed up training and further improve accuracy.

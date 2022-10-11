@@ -72,7 +72,7 @@ def build_network(config, channels, num_classes, anchors, num_layers):
     block = get_block(config.training_mode)
     BACKBONE = eval(config.model.backbone.type)
     NECK = eval(config.model.neck.type)
-    
+
     if 'CSP' in config.model.backbone.type:
         backbone = BACKBONE(
             in_channels=channels,

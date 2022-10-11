@@ -130,7 +130,7 @@ class RepPANNeck(nn.Module):
 
 class CSPRepPANNeck(nn.Module):
     """
-    CSPRepPANNeck module. 
+    CSPRepPANNeck module.
     """
 
     def __init__(
@@ -144,7 +144,7 @@ class CSPRepPANNeck(nn.Module):
 
         assert channels_list is not None
         assert num_repeats is not None
-        
+
         self.Rep_p4 = BepC3(
             in_channels=channels_list[3] + channels_list[5], # 512 + 256
             out_channels=channels_list[5], # 256
@@ -155,14 +155,14 @@ class CSPRepPANNeck(nn.Module):
 
         self.Rep_p3 = BepC3(
             in_channels=channels_list[2] + channels_list[6], # 256 + 128
-            out_channels=channels_list[6], # 128 
+            out_channels=channels_list[6], # 128
             n=num_repeats[6],
             e=csp_e,
             block=block
         )
 
         self.Rep_n3 = BepC3(
-            in_channels=channels_list[6] + channels_list[7], # 128 + 128 
+            in_channels=channels_list[6] + channels_list[7], # 128 + 128
             out_channels=channels_list[8], # 256
             n=num_repeats[7],
             e=csp_e,
@@ -170,47 +170,47 @@ class CSPRepPANNeck(nn.Module):
         )
 
         self.Rep_n4 = BepC3(
-            in_channels=channels_list[5] + channels_list[9], # 256 + 256 
-            out_channels=channels_list[10], # 512 
+            in_channels=channels_list[5] + channels_list[9], # 256 + 256
+            out_channels=channels_list[10], # 512
             n=num_repeats[8],
             e=csp_e,
             block=block
         )
 
         self.reduce_layer0 = SimConv(
-            in_channels=channels_list[4], # 1024 
-            out_channels=channels_list[5], # 256 
+            in_channels=channels_list[4], # 1024
+            out_channels=channels_list[5], # 256
             kernel_size=1,
             stride=1
         )
 
         self.upsample0 = Transpose(
-            in_channels=channels_list[5], # 256 
-            out_channels=channels_list[5], # 256 
+            in_channels=channels_list[5], # 256
+            out_channels=channels_list[5], # 256
         )
 
         self.reduce_layer1 = SimConv(
             in_channels=channels_list[5], # 256
-            out_channels=channels_list[6], # 128 
+            out_channels=channels_list[6], # 128
             kernel_size=1,
             stride=1
         )
 
         self.upsample1 = Transpose(
-            in_channels=channels_list[6], # 128 
-            out_channels=channels_list[6] # 128 
+            in_channels=channels_list[6], # 128
+            out_channels=channels_list[6] # 128
         )
 
         self.downsample2 = SimConv(
-            in_channels=channels_list[6], # 128 
-            out_channels=channels_list[7], # 128 
+            in_channels=channels_list[6], # 128
+            out_channels=channels_list[7], # 128
             kernel_size=3,
             stride=2
         )
 
         self.downsample1 = SimConv(
-            in_channels=channels_list[8], # 256 
-            out_channels=channels_list[9], # 256 
+            in_channels=channels_list[8], # 256
+            out_channels=channels_list[9], # 256
             kernel_size=3,
             stride=2
         )

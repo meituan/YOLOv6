@@ -20,7 +20,7 @@ class yolox():
         self.confThreshold = confThreshold
         self.nmsThreshold = nmsThreshold
         self.objThreshold = objThreshold
-    
+
     def preprocess(self, image):
         if len(image.shape) == 3:
             padded_img = np.ones((self.input_size[0], self.input_size[1], 3)) * 114.0
@@ -40,7 +40,7 @@ class yolox():
         # image -= self.mean
         # image /= self.std
         return image, r
-    
+
     def demo_postprocess(self, outputs):
         grids = []
         expanded_strides = []
@@ -59,7 +59,7 @@ class yolox():
         outputs[..., :2] = (outputs[..., :2] + grids) * expanded_strides
         outputs[..., 2:4] = np.exp(outputs[..., 2:4]) * expanded_strides
         return outputs
-    
+
     def nms(self, boxes, scores):
         """Single class NMS implemented in Numpy."""
         x1 = boxes[:, 0]
@@ -88,7 +88,7 @@ class yolox():
             order = order[inds + 1]
 
         return keep
-    
+
     def multiclass_nms(self, boxes, scores):
         """Multiclass NMS implemented in Numpy"""
         final_dets = []
@@ -109,7 +109,7 @@ class yolox():
         if len(final_dets) == 0:
             return None
         return np.concatenate(final_dets, 0)
-    
+
     def vis(self, img, boxes, scores, cls_ids):
         for i in range(len(boxes)):
             box = boxes[i]
@@ -129,7 +129,7 @@ class yolox():
             cv2.rectangle(img, (x0, y0 + 1), (x0 + txt_size[0] + 1, y0 + txt_size[1] + baseline), (0, 0, 0), -1)
             cv2.putText(img, text, (x0, y0 + txt_size[1]), font, 0.7, (0, 255, 255), 1, cv2.LINE_AA)
         return img
-    
+
     def detect(self, srcimg):
         img, ratio = self.preprocess(srcimg)
         blob = cv2.dnn.blobFromImage(img)
@@ -164,9 +164,9 @@ if __name__ == '__main__':
     net = yolox(args.model, args.classesFile, p6=args.with_p6, confThreshold=args.score_thr)
     srcimg = cv2.imread(args.img)
     input = srcimg.copy()
-    
 
-    # Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the 
+
+    # Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the
     # timings for each of the layers(in layersTimes)
     cycles = 300
     total_time = 0
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         t, _ = net.net.getPerfProfile()
         total_time += t
         print(f'Cycle [{i + 1}]:\t{t * 1000.0 / cv2.getTickFrequency():.2f}\tms')
-	
+
     avg_time = total_time / cycles
     window_name = os.path.splitext(os.path.basename(args.model))[0]
     label = 'Average inference time: %.2f ms' % (avg_time * 1000.0 / cv2.getTickFrequency())
