@@ -8,6 +8,7 @@ opencv-python>=4.1.2
 PyYAML>=5.3.1
 scipy>=1.4.1
 tqdm>=4.41.0
+wget>=3.2
 addict>=2.4.0
 tensorboard>=2.7.0
 pycocotools>=2.0

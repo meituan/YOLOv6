@@ -3,8 +3,15 @@
 import argparse
 import os
 import sys
+import requests
 import os.path as osp
+from pathlib import Path
+from typing import Optional
 
+import wget
+import urllib
+
+import wandb
 import torch
 
 ROOT = os.getcwd()
@@ -13,6 +20,8 @@ if str(ROOT) not in sys.path:
 
 from yolov6.utils.events import LOGGER
 from yolov6.core.inferer import Inferer
+
+from yolov6.logger.wandb_inference_logger import WandbInferenceLogger
 
 
 def get_args_parser(add_help=True):
@@ -36,6 +45,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels.')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences.')
     parser.add_argument('--half', action='store_true', help='whether to use FP16 half-precision inference.')
+    parser.add_argument("--wandb_project", type=str, default=None, help="Name of Weights & Biases Project.")
+    parser.add_argument("--wandb_entity", type=str, default=None, help="Name of Weights & Biases Entity.")
 
     args = parser.parse_args()
     LOGGER.info(args)
@@ -62,6 +73,8 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_labels=False,
         hide_conf=False,
         half=False,
+        wandb_project: Optional[str] = None,
+        wandb_entity: Optional[str] = None,
         ):
     """ Inference process, supporting inference on one image file or directory which containing images.
     Args:
@@ -84,6 +97,53 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         hide_conf: Hide confidences
         half: Use FP16 half-precision inference, e.g. False
     """
+    if wandb_project is not None:
+        wandb.init(
+            project=wandb_project,
+            name=name if name is not None else None,
+            entity=wandb_entity,
+            job_type="test"
+        )
+    
+    if name is None:
+            name = wandb.run.name
+
+    config = wandb.config
+    config.weights = Path(weights).name
+    config.source = source
+    config.yaml = yaml
+    config.img_size = img_size
+    config.conf_thres = conf_thres
+    config.iou_thres = iou_thres
+    config.max_det = max_det
+    config.device = device
+    config.save_txt = save_txt
+    config.save_img = save_img
+    config.classes = classes
+    config.agnostic_nms = agnostic_nms
+    config.hide_labels = hide_labels
+    config.hide_conf = hide_conf
+    config.half = half
+    
+    if not osp.isfile(weights):
+        try:
+            print("Downloading weights...")
+            weights_url = requests.get(
+                "https://api.github.com/repos/meituan/YOLOv6/releases/latest"
+            ).json()["html_url"].replace("tag", "download") + f"/{weights}"
+            urllib.request.urlretrieve(weights_url, weights)
+            print("\nDone.")
+        except urllib.error.HTTPError:
+            print("Unable to download model.")
+    
+    if not osp.isfile(source) and not osp.isdir(source):
+        try:
+            print("Downloading image...")
+            source = wget.download(source)
+            print("\nDone.")
+        except urllib.error.HTTPError:
+            print("Unable to download image.")
+   
     # create save dir
     if save_dir is None:
         save_dir = osp.join(project, name)
@@ -100,11 +160,14 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
             os.makedirs(save_txt_path)
 
     # Inference
-    inferer = Inferer(source, weights, device, yaml, img_size, half)
+    inferer = Inferer(source, weights, device, yaml, img_size, half, inference_logger=WandbInferenceLogger() if wandb.run is not None else None)
     inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img)
 
     if save_txt or save_img:
         LOGGER.info(f"Results saved to {save_dir}")
+    
+    if wandb.run is not None:
+        wandb.finish()
 
 
 def main(args):
