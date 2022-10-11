@@ -71,7 +71,7 @@ if __name__ == '__main__':
             'images' :{
                 0:'batch',
             },}
-        if args.end2end and not args.ort:
+        if args.end2end:
             output_axes = {
                 'num_dets': {0: 'batch'},
                 'det_boxes': {0: 'batch'},
