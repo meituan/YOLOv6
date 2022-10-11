@@ -109,7 +109,7 @@ class EfficientRep(nn.Module):
 
 class CSPBepBackbone(nn.Module):
     """
-    CSPBepBackbone module. 
+    CSPBepBackbone module.
     """
 
     def __init__(

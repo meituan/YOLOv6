@@ -61,7 +61,7 @@ class ATSSAssigner(nn.Module):
 
         overlaps_thr_per_gt, iou_candidates = self.thres_calculator(
             is_in_candidate, candidate_idxs, overlaps)
-        
+
         # select candidates iou >= threshold as positive
         is_pos = torch.where(
             iou_candidates > overlaps_thr_per_gt.repeat([1, 1, self.n_anchors]),
@@ -72,7 +72,7 @@ class ATSSAssigner(nn.Module):
 
         target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(
             mask_pos, overlaps, self.n_max_boxes)
-            
+
         # assigned target
         target_labels, target_bboxes, target_scores = self.get_targets(
             gt_labels, gt_bboxes, target_gt_idx, fg_mask)
@@ -86,8 +86,8 @@ class ATSSAssigner(nn.Module):
         return target_labels.long(), target_bboxes, target_scores, fg_mask.bool()
 
     def select_topk_candidates(self,
-                               distances, 
-                               n_level_bboxes, 
+                               distances,
+                               n_level_bboxes,
                                mask_gt):
 
         mask_gt = mask_gt.repeat(1, 1, self.topk).bool()
@@ -101,10 +101,10 @@ class ATSSAssigner(nn.Module):
             selected_k = min(self.topk, per_level_boxes)
             _, per_level_topk_idxs = per_level_distances.topk(selected_k, dim=-1, largest=False)
             candidate_idxs.append(per_level_topk_idxs + start_idx)
-            per_level_topk_idxs = torch.where(mask_gt, 
+            per_level_topk_idxs = torch.where(mask_gt,
                 per_level_topk_idxs, torch.zeros_like(per_level_topk_idxs))
             is_in_candidate = F.one_hot(per_level_topk_idxs, per_level_boxes).sum(dim=-2)
-            is_in_candidate = torch.where(is_in_candidate > 1, 
+            is_in_candidate = torch.where(is_in_candidate > 1,
                 torch.zeros_like(is_in_candidate), is_in_candidate)
             is_in_candidate_list.append(is_in_candidate.to(distances.dtype))
             start_idx = end_idx
@@ -115,12 +115,12 @@ class ATSSAssigner(nn.Module):
         return is_in_candidate_list, candidate_idxs
 
     def thres_calculator(self,
-                         is_in_candidate, 
-                         candidate_idxs, 
+                         is_in_candidate,
+                         candidate_idxs,
                          overlaps):
 
         n_bs_max_boxes = self.bs * self.n_max_boxes
-        _candidate_overlaps = torch.where(is_in_candidate > 0, 
+        _candidate_overlaps = torch.where(is_in_candidate > 0,
             overlaps, torch.zeros_like(overlaps))
         candidate_idxs = candidate_idxs.reshape([n_bs_max_boxes, -1])
         assist_idxs = self.n_anchors * torch.arange(n_bs_max_boxes, device=candidate_idxs.device)
@@ -136,18 +136,18 @@ class ATSSAssigner(nn.Module):
         return overlaps_thr_per_gt, _candidate_overlaps
 
     def get_targets(self,
-                    gt_labels, 
-                    gt_bboxes, 
-                    target_gt_idx, 
+                    gt_labels,
+                    gt_bboxes,
+                    target_gt_idx,
                     fg_mask):
-        
+
         # assigned target labels
         batch_idx = torch.arange(self.bs, dtype=gt_labels.dtype, device=gt_labels.device)
         batch_idx = batch_idx[...,None]
         target_gt_idx = (target_gt_idx + batch_idx * self.n_max_boxes).long()
         target_labels = gt_labels.flatten()[target_gt_idx.flatten()]
         target_labels = target_labels.reshape([self.bs, self.n_anchors])
-        target_labels = torch.where(fg_mask > 0, 
+        target_labels = torch.where(fg_mask > 0,
             target_labels, torch.full_like(target_labels, self.bg_idx))
 
         # assigned target boxes
@@ -159,5 +159,3 @@ class ATSSAssigner(nn.Module):
         target_scores = target_scores[:, :, :self.num_classes]
 
         return target_labels, target_bboxes, target_scores
-
-    

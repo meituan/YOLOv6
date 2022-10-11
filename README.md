@@ -14,14 +14,14 @@ Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for
 
 YOLOv6 has a series of models for various industrial scenarios, including N/T/S/M/L, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
-YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.5% AP with 495 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 869 FPS on T4. YOLOv6-T/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
+YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.5% AP with 495 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 869 FPS on T4. YOLOv6-T/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed.
 
 
 ## What's New
 
 - Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
 - 2x faster training time.
-- Fix the degration of performance when evaluating on 640x640 inputs. 
+- Fix the degration of performance when evaluating on 640x640 inputs.
 - Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 
 ## Benchmark
@@ -34,7 +34,7 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 | [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                                  | 113                                     | 149                                      | 58.5                 | 144.0               |
 | [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                                  | 98                                      | 121                                      | 58.5                 | 144.0               |
 
-### Quantized model 🚀 
+### Quantized model 🚀
 
 | Model                 | Size | Precision | mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt b1 <br/>(fps) | Speed<sup>T4<br/>trt b32 <br/>(fps) |
 | :-------------------- | ---- | --------- | :----------------------- | ---------------------------------- | ----------------------------------- |
@@ -135,11 +135,11 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--epoch 300 \
 									--device 0,1,2,3,4,5,6,7 \
 									--name yolov6m_coco # yolov6l_coco
-									
-                                                                                      
+
+
 # Step 2: Self-distillation training
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
-									--batch 256 \ # 128 for distillation of yolov6l 
+									--batch 256 \ # 128 for distillation of yolov6l
 									--conf configs/yolov6m.py \ # configs/yolov6l.py
 									--data data/coco.yaml \
 									--epoch 300 \
@@ -147,7 +147,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--distill \
 									--teacher_model_path runs/train/yolov6m_coco/weights/best_ckpt.pt \ # # yolov6l_coco
 									--name yolov6m_coco # yolov6l_coco
-							
+
 ```
 </details>
 
@@ -242,5 +242,5 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
  * Tutorial: [How to train YOLOv6 on a custom dataset](https://blog.roboflow.com/how-to-train-yolov6-on-a-custom-dataset/) <a href="https://colab.research.google.com/drive/1YnbqOinBZV-c9I7fk_UL6acgnnmkXDMM"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
  * Demo of YOLOv6 inference on Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahdilamb/YOLOv6/blob/main/inference.ipynb)
 </details>
-  
+
 ### [FAQ（Continuously updated）](https://github.com/meituan/YOLOv6/wiki/FAQ%EF%BC%88Continuously-updated%EF%BC%89)

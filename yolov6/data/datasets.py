@@ -117,7 +117,7 @@ class TrainValDataset(Dataset):
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment, return_int=self.hyp["letterbox_return_int"])
             else:
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
-                  
+
             shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
@@ -578,7 +578,7 @@ class TrainValDataset(Dataset):
         h = hashlib.md5("".join(paths).encode())
         return h.hexdigest()
 
-        
+
 class LoadData:
     def __init__(self, path):
         p = str(Path(path).resolve())  # os-agnostic absolute path

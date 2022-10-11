@@ -49,4 +49,3 @@ def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.
         anchor_points = torch.cat(anchor_points).to(device)
         stride_tensor = torch.cat(stride_tensor).to(device)
         return anchors, anchor_points, num_anchors_list, stride_tensor
-

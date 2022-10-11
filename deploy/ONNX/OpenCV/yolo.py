@@ -25,11 +25,11 @@ RED = (0,0,255)
 
 def draw_label(input_image, label, left, top):
     """Draw text onto image at location."""
-    
+
     # Get text size.
     text_size = cv2.getTextSize(label, FONT_FACE, FONT_SCALE, THICKNESS)
     dim, baseline = text_size[0], text_size[1]
-    # Use text size to create a BLACK rectangle. 
+    # Use text size to create a BLACK rectangle.
     cv2.rectangle(input_image, (left, top), (left + dim[0], top + dim[1] + baseline), BLACK, cv2.FILLED)
     # Display text inside the rectangle.
     cv2.putText(input_image, label, (left, top + dim[1]), FONT_FACE, FONT_SCALE, YELLOW, THICKNESS, cv2.LINE_AA)
@@ -88,7 +88,7 @@ def post_process(input_image, outputs):
 				top = int((cy - h/2) * y_factor)
 				width = int(w * x_factor)
 				height = int(h * y_factor)
-			  
+
 				box = np.array([left, top, width, height])
 				boxes.append(box)
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 	# Give the weight files to the model and load the network using them.
 	net = cv2.dnn.readNet(model_path)
 
-	# Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the 
+	# Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the
 	# timings for each of the layers(in layersTimes)
 	# Process image.
 	cycles = 300
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 		t, _ = net.getPerfProfile()
 		total_time += t
 		print(f'Cycle [{i + 1}]:\t{t * 1000.0 / cv2.getTickFrequency():.2f}\tms')
-	
+
 	avg_time = total_time / cycles
 	label = 'Average Inference time: %.2f ms' % (avg_time * 1000.0 / cv2.getTickFrequency())
 	print(f'Model: {window_name}\n{label}')

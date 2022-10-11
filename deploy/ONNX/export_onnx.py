@@ -93,7 +93,7 @@ if __name__ == '__main__':
     print("===================")
     print(model)
     print("===================")
-    
+
     y = model(img)  # dry run
 
     # ONNX export

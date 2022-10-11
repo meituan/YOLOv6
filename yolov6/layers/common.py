@@ -369,14 +369,14 @@ class RepBlock(nn.Module):
     '''
     def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock, basic_block=RepVGGBlock):
         super().__init__()
-        
+
         self.conv1 = block(in_channels, out_channels)
         self.block = nn.Sequential(*(block(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
         if block == BottleRep:
             self.conv1 = BottleRep(in_channels, out_channels, basic_block=basic_block, weight=True)
             n = n // 2
             self.block = nn.Sequential(*(BottleRep(out_channels, out_channels, basic_block=basic_block, weight=True) for _ in range(n - 1))) if n > 1 else None
-       
+
     def forward(self, x):
         x = self.conv1(x)
         if self.block is not None:
@@ -403,9 +403,9 @@ class BottleRep(nn.Module):
         outputs = self.conv1(x)
         outputs = self.conv2(outputs)
         return outputs + self.alpha * x if self.shortcut else outputs
-  
-        
-        
+
+
+
 def autopad(k, p=None):  # kernel, padding
     # Pad to 'same'
     if p is None:
@@ -438,12 +438,12 @@ class BepC3(nn.Module):
             self.cv1 = Conv_C3(in_channels, c_, 1, 1, act=nn.SiLU())
             self.cv2 = Conv_C3(in_channels, c_, 1, 1, act=nn.SiLU())
             self.cv3 = Conv_C3(2 * c_, out_channels, 1, 1, act=nn.SiLU())
-           
+
         self.m = RepBlock(in_channels=c_, out_channels=c_, n=n, block=BottleRep, basic_block=block)
         self.concat = concat
         if not concat:
             self.cv3 = Conv_C3(c_, out_channels, 1, 1)
-        
+
     def forward(self, x):
         if self.concat is True:
             return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), dim=1))

@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6l_relu',
     pretrained='weights/yolov6l_relu.pt',
-    depth_multiple=1.0,  
+    depth_multiple=1.0,
     width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',

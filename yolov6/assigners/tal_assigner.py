@@ -4,11 +4,11 @@ import torch.nn.functional as F
 from yolov6.assigners.assigner_utils import select_candidates_in_gts, select_highest_overlaps, iou_calculator
 
 class TaskAlignedAssigner(nn.Module):
-    def __init__(self, 
+    def __init__(self,
                  topk=13,
-                 num_classes=80, 
-                 alpha=1.0, 
-                 beta=6.0, 
+                 num_classes=80,
+                 alpha=1.0,
+                 beta=6.0,
                  eps=1e-9):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk
@@ -52,13 +52,13 @@ class TaskAlignedAssigner(nn.Module):
                    torch.zeros_like(pd_scores).to(device), \
                    torch.zeros_like(pd_scores[..., 0]).to(device)
 
-        
+
         mask_pos, align_metric, overlaps = self.get_pos_mask(
             pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt)
 
         target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(
             mask_pos, overlaps, self.n_max_boxes)
-        
+
         # assigned target
         target_labels, target_bboxes, target_scores = self.get_targets(
             gt_labels, gt_bboxes, target_gt_idx, fg_mask)
@@ -72,12 +72,12 @@ class TaskAlignedAssigner(nn.Module):
 
         return target_labels, target_bboxes, target_scores, fg_mask.bool()
 
-    def get_pos_mask(self, 
-                     pd_scores, 
-                     pd_bboxes, 
-                     gt_labels, 
-                     gt_bboxes, 
-                     anc_points, 
+    def get_pos_mask(self,
+                     pd_scores,
+                     pd_bboxes,
+                     gt_labels,
+                     gt_bboxes,
+                     anc_points,
                      mask_gt):
 
         # get anchor_align metric
@@ -91,11 +91,11 @@ class TaskAlignedAssigner(nn.Module):
         mask_pos = mask_topk * mask_in_gts * mask_gt
 
         return mask_pos, align_metric, overlaps
-    
-    def get_box_metrics(self, 
-                        pd_scores, 
-                        pd_bboxes, 
-                        gt_labels, 
+
+    def get_box_metrics(self,
+                        pd_scores,
+                        pd_bboxes,
+                        gt_labels,
                         gt_bboxes):
 
         pd_scores = pd_scores.permute(0, 2, 1)
@@ -111,8 +111,8 @@ class TaskAlignedAssigner(nn.Module):
         return align_metric, overlaps
 
     def select_topk_candidates(self,
-                               metrics,  
-                               largest=True, 
+                               metrics,
+                               largest=True,
                                topk_mask=None):
 
         num_anchors = metrics.shape[-1]
@@ -127,12 +127,12 @@ class TaskAlignedAssigner(nn.Module):
             torch.zeros_like(is_in_topk), is_in_topk)
         return is_in_topk.to(metrics.dtype)
 
-    def get_targets(self, 
-                    gt_labels, 
-                    gt_bboxes, 
-                    target_gt_idx, 
+    def get_targets(self,
+                    gt_labels,
+                    gt_bboxes,
+                    target_gt_idx,
                     fg_mask):
-        
+
         # assigned target labels
         batch_ind = torch.arange(end=self.bs, dtype=torch.int64, device=gt_labels.device)[...,None]
         target_gt_idx = target_gt_idx + batch_ind * self.n_max_boxes
@@ -141,11 +141,11 @@ class TaskAlignedAssigner(nn.Module):
         # assigned target boxes
         target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx]
 
-        # assigned target scores       
+        # assigned target scores
         target_labels[target_labels<0] = 0
         target_scores = F.one_hot(target_labels, self.num_classes)
         fg_scores_mask  = fg_mask[:, :, None].repeat(1, 1, self.num_classes)
         target_scores = torch.where(fg_scores_mask > 0, target_scores,
                                         torch.full_like(target_scores, 0))
-        
+
         return target_labels, target_bboxes, target_scores

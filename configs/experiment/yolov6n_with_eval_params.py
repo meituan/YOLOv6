@@ -31,7 +31,7 @@ model = dict(
 solver = dict(
     optim='SGD',
     lr_scheduler='Cosine',
-    lr0=0.02, #0.01 # 0.02 
+    lr0=0.02, #0.01 # 0.02
     lrf=0.01,
     momentum=0.937,
     weight_decay=0.0005,
@@ -55,7 +55,7 @@ data_aug = dict(
 )
 
 # Eval params when eval model.
-# If eval_params item is list, eg conf_thres=[0.03, 0.03], 
+# If eval_params item is list, eg conf_thres=[0.03, 0.03],
 # first will be used in train.py and second will be used in eval.py.
 eval_params = dict(
     batch_size=None,  #None mean will be the same as batch on one device * 2
@@ -63,7 +63,7 @@ eval_params = dict(
     conf_thres=0.03,
     iou_thres=0.65,
 
-    #pading and scale coord 
+    #pading and scale coord
     test_load_size=None, #None mean will be the same as test image size
     letterbox_return_int=False,
     force_no_pad=False,

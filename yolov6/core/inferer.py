@@ -53,7 +53,7 @@ class Inferer:
         self.files = LoadData(source)
         self.source = source
 
-        
+
 
     def model_switch(self, model, img_size):
         ''' Model switch to deploy status '''
