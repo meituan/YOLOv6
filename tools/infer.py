@@ -102,7 +102,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
             project=wandb_project,
             name=name if name is not None else None,
             entity=wandb_entity,
-            job_type="test"
+            job_type="inference"
         )
     
     if name is None:
