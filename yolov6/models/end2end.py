@@ -151,22 +151,48 @@ class ONNX_ORT(nn.Module):
                                            device=self.device)
 
     def forward(self, x):
+        batch, anchors, _ = x.shape
         box = x[:, :, :4]
         conf = x[:, :, 4:5]
         score = x[:, :, 5:]
         score *= conf
-        box @= self.convert_matrix
-        objScore, objCls = score.max(2, keepdim=True)
-        dis = objCls.float() * self.max_wh
-        nmsbox = box + dis
-        objScore1 = objScore.transpose(1, 2).contiguous()
-        selected_indices = ORT_NMS.apply(nmsbox, objScore1, self.max_obj, self.iou_threshold, self.score_threshold)
-        X, Y = selected_indices[:, 0], selected_indices[:, 2]
-        resBoxes = box[X, Y, :]
-        resClasses = objCls[X, Y, :].float()
-        resScores = objScore[X, Y, :]
-        X = X.unsqueeze(1).float()
-        return torch.cat([X, resBoxes, resClasses, resScores], 1)
+
+        nms_box = box @ self.convert_matrix
+        nms_score = score.transpose(1, 2).contiguous()
+
+        selected_indices = ORT_NMS.apply(nms_box, nms_score, self.max_obj, self.iou_threshold, self.score_threshold)
+        batch_inds, cls_inds, box_inds = selected_indices.unbind(1)
+        selected_score = nms_score[batch_inds, cls_inds, box_inds].unsqueeze(1)
+        selected_box = nms_box[batch_inds, box_inds, ...]
+
+        dets = torch.cat([selected_box, selected_score], dim=1)
+
+        batched_dets = dets.unsqueeze(0).repeat(batch, 1, 1)
+        batch_template = torch.arange(
+            0, batch, dtype=batch_inds.dtype, device=batch_inds.device)
+        batched_dets = batched_dets.where(
+            (batch_inds == batch_template.unsqueeze(1)).unsqueeze(-1),
+            batched_dets.new_zeros(1))
+
+        batched_labels = cls_inds.unsqueeze(0).repeat(batch, 1)
+        batched_labels = batched_labels.where(
+            (batch_inds == batch_template.unsqueeze(1)),
+            batched_labels.new_ones(1) * -1)
+
+        N = batched_dets.shape[0]
+
+        batched_dets = torch.cat((batched_dets, batched_dets.new_zeros((N, 1, 5))), 1)
+        batched_labels = torch.cat((batched_labels, -batched_labels.new_ones((N, 1))), 1)
+
+        _, topk_inds = batched_dets[:, :, -1].sort(dim=1, descending=True)
+
+        topk_batch_inds = torch.arange(batch, dtype=topk_inds.dtype, device=topk_inds.device).view(-1, 1)
+        batched_dets = batched_dets[topk_batch_inds, topk_inds, ...]
+        det_classes = batched_labels[topk_batch_inds, topk_inds, ...]
+        det_boxes, det_scores = batched_dets.split((4, 1), -1)
+        det_scores = det_scores.squeeze(-1)
+        num_det = (det_scores > 0).sum(1, keepdim=True)
+        return num_det, det_boxes, det_scores, det_classes
 
 class ONNX_TRT7(nn.Module):
     '''onnx module with TensorRT NMS operation.'''

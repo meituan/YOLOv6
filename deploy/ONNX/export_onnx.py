@@ -101,12 +101,12 @@ if __name__ == '__main__':
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
         with BytesIO() as f:
-            torch.onnx.export(model, img, f, verbose=False, opset_version=12,
+            torch.onnx.export(model, img, f, verbose=False, opset_version=13,
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['images'],
                               output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
-                              if args.end2end and args.max_wh is None else ['outputs'],
+                              if args.end2end else ['outputs'],
                               dynamic_axes=dynamic_axes)
             f.seek(0)
             # Checks
