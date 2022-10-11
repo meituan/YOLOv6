@@ -31,8 +31,8 @@ if __name__ == '__main__':
     parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
+    parser.add_argument('--ort', action='store_true', help='export onnx for onnxruntime')
     parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
-    parser.add_argument('--max-wh', type=int, default=None, help='None for tensorrt nms, int value for onnx-runtime nms')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='iou threshold for NMS')
     parser.add_argument('--conf-thres', type=float, default=0.4, help='conf threshold for NMS')
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             'images' :{
                 0:'batch',
             },}
-        if args.end2end and args.max_wh is None:
+        if args.end2end and not args.ort:
             output_axes = {
                 'num_dets': {0: 'batch'},
                 'det_boxes': {0: 'batch'},
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     if args.end2end:
         from yolov6.models.end2end import End2End
         model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
-                        max_wh=args.max_wh, device=device, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
+                        device=device, ort=args.ort, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
 
     print("===================")
     print(model)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
             onnx_model = onnx.load(f)  # load onnx model
             onnx.checker.check_model(onnx_model)  # check onnx model
             # Fix output shape
-            if args.end2end and args.max_wh is None:
+            if args.end2end and not args.ort:
                 shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
                           args.batch_size, args.topk_all, args.batch_size, args.topk_all]
                 for i in onnx_model.graph.output:
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
     if args.end2end:
-        if args.max_wh is None:
+        if not args.ort:
             info = f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}'
             if args.dynamic_batch:
                 LOGGER.info('Dynamic batch export should define min/opt/max batchsize\n'+
