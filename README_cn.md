@@ -18,10 +18,10 @@ YOLOv6-N 在 COCO 数据集上的 mAP 为 35.9% ，在 T4 显卡推理速度可�
 
 ## 本次更新
 
-- 发布了 M/L 模型，并且进一步提高了  N/T/S 模型的性能；⭐️ [精度指标](#Benchmark)
+- 发布了 M/L 模型，并且进一步提高了 N/T/S 模型的性能⭐️ [精度指标](#模型指标) 
 - 将训练速度提高了2倍；
 - 修复了 640x640 分辨率推理时性能下降的问题；
-- 定制化的模型量化加速方法； 🚀 [量化教程](./tools/qat/README.md)
+- 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)；
 
 ## 模型指标
 | 模型                                                       | 输入尺寸 | mAP<sup>val<br/>0.5:0.95              | 速度<sup>T4<br/>trt fp16 b1 <br/>(fps) | 速度<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
@@ -45,7 +45,7 @@ YOLOv6-N 在 COCO 数据集上的 mAP 为 35.9% ，在 T4 显卡推理速度可�
 | **YOLOv6-S RepOpt** | 640  | INT8      | 43.3                     | 619                                | 924                                 |
 | **YOLOv6-S**        | 640  | FP16      | 43.5                     | 377                                | 541                                 |
 
-- 速度是在 T4 上测试的，TensorRT 版本为 8.4 ；
+- 速度是在 T4 上测试的，TensorRT 版本为 8.4；
 - 精度是在训练 300 epoch 的模型上测试的；
 - mAP 和速度指标是在 [COCO val2017](https://cocodataset.org/#download)  数据集上评估的，输入分辨率为 640×640；
 - 复现 YOLOv
@@ -87,16 +87,15 @@ pip install -r requirements.txt
 python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0
 ```
 
-多卡 (我们推荐使用 DDP 模式)
+多卡 （我们推荐使用 DDP 模式）
 
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
 
-
-- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您在配置文件中填写`pretrained`模型的路径。
-- data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) 。
-- 确保您的数据集按照下面这种格式来组织:
+- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您在配置文件中填写`pretrained`模型的路径；
+- data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
+- 确保您的数据集按照下面这种格式来组织；
 ```
 ├── coco
 │   ├── annotations
@@ -138,7 +137,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 Medium 和 Large 模型
 ```shell
-# Step 1: Training a base model
+# 第一步: 训练一个基础模型
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 256 \
 									--conf configs/yolov6m.py \ # configs/yolov6l.py
@@ -148,7 +147,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--name yolov6m_coco # yolov6l_coco
 
 
-# Step 2: Self-distillation training
+# 第二步: Self-distillation training
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 256 \ # 128 for distillation of yolov6l
 									--conf configs/yolov6m.py \ # configs/yolov6l.py
@@ -186,9 +185,9 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```shell
 python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --reproduce_640_eval
 ```
-- verbose: 如果要打印每一类的精度信息，请设置为 True ；
+- verbose: 如果要打印每一类的精度信息，请设置为 True；
 - do_coco_metric: 设置 True / False 来打开或关闭 pycocotools 的评估；
-- do_pr_metric: 设置 True / False 来显示或不显示精度和召回的指标 ；
+- do_pr_metric: 设置 True / False 来显示或不显示精度和召回的指标；
 - config-file: 指定一个包含所有评估参数的配置文件，例如 [yolov6n_with_eval_params.py](configs/experiment/yolov6n_with_eval_params.py)
 </details>
 
