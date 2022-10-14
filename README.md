@@ -177,7 +177,6 @@ Your can also specify a checkpoint path to `--resume` parameter by
 ```
 # remember to replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
 --resume /path/to/your/checkpoint/path
-
 ```
 
 </details>
