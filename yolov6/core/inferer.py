@@ -105,11 +105,6 @@ class Inferer:
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
                 
-                if isinstance(self.inference_logger, WandbInferenceLogger):
-                    self.inference_logger.in_infer(
-                        np.array(img_ori), img_path, reversed(det)
-                    )
-                
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -124,6 +119,12 @@ class Inferer:
                         self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
+            
+            if isinstance(self.inference_logger, WandbInferenceLogger):
+                self.inference_logger.in_infer(
+                    np.array(img_ori), img_path, reversed(det)
+                )
+                
 
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
