@@ -4,6 +4,15 @@
 
 English | [简体中文](README_cn.md)
 
+ <br>
+
+ <div>
+    </a>
+    <a href="https://colab.research.google.com/github/meituan/YOLOv6/blob/main/turtorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+     <a href="https://www.kaggle.com/code/housanduo/yolov6"><img src="https://kaggle.com/static/images/open-in-kaggle.svg" alt="Open In Kaggle"></a>
+  </div>
+ <br>
+  
 ## YOLOv6
 
 Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
