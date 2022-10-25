@@ -235,9 +235,8 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 *  [Tutorial of Quantization for YOLOv6](./docs/Tutorial%20of%20Quantization.md)
 </details>
 
-
 <details>
-<summary> Third-party resources</sumary>
+<summary> Third-party resources</summary>
 
  * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
  * YOLOv6 ONNXRuntime/MNN/TNN C++: [YOLOv6-ORT](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth)
