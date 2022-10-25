@@ -28,10 +28,10 @@ from pytorch_quantization import nn as quant_nn
 #     ('neck.upsample0.upsample_transpose', 'neck.Rep_n4.conv1.rbr_reparam')
 # ]
 
-op_concat_fusion_list = [
+opt_concat_fusion_list = [
     ('backbone.ERBlock_5.2.m', 'backbone.ERBlock_5.2.cv2.conv'),
-    ('backbone.ERBlock_5.0.conv', 'neck.Rep_p4.conv1.conv', 'neck.upsample_feat0_quant'),
-    ('backbone.ERBlock_4.0.conv', 'neck.Rep_p3.conv1.conv', 'neck.upsample_feat1_quant'),
+    ('backbone.ERBlock_5.0.conv', 'neck.Rep_p4.conv1.conv'),
+    ('backbone.ERBlock_4.0.conv', 'neck.Rep_p3.conv1.conv'),
     ('neck.upsample1.upsample_transpose', 'neck.Rep_n3.conv1.conv'),
     ('neck.upsample0.upsample_transpose', 'neck.Rep_n4.conv1.conv'),
     #
