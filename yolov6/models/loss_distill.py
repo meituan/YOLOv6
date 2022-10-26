@@ -174,7 +174,11 @@ class ComputeLoss:
         loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
 
         target_scores_sum = target_scores.sum()
-        loss_cls /= target_scores_sum
+        # avoid devide zero error, devide by zero will cause loss to be inf or nan.
+        if target_scores_sum == 0:
+            loss_cls *= 0
+        else:
+            loss_cls /= target_scores_sum
 
         # bbox loss
         loss_iou, loss_dfl, d_loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, t_pred_distri, t_pred_bboxes, temperature, anchor_points_s,
