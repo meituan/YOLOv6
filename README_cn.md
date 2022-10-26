@@ -167,14 +167,21 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 如果您的训练进程中断了，您可以这样恢复先前的训练进程。
 ```
-# 多卡训练.
+# 单卡训练
+python tools/train.py --resume
+
+# 多卡训练
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
+上面的命令将自动在 YOLOv6 目录中找到最新保存的模型，然后恢复训练。
+
 您也可以通过 `--resume` 参数指定要恢复的模型路径
 ```
 # 记得把 /path/to/your/checkpoint/path  替换为您要恢复训练的模型权重路径
 --resume /path/to/your/checkpoint/path
 ```
+这将从您提供的模型路径恢复训练。
+
 </details>
 </details>
 
