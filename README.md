@@ -179,14 +179,20 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 If your training process is corrupted, you can resume training by
 ```
+# single GPU training.
+python tools/train.py --resume
+
 # multi GPU training.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
+Above command will automatically find the latest checkpoint in YOLOv6 directory, then resume the training process. 
+
 Your can also specify a checkpoint path to `--resume` parameter by
 ```
 # remember to replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
 --resume /path/to/your/checkpoint/path
 ```
+This will resume from the specific checkpoint you provide.
 
 </details>
 </details>
