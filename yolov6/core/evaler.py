@@ -428,7 +428,7 @@ class Evaler:
     def reload_dataset(data, task='val'):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
-        task = 'val' if task == 'train' else task
+        task = 'test' if task == 'test' else 'val'
         path = data.get(task, 'val')
         if not os.path.exists(path):
             raise Exception('Dataset not found.')
