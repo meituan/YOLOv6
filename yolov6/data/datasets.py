@@ -40,6 +40,10 @@ for k, v in ExifTags.TAGS.items():
         ORIENTATION = k
         break
 
+def img2label_paths(img_paths):
+    # Define label paths as a function of image paths
+    sa, sb = f'{os.sep}images{os.sep}', f'{os.sep}labels{os.sep}'  # /images/, /labels/ substrings
+    return [sb.join(x.rsplit(sa, 1)).rsplit('.', 1)[0] + '.txt' for x in img_paths]
 
 class TrainValDataset(Dataset):
     '''YOLOv6 train_loader/val_loader, loads images and labels for training and validation.'''
@@ -269,33 +273,11 @@ class TrainValDataset(Dataset):
                 json.dump(cache_info, f)
 
         # check and load anns
-        base_dir = osp.basename(img_dir)
-        if base_dir != "":
-            label_dir = osp.join(
-            osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
-            )
-            assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
-        else:
-            sub_dirs= []
-            label_dir = img_dir
-            for rootdir, dirs, files in os.walk(label_dir):
-                for subdir in dirs:
-                    sub_dirs.append(subdir)
-            assert "labels" in sub_dirs, f"Could not find a labels directory!"
-
-
-        # Look for labels in the save relative dir that the images are in
-        def _new_rel_path_with_ext(base_path: str, full_path: str, new_ext: str):
-            rel_path = osp.relpath(full_path, base_path)
-            return osp.join(osp.dirname(rel_path), osp.splitext(osp.basename(rel_path))[0] + new_ext)
-
 
         img_paths = list(img_info.keys())
-        label_paths = sorted(
-            osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
-            for p in img_paths
-        )
-        assert label_paths, f"No labels found in {label_dir}."
+        label_paths = img2label_paths(img_paths)
+        label_paths = sorted(label_paths)
+        assert label_paths, f"No labels found in your directory."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
             self.check_labels = True
