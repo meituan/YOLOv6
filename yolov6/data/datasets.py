@@ -211,20 +211,24 @@ class TrainValDataset(Dataset):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
-    def get_imgs_labels(self, img_dir):
-
-        assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
+    def get_imgs_labels(self, img_dirs):
+        if not isinstance(img_dirs, list):
+            img_dirs = [img_dirs]
+        # we store the cache img file in the first directory of img_dirs
         valid_img_record = osp.join(
-            osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
+            osp.dirname(img_dirs[0]), "." + osp.basename(img_dirs[0]) + ".json"
         )
         NUM_THREADS = min(8, os.cpu_count())
+        img_paths = []
+        for img_dir in img_dirs:
+            assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
+            img_paths += glob.glob(osp.join(img_dir, "**/*"), recursive=True)
 
-        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
-        assert img_paths, f"No images found in {img_dir}."
 
+        assert img_paths, f"No images found in {img_dir}."
         img_hash = self.get_hash(img_paths)
         if osp.exists(valid_img_record):
             with open(valid_img_record, "r") as f:
