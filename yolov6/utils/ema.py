@@ -50,10 +50,10 @@ def copy_attr(a, b, include=(), exclude=()):
 
 
 def is_parallel(model):
-    # Return True if model's type is DP or DDP, else False.
+    '''Return True if model's type is DP or DDP, else False.'''
     return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
 
 
 def de_parallel(model):
-    # De-parallelize a model. Return single-GPU model if model's type is DP or DDP.
+    '''De-parallelize a model. Return single-GPU model if model's type is DP or DDP.'''
     return model.module if is_parallel(model) else model

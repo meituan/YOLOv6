@@ -1,0 +1,49 @@
+name: 🚀 Feature Request
+description: Suggest a YOLOv6 idea
+# title: " "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for submitting a YOLOv6 Feature Request!
+
+  - type: checkboxes
+    attributes:
+      label: Search before asking
+      description: >
+        Please search the [issues](https://github.com/meituan/YOLOv6/issues) to see if a similar feature request already exists.
+      options:
+        - label: >
+            I have searched the YOLOv6 [issues](https://github.com/meituan/YOLOv6/issues) and found no similar feature requests.
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: A short description of your feature.
+      placeholder: |
+        What new feature would you like to see in YOLOv6? （你希望YOLOv6可以支持哪些新功能？）
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Use case
+      description: |
+        Describe the use case of your feature request. It will help us understand and prioritize the feature request.
+      placeholder: |
+        How would this feature be used, and who would use it?（请描述一下这个新功能的应用场景？）
+
+  - type: textarea
+    attributes:
+      label: Additional
+      description: Anything else you would like to share?
+
+  - type: checkboxes
+    attributes:
+      label: Are you willing to submit a PR?
+      description: >
+        (Optional) We encourage you to submit a [Pull Request](https://github.com/meituan/YOLOv6/pulls) (PR) to help improve YOLOv6 for everyone, especially if you have a good understanding of how to implement a fix or feature.
+      options:
+        - label: Yes I'd like to help by submitting a PR!

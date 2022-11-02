@@ -1,0 +1,54 @@
+name: ❓ Question
+description: Ask a YOLOv6 question
+# title: " "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your attention. We will try our best to solve your problem, but more concrete information is necessary to reproduce your problem.
+  - type: checkboxes
+    attributes:
+      label: Before Asking
+      description: >
+        Please check and try following methods to solve it by yourself
+      options:
+        - label: >
+           I have read the [README](https://github.com/meituan/YOLOv6/blob/main/README.md) carefully.
+           我已经仔细阅读了README上的操作指引。
+          required: true
+        - label: >
+           I want to train my custom dataset, and I have read the [tutorials for training your custom data](https://github.com/meituan/YOLOv6/blob/main/docs/Train_custom_data.md) carefully and organize my dataset correctly;
+           (FYI: We recommand you to apply the config files of xx_finetune.py.)
+           我想训练自定义数据集，我已经仔细阅读了训练自定义数据的教程，以及按照正确的目录结构存放数据集。（FYI: 我们推荐使用xx_finetune.py等配置文件训练自定义数据集。）
+          required: False
+        - label: >
+           I have pulled the latest code of main branch to run again and the problem still existed.
+           我已经拉取了主分支上最新的代码，重新运行之后，问题仍不能解决。
+          required: true
+
+
+  - type: checkboxes
+    attributes:
+      label: Search before asking
+      description: >
+        Please search the [issues](https://github.com/meituan/YOLOv6/issues) to see if a similar question already exists.
+      options:
+        - label: >
+            I have searched the YOLOv6 [issues](https://github.com/meituan/YOLOv6/issues) and found no similar questions.
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Question
+      description: What is your question?
+      placeholder: |
+        💡 ProTip! Include as much information as possible (screenshots, logs, tracebacks, training commands etc.) to receive the most helpful response.
+        (请仔细阅读上面的信息先进行问题排查，如果仍不能解决您的问题，请将问题尽可能地描述详细，以及提供相关命令、超参配置、报错日志等信息或截图，以便更快地定位和解决问题。)
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional
+      description: Anything else you would like to share?
