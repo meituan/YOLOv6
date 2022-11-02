@@ -249,8 +249,10 @@ class Evaler:
             else:
                 # generated coco format labels in dataset initialization
                 task = 'val' if task == 'train' else task
-                dataset_root = os.path.dirname(os.path.dirname(self.data[task]))
-                base_name = os.path.basename(self.data[task])
+                if not isinstance(self.data[task], list):
+                    self.data[task] = [self.data[task]]
+                dataset_root = os.path.dirname(os.path.dirname(self.data[task][0]))
+                base_name = os.path.basename(self.data[task][0])
                 anno_json = os.path.join(dataset_root, 'annotations', f'instances_{base_name}.json')
             pred_json = os.path.join(self.save_dir, "predictions.json")
             LOGGER.info(f'Saving {pred_json}...')
