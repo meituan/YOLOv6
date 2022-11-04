@@ -93,7 +93,7 @@ python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
 
-- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您在配置文件中填写`pretrained`模型的路径；
+- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件；
 - data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
 - 确保您的数据集按照下面这种格式来组织；
 ```

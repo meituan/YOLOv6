@@ -103,7 +103,7 @@ Multi GPUs (DDP mode recommended)
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
-- conf: select config file to specify network/optimizer/hyperparameters. Pretrained model path is recommended to be specified in the config file with the `pretrained` parameter if training on your custom dataset.
+- conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
 - data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
 - make sure your dataset structure as follows:
 ```
