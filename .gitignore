@@ -109,7 +109,7 @@ venv.bak/
 .vscode/*
 
 #data
-.data/*
+data/*
 
 #user scripts
 *.sh
