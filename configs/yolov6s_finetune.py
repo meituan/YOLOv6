@@ -41,15 +41,15 @@ solver = dict(
 )
 
 data_aug = dict(
-    hsv_h=0.0138,
-    hsv_s=0.664,
-    hsv_v=0.464,
+    hsv_h=0,
+    hsv_s=0,
+    hsv_v=0,
     degrees=0,
     translate=0,
-    scale=0.898,
-    shear=0.602,
+    scale=0,
+    shear=0,
     flipud=0,
     fliplr=0,
-    mosaic=1.0,
-    mixup=0.243,
+    mosaic=0,
+    mixup=0,
 )
