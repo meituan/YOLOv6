@@ -20,20 +20,21 @@ from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
 from yolov6.utils.general import increment_name, find_latest_checkpoint
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
-    parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='path of dataset')
-    parser.add_argument('--conf-file', default='./configs/yolov6n.py', type=str, help='experiments description file')
-    parser.add_argument('--img-size', default=640, type=int, help='train, val image size (pixels)')
-    parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
+    parser.add_argument('--data-path', default='./data/dataset.yaml', type=str, help='path of dataset')
+    parser.add_argument('--conf-file', default='./configs/yolov6s_finetune.py', type=str, help='experiments description file')
+    parser.add_argument('--img-size', default=416, type=int, help='train, val image size (pixels)')
+    parser.add_argument('--batch-size', default=256, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
-    parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
+    parser.add_argument('--workers', default=32, type=int, help='number of data loading workers (default: 8)')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--eval-interval', default=20, type=int, help='evaluate at every interval epochs')
+    parser.add_argument('--eval-interval', default=25, type=int, help='evaluate at every interval epochs')
     parser.add_argument('--eval-final-only', action='store_true', help='only evaluate at the final epoch')
-    parser.add_argument('--heavy-eval-range', default=50, type=int,
-                        help='evaluating every epoch for last such epochs (can be jointly used with --eval-interval)')
+    parser.add_argument('--heavy-eval-range', default=50, type=int,help='evaluating every epoch for last such epochs (can be jointly used with --eval-interval)')
     parser.add_argument('--check-images', action='store_true', help='check images when initializing datasets')
     parser.add_argument('--check-labels', action='store_true', help='check label files when initializing datasets')
     parser.add_argument('--output-dir', default='./runs/train', type=str, help='path to save outputs')

@@ -1,7 +1,7 @@
 # YOLOv6s model
 model = dict(
     type='YOLOv6s',
-    pretrained='weights/yolov6s.pt',
+    pretrained='weights/yolov6s_org.pt',
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
@@ -44,12 +44,12 @@ data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    degrees=0.373,
-    translate=0.245,
+    degrees=0,
+    translate=0,
     scale=0.898,
     shear=0.602,
-    flipud=0.00856,
-    fliplr=0.5,
+    flipud=0,
+    fliplr=0,
     mosaic=1.0,
     mixup=0.243,
 )
