@@ -223,8 +223,8 @@ class Trainer:
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
                             do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
                             do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
-                            plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
-                            plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                            plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", True),
+                            plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", True),
                             )
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
