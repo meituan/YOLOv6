@@ -78,7 +78,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         ):
     """ Inference process, supporting inference on one image file or directory which containing images.
     Args:
-        weights: The path of model.pt, e.g. yolov6s.pt
+        weights: The path of model.pt, e.g. yolov6s.pt. Note you can pass models that are part of the latest release without having to download them manually.
         source: Source path, supporting image files or dirs containing images.
         yaml: Data yaml file, .
         img_size: Inference image-size, e.g. 640
