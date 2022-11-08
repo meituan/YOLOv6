@@ -30,6 +30,3 @@ target_link_libraries(yolov6 cudart)
 target_link_libraries(yolov6 ${OpenCV_LIBS})
 
 add_definitions(-O2 -pthread)
-
-
-

@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6l',
     pretrained='weights/yolov6l.pt',
-    depth_multiple=1.0,  
+    depth_multiple=1.0,
     width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',
@@ -59,5 +59,5 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.243,
 )
-training_mode = "conv_silu" 
+training_mode = "conv_silu"
 # use normal conv to speed up training and further improve accuracy.

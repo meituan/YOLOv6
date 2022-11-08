@@ -60,12 +60,12 @@ vector<Mat> pre_process(Mat &input_image, Net &net)
 }
 
 
-Mat post_process(Mat &input_image, vector<Mat> &outputs, const vector<string> &class_name) 
+Mat post_process(Mat &input_image, vector<Mat> &outputs, const vector<string> &class_name)
 {
     // Initialize vectors to hold respective outputs while unwrapping detections.
     vector<int> class_ids;
     vector<float> confidences;
-    vector<Rect> boxes; 
+    vector<Rect> boxes;
 
     // Resizing factor.
     float x_factor = input_image.cols / INPUT_WIDTH;
@@ -76,11 +76,11 @@ Mat post_process(Mat &input_image, vector<Mat> &outputs, const vector<string> &c
     const int dimensions = 85;
     const int rows = 25200;
     // Iterate through 25200 detections.
-    for (int i = 0; i < rows; ++i) 
+    for (int i = 0; i < rows; ++i)
     {
         float confidence = data[4];
         // Discard bad detections and continue.
-        if (confidence >= CONFIDENCE_THRESHOLD) 
+        if (confidence >= CONFIDENCE_THRESHOLD)
         {
             float * classes_scores = data + 5;
             // Create a 1x85 Mat and store class scores of 80 classes.
@@ -90,7 +90,7 @@ Mat post_process(Mat &input_image, vector<Mat> &outputs, const vector<string> &c
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
             // Continue if the class score is above the threshold.
-            if (max_class_score > SCORE_THRESHOLD) 
+            if (max_class_score > SCORE_THRESHOLD)
             {
                 // Store class ID and confidence in the pre-defined respective vectors.
 
@@ -120,7 +120,7 @@ Mat post_process(Mat &input_image, vector<Mat> &outputs, const vector<string> &c
     // Perform Non Maximum Suppression and draw predictions.
     vector<int> indices;
     NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, indices);
-    for (int i = 0; i < indices.size(); i++) 
+    for (int i = 0; i < indices.size(); i++)
     {
         int idx = indices[i];
         Rect box = boxes[idx];
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
     // Load model.
     Net net;
-    net = readNetFromONNX(argv[1]); 
+    net = readNetFromONNX(argv[1]);
 
     // Put efficiency information.
     // The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)

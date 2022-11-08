@@ -3,7 +3,7 @@
 eval_params = dict(
     default = dict(
         img_size=640,
-        test_load_size=634,
+        test_load_size=638,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,

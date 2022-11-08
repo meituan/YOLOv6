@@ -37,7 +37,7 @@ class IOUloss:
             if self.box_format == 'xyxy':
                 b1_x1, b1_y1, b1_x2, b1_y2 = torch.split(box1, 1, dim=-1)
                 b2_x1, b2_y1, b2_x2, b2_y2 = torch.split(box2, 1, dim=-1)
-       
+
             elif self.box_format == 'xywh':
                 b1_x1, b1_y1, b1_w, b1_h = torch.split(box1, 1, dim=-1)
                 b2_x1, b2_y1, b2_w, b2_h = torch.split(box2, 1, dim=-1)
@@ -74,8 +74,8 @@ class IOUloss:
                 iou = iou - (rho2 / c2 + v * alpha)
         elif self.iou_type == 'siou':
             # SIoU Loss https://arxiv.org/pdf/2205.12740.pdf
-            s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5
-            s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) * 0.5
+            s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5 + self.eps
+            s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) * 0.5 + self.eps
             sigma = torch.pow(s_cw ** 2 + s_ch ** 2, 0.5)
             sin_alpha_1 = torch.abs(s_cw) / sigma
             sin_alpha_2 = torch.abs(s_ch) / sigma

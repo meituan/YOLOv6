@@ -1,4 +1,4 @@
-import cv2 
+import cv2
 import tensorrt as trt
 import numpy as np
 import time
@@ -288,4 +288,3 @@ class Processor():
             coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
             coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
         return coords
-

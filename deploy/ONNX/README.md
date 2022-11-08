@@ -26,8 +26,8 @@ python ./deploy/ONNX/export_onnx.py \
 - `--simplify` : Whether to simplify onnx. Not support in end to end export.
 - `--end2end` : Whether to export end to end onnx model. Only support onnxruntime and TensorRT >= 8.0.0 .
 - `--trt-version` :  Export onnx for TensorRT version. Support : 7 or 8.
+- `--ort` : Whether to export onnx for onnxruntime backend.
 - `--with-preprocess` : Whether to export preprocess with bgr2rgb and normalize (divide by 255)
-- `--max-wh` : Default is None for TensorRT backend. Set int for onnxruntime backend.
 - `--topk-all` : Topk objects for every image.
 - `--iou-thres` : IoU threshold for NMS algorithm.
 - `--conf-thres` : Confidence threshold for NMS algorithm.
@@ -58,16 +58,10 @@ python ./deploy/ONNX/export_onnx.py \
     --img 640 \
     --batch 1 \
     --end2end \
-    --max-wh 7680
+    --ort
 ```
 
 You will get an onnx with **NonMaxSuppression** operater .
-
-The onnx outputs shape is ```nums x 7```.
-
-```nums``` means the number of all objects which were detected.
-
-```7```  means [`batch_index`,`x0`,`y0`,`x1`,`y1`,`classid`,`score`]
 
 ### TensorRT backend (TensorRT version == 7.2.3.4)
 #### Usage
@@ -133,6 +127,6 @@ python deploy/ONNX/eval_trt.py --weights yolov6s.engine --batch-size=1 --data da
 
 YOLOv6 support dynamic batch export and inference, you can refer to:
 
-[export ONNX model with dynamic batch ](YOLOv6-Dynamic-Batch-onnxruntime.ipynb) 
+[export ONNX model with dynamic batch ](YOLOv6-Dynamic-Batch-onnxruntime.ipynb)
 
 [export TensorRT model with dynamic batch](YOLOv6-Dynamic-Batch-tensorrt.ipynb)

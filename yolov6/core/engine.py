@@ -98,7 +98,7 @@ class Trainer:
             for self.epoch in range(self.start_epoch, self.max_epoch):
                 self.train_in_loop(self.epoch)
             self.strip_model()
-            
+
         except Exception as _:
             LOGGER.error('ERROR in training loop or eval/save model.')
             raise
@@ -176,17 +176,17 @@ class Trainer:
                 if self.best_stop_strong_aug_ap < self.ap:
                     self.best_stop_strong_aug_ap = max(self.ap, self.best_stop_strong_aug_ap)
                     save_checkpoint(ckpt, False, save_ckpt_dir, model_name='best_stop_aug_ckpt')
-                
+
             del ckpt
             # log for learning rate
-            lr = [x['lr'] for x in self.optimizer.param_groups] 
+            lr = [x['lr'] for x in self.optimizer.param_groups]
             self.evaluate_results = list(self.evaluate_results) + lr
-            
+
             # log for tensorboard
             write_tblog(self.tblogger, self.epoch, self.evaluate_results, self.mean_loss)
             # save validation predictions to tensorboard
             write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
-            
+
     def eval_model(self):
         if not hasattr(self.cfg, "eval_params"):
             results, vis_outputs, vis_paths = eval.run(self.data_dict,
@@ -249,7 +249,7 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type)
-        if self.args.distill:                             
+        if self.args.distill:
             self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
                                                             ori_img_size=self.img_size,
                                                             use_dfl=self.cfg.model.head.use_dfl,
@@ -352,7 +352,7 @@ class Trainer:
 
         LOGGER.info('Model: {}'.format(model))
         return model
-        
+
     def get_teacher_model(self, args,cfg,nc, device):
         model = build_model(cfg, nc, device)
         weights = args.teacher_model_path

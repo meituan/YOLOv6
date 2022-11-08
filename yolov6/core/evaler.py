@@ -140,7 +140,7 @@ class Evaler:
             if self.do_pr_metric:
                 import copy
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
-            
+
             # save result
             pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
 
@@ -149,12 +149,12 @@ class Evaler:
                 vis_num = min(len(imgs), 8)
                 vis_outputs = outputs[:vis_num]
                 vis_paths = paths[:vis_num]
-            
+
             if not self.do_pr_metric:
                 continue
 
-            # Statistics per image 
-            # This code is based on 
+            # Statistics per image
+            # This code is based on
             # https://github.com/ultralytics/yolov5/blob/master/val.py
             for si, pred in enumerate(eval_outputs):
                 labels = targets[targets[:, 0] == si, 1:]
@@ -174,7 +174,7 @@ class Evaler:
                 # Assign all predictions as incorrect
                 correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
                 if nl:
-                    
+
                     from yolov6.utils.nms import xywh2xyxy
 
                     # target boxes
@@ -185,7 +185,7 @@ class Evaler:
                     self.scale_coords(imgs[si].shape[1:], tbox, shapes[si][0], shapes[si][1])  # native-space labels
 
                     labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
-                    
+
                     from yolov6.utils.metrics import process_batch
 
                     correct = process_batch(predn, labelsn, iouv)
@@ -194,7 +194,7 @@ class Evaler:
 
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
-        
+
         if self.do_pr_metric:
             # Compute statistics
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
@@ -207,7 +207,7 @@ class Evaler:
                 ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
                 mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
                 nt = np.bincount(stats[3].astype(np.int64), minlength=model.nc)  # number of targets per class
-                
+
                 # Print results
                 s = ('%-16s' + '%12s' * 7) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
                 LOGGER.info(s)
@@ -219,17 +219,17 @@ class Evaler:
                 # Print results per class
                 if self.verbose and model.nc > 1:
                     for i, c in enumerate(ap_class):
-                        LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx], 
+                        LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx],
                                            f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
-                
+
                 if self.plot_confusion_matrix:
                     confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
             else:
                 LOGGER.info("Calculate metric failed, might check dataset.")
                 self.pr_metric_result = (0.0, 0.0)
-        
+
         return pred_results, vis_outputs, vis_paths
-        
+
 
     def eval_model(self, pred_results, model, dataloader, task):
         '''Evaluate models
@@ -269,7 +269,7 @@ class Evaler:
 
             #print each class ap from pycocotool result
             if self.verbose:
-                
+
                 import copy
                 val_dataset_img_count = cocoEval.cocoGt.imgToAnns.__len__()
                 val_dataset_anns_count = 0
@@ -282,7 +282,7 @@ class Evaler:
                     nc_i = self.coco80_to_coco91_class().index(ann_i['category_id']) if self.is_coco else ann_i['category_id']
                     label_count_dicts[nc_i]["images"].add(ann_i["image_id"])
                     label_count_dicts[nc_i]["anns"] += 1
-                
+
                 s = ('%-16s' + '%12s' * 7) % ('Class', 'Labeled_images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
                 LOGGER.info(s)
                 #IOU , all p, all cats, all gt, maxdet 100
@@ -299,7 +299,7 @@ class Evaler:
 
                 pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
                 LOGGER.info(pf % ('all', val_dataset_img_count, val_dataset_anns_count, mp[i], mr[i], mf1[i], map50, map))
-                
+
                 #compute each class best f1 and corresponding p and r
                 for nc_i in range(model.nc):
                     coco_p_c = coco_p[:, :, nc_i, 0, 2]
@@ -428,7 +428,7 @@ class Evaler:
     def reload_dataset(data, task='val'):
         with open(data, errors='ignore') as yaml_file:
             data = yaml.safe_load(yaml_file)
-        task = 'val' if task == 'train' else task
+        task = 'test' if task == 'test' else 'val'
         path = data.get(task, 'val')
         if not os.path.exists(path):
             raise Exception('Dataset not found.')

@@ -40,7 +40,7 @@ def run(data,
         save_dir='',
         name = ''
         ):
-    """ 
+    """
     TensorRT models's evaluation process.
     """
 

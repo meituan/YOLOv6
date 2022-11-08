@@ -117,7 +117,7 @@ class TrainValDataset(Dataset):
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment, return_int=self.hyp["letterbox_return_int"])
             else:
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
-                  
+
             shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
@@ -185,8 +185,12 @@ class TrainValDataset(Dataset):
             Image, original shape of image, resized image shape
         """
         path = self.img_paths[index]
-        im = cv2.imread(path)
-        assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
+        try:
+            im = cv2.imread(path)
+            assert im is not None, f"opencv cannot read image correctly or {path} not exists"
+        except:
+            im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
+            assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
 
         h0, w0 = im.shape[:2]  # origin shape
         if force_load_size:
@@ -265,10 +269,20 @@ class TrainValDataset(Dataset):
                 json.dump(cache_info, f)
 
         # check and load anns
-        label_dir = osp.join(
+        base_dir = osp.basename(img_dir)
+        if base_dir != "":
+            label_dir = osp.join(
             osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
-        )
-        assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
+            )
+            assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
+        else:
+            sub_dirs= []
+            label_dir = img_dir
+            for rootdir, dirs, files in os.walk(label_dir):
+                for subdir in dirs:
+                    sub_dirs.append(subdir)
+            assert "labels" in sub_dirs, f"Could not find a labels directory!"
+
 
         # Look for labels in the save relative dir that the images are in
         def _new_rel_path_with_ext(base_path: str, full_path: str, new_ext: str):
@@ -578,7 +592,7 @@ class TrainValDataset(Dataset):
         h = hashlib.md5("".join(paths).encode())
         return h.hexdigest()
 
-        
+
 class LoadData:
     def __init__(self, path):
         p = str(Path(path).resolve())  # os-agnostic absolute path

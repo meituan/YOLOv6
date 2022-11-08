@@ -182,7 +182,7 @@ void yolox::detect(Mat& srcimg)
 		int baseLine;
 		Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.7, 1, &baseLine);
 		rectangle(srcimg, Point(x0, y0 + 1), Point(x0 + labelSize.width + 1, y0 + labelSize.height + baseLine), Scalar(0, 0, 0), FILLED);
-		putText(srcimg, label, Point(x0, y0 + labelSize.height), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 255), 1);	
+		putText(srcimg, label, Point(x0, y0 + labelSize.height), FONT_HERSHEY_SIMPLEX, 0.7, Scalar(0, 255, 255), 1);
 	}
 }
 

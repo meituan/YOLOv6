@@ -2,8 +2,17 @@
   <img src="assets/banner-YOLO.png" align="middle" width = "1000" />
 </p>
 
+English | [简体中文](README_cn.md)
 
+ <br>
 
+ <div>
+    </a>
+    <a href="[https://colab.research.google.com/github/meituan/YOLOv6/blob/main/turtorial.ipynb](https://colab.research.google.com/gist/HouSanDuo123/bdad4ad6706209d4e9275d2186d54289/tutorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+     <a href="https://www.kaggle.com/code/housanduo/yolov6"><img src="https://kaggle.com/static/images/open-in-kaggle.svg" alt="Open In Kaggle"></a>
+  </div>
+ <br>
+  
 ## YOLOv6
 
 Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
@@ -14,15 +23,15 @@ Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for
 
 YOLOv6 has a series of models for various industrial scenarios, including N/T/S/M/L, which the architectures vary considering the model size for better accuracy-speed trade-off. And some Bag-of-freebies methods are introduced to further improve the performance, such as self-distillation and more training epochs. For industrial deployment, we adopt QAT with channel-wise distillation and graph optimization to pursue extreme performance.
 
-YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.5% AP with 495 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 869 FPS on T4. YOLOv6-T/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed. 
+YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.5% AP with 495 FPS, and the quantized YOLOv6-S model achieves 43.3% AP at a accelerated speed of 869 FPS on T4. YOLOv6-T/M/L also have excellent performance, which show higher accuracy than other detectors with the similar inference speed.
 
 
 ## What's New
 
-- Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
-- 2x faster training time.
-- Fix the degration of performance when evaluating on 640x640 inputs. 
-- Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
+- [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
+- [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
+- [2022.09.05] Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
+- [2022.06.23] Release N/T/S models with excellent performance.
 
 ## Benchmark
 | Model                                                        | Size | mAP<sup>val<br/>0.5:0.95              | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
@@ -33,8 +42,8 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 | [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                                  | 179                                     | 233                                      | 34.3                 | 82.2                |
 | [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                                  | 113                                     | 149                                      | 58.5                 | 144.0               |
 | [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                                  | 98                                      | 121                                      | 58.5                 | 144.0               |
-
-### Quantized model 🚀 
+- Speed is tested with TensorRT 7.2 on T4.
+### Quantized model 🚀
 
 | Model                 | Size | Precision | mAP<sup>val<br/>0.5:0.95 | Speed<sup>T4<br/>trt b1 <br/>(fps) | Speed<sup>T4<br/>trt b32 <br/>(fps) |
 | :-------------------- | ---- | --------- | :----------------------- | ---------------------------------- | ----------------------------------- |
@@ -47,6 +56,9 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 
 - Speed is tested with TensorRT 8.4 on T4.
 - Precision is figured on models for 300 epochs.
+- Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
+- Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
+- Params and FLOPs of YOLOv6 are estimated on deployed models.
 
 <details>
 <summary>Legacy models</summary>
@@ -59,12 +71,6 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 
 
 </details>
-
-- Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640.
-- Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
-- Params and FLOPs of YOLOv6 are estimated on deployed models.
-
-
 
 
 ## Quick Start
@@ -96,6 +102,23 @@ Multi GPUs (DDP mode recommended)
 
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
+```
+- conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
+- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
+- make sure your dataset structure as follows:
+```
+├── coco
+│   ├── annotations
+│   │   ├── instances_train2017.json
+│   │   └── instances_val2017.json
+│   ├── images
+│   │   ├── train2017
+│   │   └── val2017
+│   ├── labels
+│   │   ├── train2017
+│   │   ├── val2017
+│   ├── LICENSE
+│   ├── README.txt
 ```
 
 
@@ -135,11 +158,11 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--epoch 300 \
 									--device 0,1,2,3,4,5,6,7 \
 									--name yolov6m_coco # yolov6l_coco
-									
-                                                                                      
+
+
 # Step 2: Self-distillation training
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
-									--batch 256 \ # 128 for distillation of yolov6l 
+									--batch 256 \ # 128 for distillation of yolov6l
 									--conf configs/yolov6m.py \ # configs/yolov6l.py
 									--data data/coco.yaml \
 									--epoch 300 \
@@ -147,7 +170,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--distill \
 									--teacher_model_path runs/train/yolov6m_coco/weights/best_ckpt.pt \ # # yolov6l_coco
 									--name yolov6m_coco # yolov6l_coco
-							
+
 ```
 </details>
 
@@ -156,35 +179,22 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 If your training process is corrupted, you can resume training by
 ```
+# single GPU training.
+python tools/train.py --resume
+
 # multi GPU training.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
+Above command will automatically find the latest checkpoint in YOLOv6 directory, then resume the training process. 
+
 Your can also specify a checkpoint path to `--resume` parameter by
 ```
 # remember to replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
 --resume /path/to/your/checkpoint/path
-
 ```
+This will resume from the specific checkpoint you provide.
 
 </details>
-
-- conf: select config file to specify network/optimizer/hyperparameters. Pretrained model path is recommended to be specified in the config file with the `pretrained` parameter if training on your custom dataset.
-- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
-- make sure your dataset structure as follows:
-```
-├── coco
-│   ├── annotations
-│   │   ├── instances_train2017.json
-│   │   └── instances_val2017.json
-│   ├── images
-│   │   ├── train2017
-│   │   └── val2017
-│   ├── labels
-│   │   ├── train2017
-│   │   ├── val2017
-│   ├── LICENSE
-│   ├── README.txt
-```
 </details>
 
 <details>
@@ -231,9 +241,9 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 *  [Tutorial of Quantization for YOLOv6](./docs/Tutorial%20of%20Quantization.md)
 </details>
 
-
 <details>
 <summary> Third-party resources</summary>
+
  * YOLOv6 NCNN Android app demo: [ncnn-android-yolov6](https://github.com/FeiGeChuanShu/ncnn-android-yolov6) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
  * YOLOv6 ONNXRuntime/MNN/TNN C++: [YOLOv6-ORT](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/ort/cv/yolov6.cpp), [YOLOv6-MNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/mnn/cv/mnn_yolov6.cpp) and [YOLOv6-TNN](https://github.com/DefTruth/lite.ai.toolkit/blob/main/lite/tnn/cv/tnn_yolov6.cpp) from [DefTruth](https://github.com/DefTruth)
  * YOLOv6 TensorRT Python: [yolov6-tensorrt-python](https://github.com/Linaom1214/TensorRT-For-YOLO-Series) from [Linaom1214](https://github.com/Linaom1214)
@@ -242,5 +252,5 @@ python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
  * Tutorial: [How to train YOLOv6 on a custom dataset](https://blog.roboflow.com/how-to-train-yolov6-on-a-custom-dataset/) <a href="https://colab.research.google.com/drive/1YnbqOinBZV-c9I7fk_UL6acgnnmkXDMM"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
  * Demo of YOLOv6 inference on Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahdilamb/YOLOv6/blob/main/inference.ipynb)
 </details>
-  
+
 ### [FAQ（Continuously updated）](https://github.com/meituan/YOLOv6/wiki/FAQ%EF%BC%88Continuously-updated%EF%BC%89)

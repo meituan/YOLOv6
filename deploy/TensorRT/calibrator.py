@@ -38,7 +38,7 @@ class Calibrator(trt.IInt8MinMaxCalibrator):
         print(names)
         print("######################")
         batch = self.stream.next_batch()
-        if not batch.size:   
+        if not batch.size:
             return None
 
         cuda.memcpy_htod(self.d_input, batch)
