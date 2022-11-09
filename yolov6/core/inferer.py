@@ -101,11 +101,11 @@ class Inferer:
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-                    if save_img:
-                        class_num = int(cls)  # integer class
-                        label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
+                    # if save_img:
+                    class_num = int(cls)  # integer class
+                    label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
-                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
+                    self.plot_box_and_label(img_ori, 1, xyxy, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
 
@@ -121,7 +121,7 @@ class Inferer:
                     font_scale=1.0,
                     text_color=(204, 85, 17),
                     text_color_bg=(255, 255, 255),
-                    font_thickness=2,
+                    font_thickness=1,
                 )
 
             if view_img:
