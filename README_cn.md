@@ -16,12 +16,12 @@ YOLOv6 提供了一系列面向各种工业应用场景的模型，包括微小�
 
 YOLOv6-N 在 COCO 数据集上的 mAP 为 35.9% ，在 T4 显卡推理速度可达 1234 FPS。 YOLOv6-S 的 mAP 为 43.5%，推理速度为 495 FPS ，量化后的 YOLOv6-S 模型在 T4显卡 上的 FPS 可以加速到 869，mAP 为 43.3% 。 YOLOv6-T/M/L 也具有出色的性能，与其他检测器相比，我们的模型在基本相同的推理速度时，可以达到更高的精度。
 
-## 本次更新
+## 更新日志
 
-- 发布了 M/L 模型，并且进一步提高了 N/T/S 模型的性能⭐️ [精度指标](#模型指标) 
-- 将训练速度提高了2倍；
-- 修复了 640x640 分辨率推理时性能下降的问题；
-- 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)；
+- [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程。
+- [2022.09.06] 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)
+- [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能 ⭐️ [模型指标](#模型指标)
+- [2022.06.23] 发布 N/T/S v1.0 版本模型。
 
 ## 模型指标
 | 模型                                                       | 输入尺寸 | mAP<sup>val<br/>0.5:0.95              | 速度<sup>T4<br/>trt fp16 b1 <br/>(fps) | 速度<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
@@ -93,7 +93,7 @@ python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
 
-- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您在配置文件中填写`pretrained`模型的路径；
+- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件；
 - data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
 - 确保您的数据集按照下面这种格式来组织；
 ```
@@ -167,14 +167,21 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 如果您的训练进程中断了，您可以这样恢复先前的训练进程。
 ```
-# 多卡训练.
+# 单卡训练
+python tools/train.py --resume
+
+# 多卡训练
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
+上面的命令将自动在 YOLOv6 目录中找到最新保存的模型，然后恢复训练。
+
 您也可以通过 `--resume` 参数指定要恢复的模型路径
 ```
 # 记得把 /path/to/your/checkpoint/path  替换为您要恢复训练的模型权重路径
 --resume /path/to/your/checkpoint/path
 ```
+这将从您提供的模型路径恢复训练。
+
 </details>
 </details>
 

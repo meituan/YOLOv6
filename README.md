@@ -28,10 +28,10 @@ YOLOv6-N hits 35.9% AP on COCO dataset with 1234 FPS on T4. YOLOv6-S strikes 43.
 
 ## What's New
 
-- Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
-- 2x faster training time.
-- Fix the degration of performance when evaluating on 640x640 inputs.
-- Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
+- [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
+- [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
+- [2022.09.05] Release M/L models and update N/T/S models with enhanced performance.⭐️ [Benchmark](#Benchmark)
+- [2022.06.23] Release N/T/S models with excellent performance.
 
 ## Benchmark
 | Model                                                        | Size | mAP<sup>val<br/>0.5:0.95              | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
@@ -103,7 +103,7 @@ Multi GPUs (DDP mode recommended)
 ```shell
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --device 0,1,2,3,4,5,6,7
 ```
-- conf: select config file to specify network/optimizer/hyperparameters. Pretrained model path is recommended to be specified in the config file with the `pretrained` parameter if training on your custom dataset.
+- conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
 - data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
 - make sure your dataset structure as follows:
 ```
@@ -179,14 +179,20 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 If your training process is corrupted, you can resume training by
 ```
+# single GPU training.
+python tools/train.py --resume
+
 # multi GPU training.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
+Above command will automatically find the latest checkpoint in YOLOv6 directory, then resume the training process. 
+
 Your can also specify a checkpoint path to `--resume` parameter by
 ```
 # remember to replace /path/to/your/checkpoint/path to the checkpoint path which you want to resume training.
 --resume /path/to/your/checkpoint/path
 ```
+This will resume from the specific checkpoint you provide.
 
 </details>
 </details>

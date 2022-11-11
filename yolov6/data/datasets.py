@@ -189,8 +189,12 @@ class TrainValDataset(Dataset):
             Image, original shape of image, resized image shape
         """
         path = self.img_paths[index]
-        im = cv2.imread(path)
-        assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
+        try:
+            im = cv2.imread(path)
+            assert im is not None, f"opencv cannot read image correctly or {path} not exists"
+        except:
+            im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
+            assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
 
         h0, w0 = im.shape[:2]  # origin shape
         if force_load_size:
