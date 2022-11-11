@@ -21,6 +21,12 @@ from yolov6.utils.torch_utils import time_sync, get_model_info
 python tools/eval.py --task 'train'/'val'/'speed'
 '''
 
+def vis_tensor(img):
+    import cv2
+    img = img.cpu().numpy()
+    img = img[0]
+    img = img.transpose(1,2,0)
+    cv2.imwrite('vis.jpg', img)
 
 class Evaler:
     def __init__(self,
@@ -129,6 +135,7 @@ class Evaler:
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
             imgs = imgs.half() if self.half else imgs.float()
+            # import pdb; pdb.set_trace()
             imgs /= 255
             self.speed_result[1] += time_sync() - t1  # pre-process time
 

@@ -57,8 +57,8 @@ def create_dataloader(
             data_dict=data_dict,
             task=task,
             specific_shape = specific_shape,
-            height=1088,
-            width=1920
+            height=height,
+            width=width
 
         )
 

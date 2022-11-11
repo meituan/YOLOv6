@@ -147,8 +147,9 @@ def run(data,
     data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
 
     # init
-    height = check_img_size(height, 32, floor= 128)  # verify imgsz is gs-multiple
-    width = check_img_size(width, 32, floor= 128)  # verify imgsz is gs-multiple
+    if specific_shape:
+        height = check_img_size(height, 32, floor= 128)  # verify imgsz is gs-multiple
+        width = check_img_size(width, 32, floor= 128)  # verify imgsz is gs-multiple
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
                 test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect, scale_exact,
