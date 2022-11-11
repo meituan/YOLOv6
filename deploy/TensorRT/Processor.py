@@ -89,9 +89,14 @@ class Processor():
             self.engine = self.runtime.deserialize_cuda_engine(f.read())
         self.input_shape = get_input_shape(self.engine)
         self.bindings = OrderedDict()
-
+        self.input_names = list()
+        self.output_names = list()
         for index in range(self.engine.num_bindings):
             name = self.engine.get_binding_name(index)
+            if self.engine.binding_is_input(index):
+                self.input_names.append(name)
+            else:
+                self.output_names.append(name)
             dtype = trt.nptype(self.engine.get_binding_dtype(index))
             shape = tuple(self.engine.get_binding_shape(index))
             data = torch.from_numpy(np.empty(shape, dtype=np.dtype(dtype))).to(device)
@@ -136,10 +141,10 @@ class Processor():
         return image, pad
 
     def inference(self, inputs):
-        self.binding_addrs['images'] = int(inputs.data_ptr())
+        self.binding_addrs[self.input_names[0]] = int(inputs.data_ptr())
         #self.binding_addrs['x2paddle_image_arrays'] = int(inputs.data_ptr())
         self.context.execute_v2(list(self.binding_addrs.values()))
-        output = self.bindings['outputs'].data
+        output = self.bindings[self.output_names[0]].data
         #output = self.bindings['save_infer_model/scale_0.tmp_0'].data
         return output
 
