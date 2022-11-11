@@ -26,7 +26,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--max-det', type=int, default=1000, help='maximal inferences per image.')
     parser.add_argument('--device', default='0', help='device to run our model i.e. 0 or 0,1,2,3 or cpu.')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt.')
-    parser.add_argument('--save-img', action='store_false', help='save visuallized inference results.')
+    parser.add_argument('--not-save-img', action='store_true', help='do not save visuallized inference results.')
     parser.add_argument('--save-dir', type=str, help='directory to save predictions in. See --save-txt.')
     parser.add_argument('--view-img', action='store_true', help='show inference results')
     parser.add_argument('--classes', nargs='+', type=int, help='filter by classes, e.g. --classes 0, or --classes 0 2 3.')
@@ -52,7 +52,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         max_det=1000,
         device='',
         save_txt=False,
-        save_img=True,
+        not_save_img=False,
         save_dir=None,
         view_img=True,
         classes=None,
@@ -74,7 +74,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         max_det: Maximal detections per image, e.g. 1000
         device: Cuda device, e.e. 0, or 0,1,2,3 or cpu
         save_txt: Save results to *.txt
-        save_img: Save visualized inference results
+        not_save_img: Do not save visualized inference results
         classes: Filter by class: --class 0, or --class 0 2 3
         agnostic_nms: Class-agnostic NMS
         project: Save results to project/name
@@ -90,7 +90,7 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
         save_txt_path = osp.join(save_dir, 'labels')
     else:
         save_txt_path = save_dir
-    if (save_img or save_txt) and not osp.exists(save_dir):
+    if (not not_save_img or save_txt) and not osp.exists(save_dir):
         os.makedirs(save_dir)
     else:
         LOGGER.warning('Save directory already existed')
@@ -101,9 +101,9 @@ def run(weights=osp.join(ROOT, 'yolov6s.pt'),
 
     # Inference
     inferer = Inferer(source, weights, device, yaml, img_size, half)
-    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img)
+    inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, not not_save_img, hide_labels, hide_conf, view_img)
 
-    if save_txt or save_img:
+    if save_txt or not not_save_img:
         LOGGER.info(f"Results saved to {save_dir}")
 
 
