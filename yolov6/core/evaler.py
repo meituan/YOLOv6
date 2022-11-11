@@ -432,8 +432,11 @@ class Evaler:
             data = yaml.safe_load(yaml_file)
         task = 'test' if task == 'test' else 'val'
         path = data.get(task, 'val')
-        if not os.path.exists(path):
-            raise Exception('Dataset not found.')
+        if not isinstance(path, list):
+            path = [path]
+        for p in path:
+            if not os.path.exists(p):
+                raise Exception(f'Dataset path {p} not found.')
         return data
 
     @staticmethod
