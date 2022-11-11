@@ -81,9 +81,9 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
         image_ids = []
         shapes = []
         for i in range(batch_size):
-            idx += 1
             if (idx == len(jpgs)): break
             img = cv2.imread(os.path.join(imgs_dir, jpgs[idx]))
+            img_src = img.copy()
             # shapes.append(img.shape)
             h0, w0 = img.shape[:2]
             r = test_load_size / max(h0, w0)
@@ -95,13 +95,14 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
                     if r < 1 else cv2.INTER_LINEAR,
                 )
             h, w = img.shape[:2]
-            imgs[i], pad, img_src = processor.pre_process(img)
+            imgs[i], pad = processor.pre_process(img)
             source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
             shapes.append(shape)
             image_ids.append(int(jpgs[idx].split('.')[0].split('_')[-1]))
+            idx += 1
         output = processor.inference(imgs)
-
+        
         for j in range(len(shapes)):
             pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres=conf_thres, iou_thres=iou_thres)
             if visualize and num_visualized < num_imgs_to_visualize:
