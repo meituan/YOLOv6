@@ -112,7 +112,7 @@ def generate_results(processor, imgs_dir, visual_dir, jpgs, conf_thres, iou_thre
 
                 cv2.rectangle(image, (int(x), int(y)), (int(x + w), int(y + h)), (255, 0, 0), 1)
 
-            print("saving to {}".format(os.path.join(visual_dir, image_names[j])))
+            # print("saving to {}".format(os.path.join(visual_dir, image_names[j])))
             cv2.imwrite("{}".format(os.path.join(visual_dir, image_names[j])), image)
 
 def main():
