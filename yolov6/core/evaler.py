@@ -41,7 +41,10 @@ class Evaler:
                  do_coco_metric=True,
                  do_pr_metric=False,
                  plot_curve=True,
-                 plot_confusion_matrix=False
+                 plot_confusion_matrix=False,
+                 specific_shape=False,
+                 height=640,
+                 width=640
                  ):
         assert do_pr_metric or do_coco_metric, 'ERROR: at least set one val metric'
         self.data = data
@@ -62,6 +65,9 @@ class Evaler:
         self.do_pr_metric = do_pr_metric
         self.plot_curve = plot_curve
         self.plot_confusion_matrix = plot_confusion_matrix
+        self.specific_shape = specific_shape
+        self.height = height
+        self.width = width
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -96,7 +102,7 @@ class Evaler:
             rect = not self.not_infer_on_rect
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
                                            self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=pad, rect=rect,
-                                           data_dict=self.data, task=task)[0]
+                                           data_dict=self.data, task=task, specific_shape=self.specific_shape, height=self.height, width=self.width)[0]
         return dataloader
 
     def predict_model(self, model, dataloader, task):
@@ -128,6 +134,7 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
+            print(imgs.shape)
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 

@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 import os
 import glob
+import math
 import torch
 from pathlib import Path
 
@@ -80,3 +81,19 @@ def box_iou(box1, box2):
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
     inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
     return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
+
+
+def make_divisible(x, divisor):
+    # Returns x evenly divisible by divisor
+    return math.ceil(x / divisor) * divisor
+
+
+def check_img_size(imgsz, s=32, floor=0):
+    # Verify image size is a multiple of stride s in each dimension
+    if isinstance(imgsz, int):  # integer i.e. img_size=640
+        new_size = max(make_divisible(imgsz, int(s)), floor)
+    else:  # list i.e. img_size=[640, 480]
+        new_size = [max(make_divisible(x, int(s)), floor) for x in imgsz]
+    if new_size != imgsz:
+        print(f'WARNING: --img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
+    return new_size

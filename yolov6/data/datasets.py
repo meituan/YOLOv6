@@ -62,6 +62,10 @@ class TrainValDataset(Dataset):
         rank=-1,
         data_dict=None,
         task="train",
+        specific_shape = False,
+        height=1088,
+        width=1920
+
     ):
         assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
         t1 = time.time()
@@ -70,6 +74,10 @@ class TrainValDataset(Dataset):
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
+        self.rect = rect
+        self.specific_shape = specific_shape
+        self.target_height = height
+        self.target_width = width
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -112,11 +120,14 @@ class TrainValDataset(Dataset):
                 img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
-            shape = (
-                self.batch_shapes[self.batch_indices[index]]
-                if self.rect
-                else self.img_size
-            )  # final letterboxed shape
+            if self.specific_shape:
+                shape = (self.target_height, self.target_width)
+            else:
+                shape = (
+                    self.batch_shapes[self.batch_indices[index]]
+                    if self.rect
+                    else self.img_size
+                )  # final letterboxed shape
             if self.hyp and "letterbox_return_int" in self.hyp:
                 img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment, return_int=self.hyp["letterbox_return_int"])
             else:
@@ -145,6 +156,10 @@ class TrainValDataset(Dataset):
                 labels[:, 1:] = boxes
 
             if self.augment:
+                if self.specific_shape:
+                    new_shape=(self.target_height, self.target_width)
+                else:
+                    new_shape = (self.img_size, self.img_size)
                 img, labels = random_affine(
                     img,
                     labels,
@@ -152,7 +167,7 @@ class TrainValDataset(Dataset):
                     translate=self.hyp["translate"],
                     scale=self.hyp["scale"],
                     shear=self.hyp["shear"],
-                    new_shape=(self.img_size, self.img_size),
+                    new_shape=new_shape,
                 )
 
         if len(labels):
@@ -197,18 +212,25 @@ class TrainValDataset(Dataset):
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
 
         h0, w0 = im.shape[:2]  # origin shape
-        if force_load_size:
-            r = force_load_size / max(h0, w0)
+        if self.specific_shape:
+            if self.target_width != w0 or self.target_height != h0:
+                im = cv2.resize(im, (self.target_width, self.target_height))
         else:
-            r = self.img_size / max(h0, w0)
-        if r != 1:
-            im = cv2.resize(
-                im,
-                (int(w0 * r), int(h0 * r)),
-                interpolation=cv2.INTER_AREA
-                if r < 1 and not self.augment
-                else cv2.INTER_LINEAR,
-            )
+            if force_load_size:
+                r = force_load_size / max(h0, w0)
+            else:
+                if self.rect and self.width is not None and self.height is not None:
+                    r = max(self.height, self.width) / max(h0, w0)
+                else:
+                    r = self.img_size / max(h0, w0)
+            if r != 1:
+                im = cv2.resize(
+                    im,
+                    (int(w0 * r), int(h0 * r)),
+                    interpolation=cv2.INTER_AREA
+                    if r < 1 and not self.augment
+                    else cv2.INTER_LINEAR,
+                )
         return im, (h0, w0), im.shape[:2]
 
     @staticmethod

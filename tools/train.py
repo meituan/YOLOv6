@@ -18,7 +18,7 @@ from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
-from yolov6.utils.general import increment_name, find_latest_checkpoint
+from yolov6.utils.general import increment_name, find_latest_checkpoint, check_img_size
 
 
 def get_args_parser(add_help=True):
@@ -51,6 +51,9 @@ def get_args_parser(add_help=True):
     parser.add_argument('--calib', action='store_true', help='run ptq')
     parser.add_argument('--teacher_model_path', type=str, default=None, help='teacher model path')
     parser.add_argument('--temperature', type=int, default=20, help='distill temperature')
+    parser.add_argument('--specific-shape', action='store_true', help='rectangular training')
+    parser.add_argument('--height', type=int, default=None, help='image height of model input')
+    parser.add_argument('--width', type=int, default=None, help='image width of model input')
     return parser
 
 
@@ -77,6 +80,11 @@ def check_and_init(args):
         args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
         if master_process:
             os.makedirs(args.save_dir)
+
+    # check specific shape 
+    if args.specific_shape:
+        args.height = check_img_size(args.height, 32, floor= 128)  # verify imgsz is gs-multiple
+        args.width = check_img_size(args.width, 32, floor= 128)  # verify imgsz is gs-multiple
 
     cfg = Config.fromfile(args.conf_file)
     if not hasattr(cfg, 'training_mode'):
