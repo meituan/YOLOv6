@@ -138,7 +138,7 @@ if __name__ == '__main__':
                           opset_version=13,
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
-                          input_names=['image_arrays'],
+                          input_names=['images'],
                           output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
                           if args.end2end else ['outputs'],
                           dynamic_axes=dynamic_axes
@@ -157,7 +157,7 @@ if __name__ == '__main__':
                           opset_version=13,
                           training=torch.onnx.TrainingMode.EVAL,
                           do_constant_folding=True,
-                          input_names=['image_arrays'],
+                          input_names=['images'],
                           output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
                           if args.end2end else ['outputs'],
                           )

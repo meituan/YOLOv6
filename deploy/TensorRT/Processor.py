@@ -120,7 +120,7 @@ class Processor():
 
     def detect(self, img):
         """Detect objects in the input image."""
-        resized, _, _ = self.pre_process(img, self.input_shape)
+        resized, _ = self.pre_process(img, self.input_shape)
         outputs = self.inference(resized)
         return outputs
 
@@ -133,10 +133,10 @@ class Processor():
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image)).to(self.device).float()
         image = image / 255.  # 0 - 255 to 0.0 - 1.0
-        return image, pad, img_src
+        return image, pad
 
     def inference(self, inputs):
-        self.binding_addrs['image_arrays'] = int(inputs.data_ptr())
+        self.binding_addrs['images'] = int(inputs.data_ptr())
         #self.binding_addrs['x2paddle_image_arrays'] = int(inputs.data_ptr())
         self.context.execute_v2(list(self.binding_addrs.values()))
         output = self.bindings['outputs'].data
@@ -198,7 +198,6 @@ class Processor():
         Returns:
              list of detections, echo item is one tensor with shape (num_boxes, 6), 6 is for [xyxy, conf, cls].
         """
-
         num_classes = prediction.shape[2] - 5  # number of classes
         pred_candidates = prediction[..., 4] > conf_thres  # candidates
 
