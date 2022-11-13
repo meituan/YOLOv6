@@ -4,11 +4,13 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 import math
-
+import os
+from sklearn.metrics import confusion_matrix, classification_report
 
 def draw_bbox_on_image(img, box, color=(0,0,255)):
-	img = cv2.putText(img, 'scoreboard', (box[0], box[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0,0,255),1)
-	img = cv2.rectangle(img, (box[0],box[1]), (box[2], box[3]), (0,0,255), 1)
+	if box is None:
+		return img
+	img = cv2.rectangle(img, (box[0],box[1]), (box[2], box[3]), color, 1)
 	return img
 
 
@@ -45,25 +47,48 @@ def evaluate(detector:Yolov6Detector, imgs_path:Path, annotations_path:Path):
 	sorted_images  = sorted(list(imgs_path.iterdir()), key = lambda x: x.name.split('.'))
 	sorted_txts  = sorted(list(annotations_path.iterdir()), key = lambda x: x.name.split('.'))
 	couples = list(zip(sorted_images,sorted_txts))
+	TP, TN, FP, FN = 0,0,0,0
 	for couple in tqdm(couples, total= len(couples)):
 		img = cv2.imread(couple[0].as_posix())
+		if img.shape != (416,416,3):
+			img = cv2.resize(img, (416,416))
 		detections, relative_detections = detector.detect(img) # (x1, y1, x2, y2)
-		detected_bbox= relative_detections.cpu().numpy()
+		detected_bbox= relative_detections.cpu().numpy() if relative_detections is not None else None
 		with open(couple[1].as_posix(), 'r') as f:
 			value = f.readline()
 			value = eval('['+ value.replace(' ', ',')+']')
-			annotations = np.array([value[1], value[2], value[3], value[4]])
-			tl = (annotations[0] - 0.5*annotations[2], annotations[1] - 0.5*annotations[3])
-			br = (annotations[0] + 0.5*annotations[2], annotations[1] + 0.5*annotations[3])
-			annotated_bbox = np.array([tl[0], tl[1], br[0], br[1]])
-		iou = get_iou(detected_bbox,annotated_bbox)
+			annotations = np.array([value[1], value[2], value[3], value[4]]) if len(value)>3 else None
+			tl = (annotations[0] - 0.5*annotations[2], annotations[1] - 0.5*annotations[3]) if len(value)>3 else None
+			br = (annotations[0] + 0.5*annotations[2], annotations[1] + 0.5*annotations[3]) if len(value)>3 else None
+			annotated_bbox = np.array([tl[0], tl[1], br[0], br[1]]) if len(value)>3 else None
 
-		img = draw_bbox_on_image(img, detected_bbox,(0,0,255))
-		img = draw_bbox_on_image(img, annotated_bbox,(255,0,0))
-		cv2.imshow('test', img)
-		cv2.waitKey(0)
+		if annotated_bbox is None and detected_bbox is None: #means both bboxes are none
+			TN+=1
+		elif annotated_bbox is not None and detected_bbox is None:
+			FN+=1
+		elif annotated_bbox is None and detected_bbox is not None:
+			FP+=1
+		else:
+			iou = get_iou(detected_bbox,annotated_bbox)
+			if iou > 0.975:
+				TP+=1
+			if iou < 0.975:
+				FP+=1
 
-		print(iou)
+	
+		detected_bbox_for_drawing = [round(it) for it in detections.cpu().numpy()] if detections is not None else None
+		annotated_bbox_for_drawing = [round(it*416) for it in annotated_bbox] if detections is not None else None
+		img = draw_bbox_on_image(img, detected_bbox_for_drawing,(0,0,255)) # detected in red
+		img = draw_bbox_on_image(img, annotated_bbox_for_drawing,(255,0,0)) # annotated in blue
+		img_to_show = cv2.resize(img, (1280, 720), cv2.INTER_LINEAR)
+		cv2.imshow('test', img_to_show)
+		cv2.waitKey(1)
+
+
+
+
+
+
 	a =2
 
 
