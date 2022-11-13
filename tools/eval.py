@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import sys
 import torch
+from pathlib import Path
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
@@ -90,20 +91,20 @@ def get_args_parser(add_help=True):
 
 
 @torch.no_grad()
-def run(data,
-        weights=None,
-        batch_size=32,
-        img_size=640,
+def run(data = Path(r"/media/access/New Volume1/YOLOv6/data/custom_dataset").as_posix(),
+        weights=Path(ROOT+'/runs/train/exp2 (with heavy augmentation)/weights/best_stop_aug_ckpt.pt').as_posix(),
+        batch_size=128,
+        img_size=416,
         conf_thres=0.03,
         iou_thres=0.65,
         task='val',
-        device='',
+        device='0',
         half=False,
         model=None,
         dataloader=None,
-        save_dir='',
-        name = '',
-        test_load_size=640,
+        save_dir='/home/access/Desktop/tmp/scoreboard_detector_yolov6',
+        name = 'first_evaluation',
+        test_load_size=416,
         letterbox_return_int=False,
         force_no_pad=False,
         not_infer_on_rect=False,
@@ -114,7 +115,7 @@ def run(data,
         do_coco_metric=True,
         do_pr_metric=False,
         plot_curve=False,
-        plot_confusion_matrix=False,
+        plot_confusion_matrix=True,
         config_file=None,
         ):
     """ Run the evaluation process
@@ -155,10 +156,6 @@ def run(data,
     return eval_result, vis_outputs, vis_paths
 
 
-def main(args):
-    run(**vars(args))
-
 
 if __name__ == "__main__":
-    args = get_args_parser()
-    main(args)
+    eval_result, vis_outputs, vis_paths = run()

@@ -127,9 +127,9 @@ class Inferer:
             if view_img:
                 if img_path not in windows:
                     windows.append(img_path)
-                    cv2.namedWindow(str(img_path), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
-                    cv2.resizeWindow(str(img_path), img_src.shape[1], img_src.shape[0])
-                cv2.imshow(str(img_path), img_src)
+                    cv2.namedWindow('test', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                    cv2.resizeWindow('test', img_src.shape[1], img_src.shape[0])
+                cv2.imshow('test', img_src)
                 cv2.waitKey(1)  # 1 millisecond
 
             # Save results (image with detections)

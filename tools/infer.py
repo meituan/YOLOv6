@@ -18,8 +18,8 @@ from pathlib import Path
 
 
 @torch.no_grad()
-def run(weights=Path(ROOT+'/runs/train/exp2 (with heavy augmentation)/weights/best_stop_aug_ckpt.pt').as_posix(),
-        source=Path('/run/user/1000/gvfs/smb-share:server=qnap.lsports.eu,share=data-new/Asaf/all sports videos/Table Tennis/Table Tennis New/XH6XW3cnzkk___FULL MATCH  Timo Boll vs Dimitrij Ovtcharov  Champions League.mp4').as_posix(),
+def run(weights=Path(ROOT+'/runs/train/exp2 (with heavy augmentation)/weights/best_ckpt.pt').as_posix(),
+        source=Path('/media/access/New Volume1/6974125.avi').as_posix(),
         yaml=Path(r"/media/access/New Volume1/YOLOv6/data/dataset.yaml").as_posix(),
         img_size=416,
         conf_thres=0.2,

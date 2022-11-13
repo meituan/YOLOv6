@@ -6,7 +6,7 @@ import torch
 import os.path as osp
 from yolov6.utils.events import LOGGER
 from yolov6.utils.torch_utils import fuse_model
-
+from pathlib import Path
 
 def load_state_dict(weights, model, map_location=None):
     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
