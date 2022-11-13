@@ -19,10 +19,10 @@ from pathlib import Path
 
 @torch.no_grad()
 def run(weights=Path(ROOT+'/runs/train/exp2 (with heavy augmentation)/weights/best_stop_aug_ckpt.pt').as_posix(),
-        source=Path('/run/user/1000/gvfs/smb-share:server=qnap.lsports.eu,share=data-new/Asaf/test videos and results 30_08_2022/7451847.avi').as_posix(),
+        source=Path('/run/user/1000/gvfs/smb-share:server=qnap.lsports.eu,share=data-new/Asaf/all sports videos/Table Tennis/Table Tennis New/XH6XW3cnzkk___FULL MATCH  Timo Boll vs Dimitrij Ovtcharov  Champions League.mp4').as_posix(),
         yaml=Path(r"/media/access/New Volume1/YOLOv6/data/dataset.yaml").as_posix(),
         img_size=416,
-        conf_thres=0.4,
+        conf_thres=0.2,
         iou_thres=0.45,
         max_det=5,
         device='0',
