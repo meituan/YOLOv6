@@ -3,9 +3,9 @@ from asaf_yolov6_detector_class import Yolov6Detector
 from tqdm import tqdm
 import cv2
 import numpy as np
-import math
-import os
-from sklearn.metrics import confusion_matrix, classification_report
+import boto3
+from pygit2 import Repository, Commit
+from datetime import datetime
 
 def draw_bbox_on_image(img, box, color=(0,0,255)):
 	if box is None:
@@ -70,9 +70,9 @@ def evaluate(detector:Yolov6Detector, imgs_path:Path, annotations_path:Path):
 			FP+=1
 		else:
 			iou = get_iou(detected_bbox,annotated_bbox)
-			if iou > 0.975:
+			if iou > 0.97:
 				TP+=1
-			if iou < 0.975:
+			if iou < 0.97:
 				FP+=1
 
 	
@@ -87,8 +87,10 @@ def evaluate(detector:Yolov6Detector, imgs_path:Path, annotations_path:Path):
 
 
 
-
-
+	accuracy = (TP + TN)/(TP + TN + FP + FN)
+	precision = TP/(TP + FP)
+	recall = TP/(TP + FN)
+	f1_score = (2 * precision * recall)/(precision + recall)
 	a =2
 
 
