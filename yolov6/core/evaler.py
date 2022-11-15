@@ -130,7 +130,6 @@ class Evaler:
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
-
             # pre-process
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
@@ -140,7 +139,6 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
-            print(imgs.shape)
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 

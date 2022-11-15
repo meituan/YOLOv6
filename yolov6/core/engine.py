@@ -83,6 +83,9 @@ class Trainer:
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
+        self.specific_shape = args.specific_shape
+        self.height = args.height
+        self.width = args.width
 
 
         self.loss_num = 3
@@ -123,6 +126,7 @@ class Trainer:
 
     # Training loop for batchdata
     def train_in_steps(self, epoch_num, step_num):
+        # import pdb; pdb.set_trace()
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
@@ -131,7 +135,6 @@ class Trainer:
 
         # forward
         with amp.autocast(enabled=self.device != 'cpu'):
-            print(f"image shape: {images.shape}")
             preds, s_featmaps = self.model(images)
             if self.args.distill:
                 with torch.no_grad():
@@ -197,7 +200,11 @@ class Trainer:
                             conf_thres=0.03,
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
-                            task='train')
+                            task='train',
+                            specific_shape=self.specific_shape,
+                            height=self.height,
+                            width=self.width
+                            )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
                 if value_str in cfg_dict:
@@ -226,6 +233,9 @@ class Trainer:
                             do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
                             plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
                             plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                            specific_shape=self.specific_shape,
+                            height=self.height,
+                            width=self.width
                             )
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")

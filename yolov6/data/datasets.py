@@ -102,6 +102,7 @@ class TrainValDataset(Dataset):
         """
         # Mosaic Augmentation
         if self.augment and random.random() < self.hyp["mosaic"]:
+            assert not self.specific_shape, "If specific shape, do not  use mosaic"
             img, labels = self.get_mosaic(index)
             shapes = None
 

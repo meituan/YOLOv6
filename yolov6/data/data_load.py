@@ -59,7 +59,6 @@ def create_dataloader(
             specific_shape = specific_shape,
             height=height,
             width=width
-
         )
 
     batch_size = min(batch_size, len(dataset))
