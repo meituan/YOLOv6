@@ -135,7 +135,6 @@ class Evaler:
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
             imgs = imgs.half() if self.half else imgs.float()
-            # import pdb; pdb.set_trace()
             imgs /= 255
             self.speed_result[1] += time_sync() - t1  # pre-process time
 
@@ -366,10 +365,8 @@ class Evaler:
             pad = ratio_pad[1]
 
         coords[:, [0, 2]] -= pad[0]  # x padding
-        if self.scale_exact:
-            coords[:, [0, 2]] /= gain[1]  # x gain
-        else:
-            coords[:, [0, 2]] /= gain[0]  # raw x gain
+        coords[:, [0, 2]] /= gain[1]  # raw x gain
+
         coords[:, [1, 3]] -= pad[1]  # y padding
         coords[:, [1, 3]] /= gain[0]  # y gain
 
