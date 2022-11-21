@@ -27,6 +27,33 @@ from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 from yolov6.utils.nms import xywh2xyxy
 
+def vis_tensor(imgs, targets=None):
+    import numpy as np
+    import cv2
+    imgs = imgs.cpu().numpy()
+    imgs = imgs.transpose((0,2,3,1))
+    imgs *= 255
+    imgs = imgs.astype(np.uint8)
+    _, h, w, _ = imgs.shape
+    for i in range(len(imgs)):
+        if len(targets):
+            targets_img = targets.cpu().numpy()
+            targets_img = targets_img[targets_img[:, 0] == i]
+            img = np.ascontiguousarray(imgs[i])
+            targets_img[:, 2] -= targets_img[:, 4] / 2
+            targets_img[:, 3] -= targets_img[:, 5] / 2
+            targets_img[:, 4] += targets_img[:, 2] 
+            targets_img[:, 5] += targets_img[:, 3] 
+            targets_img[:, 2::2] *= w
+            targets_img[:, 3::2] *= h
+            targets_img = targets_img.astype(np.int32)
+            for j in range(len(targets_img)):
+                _, class_id, xmin, ymin, xmax, ymax = targets_img[j]
+                print(xmin, ymin, xmax, ymax)
+                cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255,5,5),2) 
+
+        cv2.imwrite(f'vis_img_{i}.jpg', img)
+    
 
 class Trainer:
     def __init__(self, args, cfg, device):
@@ -259,7 +286,11 @@ class Trainer:
                                         ori_img_size=self.img_size,
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
-                                        iou_type=self.cfg.model.head.iou_type)
+                                        iou_type=self.cfg.model.head.iou_type,
+                                        specific_shape=self.specific_shape,
+                                        height=self.height,
+                                        width=self.width
+                                        )
         if self.args.distill:
             self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
                                                             ori_img_size=self.img_size,
