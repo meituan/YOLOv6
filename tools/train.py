@@ -9,7 +9,7 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 import sys
-
+import datetime
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
@@ -113,7 +113,7 @@ def main(args):
         device = torch.device('cuda', args.local_rank)
         LOGGER.info('Initializing process group... ')
         dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo", \
-                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size)
+                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size,timeout=datetime.timedelta(seconds=7200))
 
     # Start
     trainer = Trainer(args, cfg, device)
