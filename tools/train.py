@@ -95,10 +95,10 @@ def check_and_init(args):
 def main(args):
     '''main function of training'''
     # Setup
-    args.rank, args.local_rank, args.world_size = get_envs()
+    args.local_rank, args.rank, args.world_size = get_envs()
     cfg, device, args = check_and_init(args)
     # reload envs because args was chagned in check_and_init(args)
-    args.rank, args.local_rank, args.world_size = get_envs()
+    args.local_rank, args.rank, args.world_size = get_envs()
     LOGGER.info(f'training args are: {args}\n')
     if args.local_rank != -1: # if DDP mode
         torch.cuda.set_device(args.local_rank)
