@@ -31,6 +31,8 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)
+    elif isinstance(new_shape, list) and len(new_shape) == 1:
+       new_shape = (new_shape[0], new_shape[0])
 
     # Scale ratio (new / old)
     r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
