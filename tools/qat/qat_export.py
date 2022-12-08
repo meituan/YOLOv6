@@ -16,6 +16,8 @@ from tools.partial_quantization.eval import EvalerWrapper
 from tools.partial_quantization.utils import get_module, concat_quant_amax_fuse
 from tools.qat.qat_utils import qat_init_model_manu
 from pytorch_quantization import nn as quant_nn
+from onnx_utils import get_remove_qdq_onnx_and_cache
+
 op_concat_fusion_list = [
     ('backbone.ERBlock_5.2.m', 'backbone.ERBlock_5.2.cv2.conv'),
     ('backbone.ERBlock_5.0.conv', 'neck.Rep_p4.conv1.conv', 'neck.upsample_feat0_quant'),
@@ -95,9 +97,11 @@ if __name__ == '__main__':
     cfg = Config.fromfile(args.conf)
     # init qat model
     qat_init_model_manu(model, cfg, args)
+    print(model)
     model.neck.upsample_enable_quant(cfg.ptq.num_bits, cfg.ptq.calib_method)
     ckpt = torch.load(args.quant_weights)
     model.load_state_dict(ckpt['model'].float().state_dict())
+    print(model)
     model.to(device)
     if args.scale_fix:
         zero_scale_fix(model, device)
@@ -161,3 +165,5 @@ if __name__ == '__main__':
                           output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
                           if args.end2end else ['outputs'],
                           )
+
+    get_remove_qdq_onnx_and_cache(export_file)
