@@ -53,3 +53,6 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.0,
 )
+
+# Choose Rep-block by the training Mode, choices=["repvgg", "conv_relu", "conv_silu", "conv_seg_relu"]
+training_mode = 'conv_seg_relu'
