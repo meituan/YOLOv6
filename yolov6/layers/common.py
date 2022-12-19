@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 import torch.nn.init as init
+from yolov6.layers.seg_common import SegConvWrapper
 
 
 class SiLU(nn.Module):
@@ -462,5 +463,7 @@ def get_block(mode):
         return SimConvWrapper
     elif mode == 'conv_silu':
         return ConvWrapper
+    elif mode == 'conv_seg_relu':
+        return SegConvWrapper
     else:
         raise NotImplementedError("Undefied Repblock choice for mode {}".format(mode))
