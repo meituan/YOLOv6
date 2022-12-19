@@ -7,7 +7,7 @@ class SegReLU(nn.Module):
     """ Activation of SegReLU """
     @staticmethod
     def forward(x):
-        return x if x > 0 else torch.nn.Softsign()(x)
+        return torch.where(x > 0, x, torch.nn.Softsign()(x))
 
 
 class SegConv(nn.Module):
