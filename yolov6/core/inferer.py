@@ -96,6 +96,11 @@ class Inferer:
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
+                        pp = torch.tensor(xyxy).view(1, 4).view(-1).tolist()  # p1, p2 = (xyxy[0], xyxy[1]), (xyxy[2], xyxy[3])
+                        line = (cls, *pp, conf)
+                        with open(txt_path + '-2p.txt', 'a') as f:
+                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf)
                         with open(txt_path + '.txt', 'a') as f:
