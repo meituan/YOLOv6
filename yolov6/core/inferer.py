@@ -114,6 +114,15 @@ class Inferer:
 
                 img_src = np.asarray(img_ori)
 
+            # save frames from video or stream
+            if save_img and self.files.type != 'image':  # 'video' or 'stream'
+                path_frames = os.path.join(save_dir, osp.splitext(osp.basename(img_path))[0] + "-frames")
+                if not os.path.exists(path_frames):
+                    os.makedirs(path_frames)  # created folder save frames
+                cnt_file = len(os.listdir(path_frames))
+                frame_name = osp.splitext(osp.basename(img_path))[0] + f"-{cnt_file}.png"
+                cv2.imwrite(os.path.join(path_frames, frame_name), img_src)
+
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
             avg_fps = fps_calculator.accumulate()
