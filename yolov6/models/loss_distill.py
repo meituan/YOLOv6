@@ -175,7 +175,7 @@ class ComputeLoss:
 
         target_scores_sum = target_scores.sum()
         # avoid devide zero error, devide by zero will cause loss to be inf or nan.
-        if target_scores_sum > 0:
+        if target_scores_sum > 1:
            loss_cls /= target_scores_sum
 
         # bbox loss
@@ -298,10 +298,10 @@ class BboxLoss(nn.Module):
                 target_scores.sum(-1), fg_mask).unsqueeze(-1)
             loss_iou = self.iou_loss(pred_bboxes_pos,
                                      target_bboxes_pos) * bbox_weight
-            if target_scores_sum == 0:
-                loss_iou = loss_iou.sum()
-            else:
+            if target_scores_sum > 1:
                 loss_iou = loss_iou.sum() / target_scores_sum
+            else:
+                loss_iou = loss_iou.sum()
 
             # dfl loss
             if self.use_dfl:
@@ -317,12 +317,12 @@ class BboxLoss(nn.Module):
                 loss_dfl = self._df_loss(pred_dist_pos,
                                         target_ltrb_pos) * bbox_weight
                 d_loss_dfl = self.distill_loss_dfl(pred_dist_pos, t_pred_dist_pos, temperature) * bbox_weight
-                if target_scores_sum == 0:
-                    loss_dfl = loss_dfl.sum()
-                    d_loss_dfl = d_loss_dfl.sum()
-                else:
+                if target_scores_sum > 1:
                     loss_dfl = loss_dfl.sum() / target_scores_sum
                     d_loss_dfl = d_loss_dfl.sum() / target_scores_sum
+                else:
+                    loss_dfl = loss_dfl.sum()
+                    d_loss_dfl = d_loss_dfl.sum()
             else:
                 loss_dfl = pred_dist.sum() * 0.
                 d_loss_dfl = pred_dist.sum() * 0.
