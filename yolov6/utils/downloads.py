@@ -21,8 +21,8 @@ def safe_download(file, url, url2=None, min_bytes=1E0, error_msg=''):
         if not file.exists() or file.stat().st_size < min_bytes:  # check
             file.unlink(missing_ok=True)  # remove partial downloads
             raise Exception(error_msg or assert_msg)  # raise informative error
-           
-def attempt_download(file, repo='meituan/YOLOv6', release='0.2.0'):
+
+def attempt_download(file, repo='meituan/YOLOv6', release='0.3.0'):
     def github_assets(repository, version='tags/latest'):
         response = requests.get(f'https://api.github.com/repos/{repository}/releases/{version}').json()  # github api
         return response['tag_name'], [x['name'] for x in response['assets']]  # tag, assets
@@ -42,7 +42,8 @@ def attempt_download(file, repo='meituan/YOLOv6', release='0.2.0'):
 
         # GitHub assets
         assets = [
-            'yolov6t.pt', 'yolov6s.pt', 'yolov6n.pt', 'yolov6m.pt', 'yolov6l.pt']
+            'yolov6n.pt', 'yolov6s.pt', 'yolov6m.pt', 'yolov6l.pt',
+            'yolov6n6.pt', 'yolov6s6.pt', 'yolov6m6.pt', 'yolov6l6.pt']
         try:
             tag, assets = github_assets(repo, release)
         except Exception:
@@ -63,5 +64,5 @@ def attempt_download(file, repo='meituan/YOLOv6', release='0.2.0'):
                 url2=f'https://storage.googleapis.com/{repo}/{tag}/{name}',  # backup url (optional)
                 min_bytes=1E5,
                 error_msg=f'{file} missing, try downloading from https://github.com/{repo}/releases/{tag} or {url3}')
-
+    
     return str(file)
