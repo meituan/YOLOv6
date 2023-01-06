@@ -237,3 +237,8 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir
    </details>
 
 ### [FAQ（Continuously updated）](https://github.com/meituan/YOLOv6/wiki/FAQ%EF%BC%88Continuously-updated%EF%BC%89)
+
+If you have any questions, welcome to join our WeChat group to discuss and exchange.
+<p align="center">
+  <img src="assets/wechat_qrcode.png" align="middle" width = "1000" />
+</p>
