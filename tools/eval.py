@@ -79,7 +79,7 @@ def get_args_parser(add_help=True):
         args.force_no_pad = eval_params[eval_model_name]["force_no_pad"]
         args.not_infer_on_rect = eval_params[eval_model_name]["not_infer_on_rect"]
         #force params
-        args.img_size = 640
+        #args.img_size = 640
         args.conf_thres = 0.03
         args.iou_thres = 0.65
         args.task = "val"

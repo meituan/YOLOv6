@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+from ast import Pass
 import os
 import time
 from copy import deepcopy
@@ -18,8 +19,12 @@ from torch.utils.tensorboard import SummaryWriter
 import tools.eval as eval
 from yolov6.data.data_load import create_dataloader
 from yolov6.models.yolo import build_model
-from yolov6.models.loss import ComputeLoss
-from yolov6.models.loss_distill import ComputeLoss as ComputeLoss_distill
+
+from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
+from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
+from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
+from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
+
 from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
@@ -47,8 +52,12 @@ class Trainer:
         self.num_classes = self.data_dict['nc']
         self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
+        self.distill_ns = True if self.args.distill and self.cfg.model.type in ['YOLOv6n','YOLOv6s'] else False
         model = self.get_model(args, cfg, self.num_classes, device)
         if self.args.distill:
+            if self.args.fuse_ab and self.distill_ns:
+                LOGGER.error('ERROR in: Distill n/s models should turn off the fuse_ab.\n')
+                exit()
             self.teacher_model = self.get_teacher_model(args, cfg, self.num_classes, device)
         if self.args.quant:
             self.quant_setup(model, cfg, device)
@@ -84,12 +93,12 @@ class Trainer:
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
 
-
         self.loss_num = 3
         self.loss_info = ['Epoch', 'iou_loss', 'dfl_loss', 'cls_loss']
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ['cwd_loss']
+
 
     # Training Process
     def train(self):
@@ -135,11 +144,17 @@ class Trainer:
             if self.args.distill:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
-                temperature = self.args.temperature
+                temperature = self.args.temperature   
                 total_loss, loss_items = self.compute_loss_distill(preds, t_preds, s_featmaps, t_featmaps, targets, \
-                                                                   epoch_num, self.max_epoch, temperature, step_num)
+                                                                epoch_num, self.max_epoch, temperature, step_num)
+            
+            elif self.args.fuse_ab:       
+                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num, step_num) # YOLOv6_af
+                total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num) # YOLOv6_ab
+                total_loss += total_loss_ab
+                loss_items += loss_items_ab
             else:
-                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num)
+                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num) # YOLOv6_af
             if self.rank != -1:
                 total_loss *= self.world_size
         # backward
@@ -149,7 +164,7 @@ class Trainer:
 
     def eval_and_save(self):
         remaining_epochs = self.max_epoch - self.epoch
-        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 1
+        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
         is_val_epoch = (not self.args.eval_final_only or (remaining_epochs == 1)) and (self.epoch % eval_interval == 0)
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
@@ -244,20 +259,39 @@ class Trainer:
         self.best_ap, self.ap = 0.0, 0.0
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0) # AP50, AP50_95
+        
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
+                                        warmup_epoch=self.cfg.model.head.atss_warmup_epoch,
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
-                                        iou_type=self.cfg.model.head.iou_type)
-        if self.args.distill:
-            self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
-                                                            ori_img_size=self.img_size,
-                                                            use_dfl=self.cfg.model.head.use_dfl,
-                                                            reg_max=self.cfg.model.head.reg_max,
-                                                            iou_type=self.cfg.model.head.iou_type,
-                                                            distill_weight = self.cfg.model.head.distill_weight,
-                                                            distill_feat = self.args.distill_feat,
-                                                            )
+                                        iou_type=self.cfg.model.head.iou_type,
+										fpn_strides=self.cfg.model.head.strides)
+
+        if self.args.fuse_ab:
+            self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],
+                                        ori_img_size=self.img_size,
+                                        warmup_epoch=0,
+                                        use_dfl=False,
+                                        reg_max=0,
+                                        iou_type=self.cfg.model.head.iou_type,
+                                        fpn_strides=self.cfg.model.head.strides)
+        if self.args.distill :
+            if self.cfg.model.type in ['YOLOv6n','YOLOv6s']:
+                Loss_distill_func = ComputeLoss_distill_ns
+            else:
+                Loss_distill_func = ComputeLoss_distill
+
+            self.compute_loss_distill = Loss_distill_func(num_classes=self.data_dict['nc'],
+                                                        ori_img_size=self.img_size,
+                                                        fpn_strides=self.cfg.model.head.strides,
+                                                        warmup_epoch=self.cfg.model.head.atss_warmup_epoch,
+                                                        use_dfl=self.cfg.model.head.use_dfl,
+                                                        reg_max=self.cfg.model.head.reg_max,
+                                                        iou_type=self.cfg.model.head.iou_type,
+                                                        distill_weight = self.cfg.model.head.distill_weight,
+                                                        distill_feat = self.args.distill_feat,
+                                                        )
 
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
@@ -344,7 +378,7 @@ class Trainer:
         return images, targets
 
     def get_model(self, args, cfg, nc, device):
-        model = build_model(cfg, nc, device)
+        model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
         weights = cfg.model.pretrained
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
@@ -353,8 +387,9 @@ class Trainer:
         LOGGER.info('Model: {}'.format(model))
         return model
 
-    def get_teacher_model(self, args,cfg,nc, device):
-        model = build_model(cfg, nc, device)
+    def get_teacher_model(self, args, cfg, nc, device):
+        teacher_fuse_ab = False if cfg.model.head.num_layers != 3 else True
+        model = build_model(cfg, nc, device, fuse_ab=teacher_fuse_ab)
         weights = args.teacher_model_path
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f'Loading state_dict from {weights} for teacher')
@@ -396,7 +431,7 @@ class Trainer:
     def get_optimizer(self, args, cfg, model):
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
-        cfg.solver.lr0 *= args.batch_size / (self.world_size * 32) # rescale lr0 related to batchsize
+        cfg.solver.lr0 *= args.batch_size / (self.world_size * args.bs_per_gpu) # rescale lr0 related to batchsize
         optimizer = build_optimizer(cfg, model)
         return optimizer
 
