@@ -55,8 +55,8 @@ class Trainer:
         self.distill_ns = True if self.args.distill and self.cfg.model.type in ['YOLOv6n','YOLOv6s'] else False
         model = self.get_model(args, cfg, self.num_classes, device)
         if self.args.distill:
-            if self.args.fuse_ab and self.distill_ns:
-                LOGGER.error('ERROR in: Distill n/s models should turn off the fuse_ab.\n')
+            if self.args.fuse_ab:
+                LOGGER.error('ERROR in: Distill models should turn off the fuse_ab.\n')
                 exit()
             self.teacher_model = self.get_teacher_model(args, cfg, self.num_classes, device)
         if self.args.quant:
