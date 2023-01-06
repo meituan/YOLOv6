@@ -51,6 +51,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--calib', action='store_true', help='run ptq')
     parser.add_argument('--teacher_model_path', type=str, default=None, help='teacher model path')
     parser.add_argument('--temperature', type=int, default=20, help='distill temperature')
+    parser.add_argument('--fuse_ab', action='store_true', help='fuse ab branch in training process or not')
+    parser.add_argument('--bs_per_gpu', default=32, type=int, help='batch size per GPU for auto-rescale learning rate, set to 16 for P6 models')
     return parser
 
 

@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from yolov6.assigners.assigner_utils import select_candidates_in_gts, select_highest_overlaps, iou_calculator
+from yolov6.assigners.assigner_utils import select_candidates_in_gts, select_highest_overlaps, iou_calculator, dist_calculator
 
 class TaskAlignedAssigner(nn.Module):
     def __init__(self,
                  topk=13,
                  num_classes=80,
                  alpha=1.0,
-                 beta=6.0,
+                 beta=6.0, 
                  eps=1e-9):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk
