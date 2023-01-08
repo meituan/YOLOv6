@@ -99,7 +99,7 @@ def get_model_info(model, img_size=640):
     Code base on https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/utils/model_utils.py
     """
     from thop import profile
-    stride = 32
+    stride = 64 #32
     img = torch.zeros((1, 3, stride, stride), device=next(model.parameters()).device)
 
     flops, params = profile(deepcopy(model), inputs=(img,), verbose=False)

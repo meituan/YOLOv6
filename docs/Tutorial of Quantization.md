@@ -7,3 +7,4 @@ Specific tutorials, please refer to the following links:
 *  [Tutorial of RepOpt for YOLOv6](./tutorial_repopt.md)
 *  [Tutorial of QAT for YOLOv6](../tools/qat/README.md)
 *  [Partial Quantization](../tools/partial_quantization)
+*  [PPQ Quantization](../tools/quantization/ppq)

@@ -3,7 +3,7 @@
 eval_params = dict(
     default = dict(
         img_size=640,
-        test_load_size=634,
+        test_load_size=638,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,
@@ -11,7 +11,7 @@ eval_params = dict(
     ),
     yolov6n = dict(
         img_size=640,
-        test_load_size=638,
+        test_load_size=636,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,
@@ -27,7 +27,7 @@ eval_params = dict(
     ),
     yolov6s = dict(
         img_size=640,
-        test_load_size=638,
+        test_load_size=634,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,
@@ -35,7 +35,7 @@ eval_params = dict(
     ),
     yolov6m = dict(
         img_size=640,
-        test_load_size=628,
+        test_load_size=636,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,
@@ -43,7 +43,7 @@ eval_params = dict(
     ),
     yolov6l = dict(
         img_size=640,
-        test_load_size=632,
+        test_load_size=636,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,
@@ -52,6 +52,38 @@ eval_params = dict(
     yolov6l_relu = dict(
         img_size=640,
         test_load_size=638,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6n6 = dict(
+        img_size=1280,
+        test_load_size=1263,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6s6 = dict(
+        img_size=1280,
+        test_load_size=1272,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6m6 = dict(
+        img_size=1280,
+        test_load_size=1216,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6l6 = dict(
+        img_size=1280,
+        test_load_size=1239,
         letterbox_return_int=True,
         scale_exact=True,
         force_no_pad=True,

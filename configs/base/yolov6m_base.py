@@ -1,9 +1,9 @@
-# YOLOv6l model
+# YOLOv6 medium/large base model
 model = dict(
-    type='YOLOv6l_relu',
+    type='YOLOv6m_base',
+    depth_multiple=0.80,
+    width_multiple=0.75,
     pretrained=None,
-    depth_multiple=1.0,
-    width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',
         num_repeats=[1, 6, 12, 18, 6],
@@ -43,12 +43,12 @@ solver=dict(
     weight_decay=0.0005,
     warmup_epochs=3.0,
     warmup_momentum=0.8,
-    warmup_bias_lr=0.1
+    warmup_bias_lr=0.1       
 )
-
+ 
 data_aug = dict(
-    hsv_h=0.015,
-    hsv_s=0.7,
+    hsv_h=0.015,  
+    hsv_s=0.7, 
     hsv_v=0.4,
     degrees=0.0,
     translate=0.1,
@@ -59,3 +59,4 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.1,
 )
+training_mode = "conv_relu" 

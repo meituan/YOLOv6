@@ -1,9 +1,9 @@
-# YOLOv6l model
+# YOLOv6 medium/large base model
 model = dict(
-    type='YOLOv6l_relu',
-    pretrained='weights/yolov6l_relu.pt',
-    depth_multiple=1.0,
-    width_multiple=1.0,
+    type='YOLOv6m_base',
+    depth_multiple=0.80,
+    width_multiple=0.75,
+    pretrained=None,
     backbone=dict(
         type='CSPBepBackbone',
         num_repeats=[1, 6, 12, 18, 6],
@@ -59,3 +59,4 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.243,
 )
+training_mode = "conv_relu" 
