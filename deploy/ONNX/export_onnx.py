@@ -19,7 +19,6 @@ from yolov6.utils.events import LOGGER
 from yolov6.utils.checkpoint import load_checkpoint
 from io import BytesIO
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='./yolov6s.pt', help='weights path')
@@ -28,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
-    parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
+    parser.add_argument('--dynamic', nargs='?', const='all', default=False, help='export dynamic onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
     parser.add_argument('--ort', action='store_true', help='export onnx for onnxruntime')
@@ -52,7 +51,7 @@ if __name__ == '__main__':
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
     # Input
-    img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
+    img = torch.zeros([args.batch_size, 3, *args.img_size]).to(device)  # image size(1,3,320,192) iDetection
 
     # Update model
     if args.half:
@@ -64,31 +63,29 @@ if __name__ == '__main__':
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
-    dynamic_axes = None
-    if args.dynamic_batch:
-        args.batch_size = 'batch'
-        dynamic_axes = {
-            'images' :{
-                0:'batch',
-            },}
-        if args.end2end:
-            output_axes = {
-                'num_dets': {0: 'batch'},
-                'det_boxes': {0: 'batch'},
-                'det_scores': {0: 'batch'},
-                'det_classes': {0: 'batch'},
-            }
-        else:
-            output_axes = {
-                'outputs': {0: 'batch'},
-            }
-        dynamic_axes.update(output_axes)
-
-
+    b = 'batch'
     if args.end2end:
         from yolov6.models.end2end import End2End
-        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres,score_thres=args.conf_thres,
+
+        model = End2End(model, max_obj=args.topk_all, iou_thres=args.iou_thres, score_thres=args.conf_thres,
                         device=device, ort=args.ort, trt_version=args.trt_version, with_preprocess=args.with_preprocess)
+        output_names = ['num_dets', 'boxes', 'scores', 'labels']
+        output_shapes = {n: {0: b} for n in output_names}
+        if args.dynamic == 'batch':
+            dynamic_cfg = {'images': {0: b}, **output_shapes}
+        elif args.dynamic == 'all':
+            dynamic_cfg = {'images': {0: b, 2: 'height', 3: 'width'}, **output_shapes}
+        else:
+            dynamic_cfg = {}
+    else:
+        output_names = 'outputs'
+        if args.dynamic == 'batch':
+            dynamic_cfg = {'images': {0: b}, output_names: {0: b}}
+        elif args.dynamic == 'all':
+            dynamic_cfg = {'images': {0: b, 2: 'height', 3: 'width'}, output_names: {0: b, 1: 'anchors'}}
+        else:
+            dynamic_cfg = {}
+        output_names = [output_names]
 
     print("===================")
     print(model)
@@ -105,23 +102,25 @@ if __name__ == '__main__':
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['images'],
-                              output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
-                              if args.end2end else ['outputs'],
-                              dynamic_axes=dynamic_axes)
+                              output_names=output_names,
+                              dynamic_axes=dynamic_cfg)
             f.seek(0)
             # Checks
             onnx_model = onnx.load(f)  # load onnx model
             onnx.checker.check_model(onnx_model)  # check onnx model
             # Fix output shape
-            if args.end2end and not args.ort:
-                shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
-                          args.batch_size, args.topk_all, args.batch_size, args.topk_all]
+            if args.end2end:
+                if args.ort:
+                    shapes = [b, 1, b, 'topk', 4, b, 'topk', b, 'topk']
+                else:
+                    shapes = [b, 1, b, args.topk_all, 4, b, args.topk_all, b, args.topk_all]
                 for i in onnx_model.graph.output:
                     for j in i.type.tensor_type.shape.dim:
                         j.dim_param = str(shapes.pop(0))
         if args.simplify:
             try:
                 import onnxsim
+
                 LOGGER.info('\nStarting to simplify ONNX...')
                 onnx_model, check = onnxsim.simplify(onnx_model)
                 assert check, 'assert check failed'
@@ -134,16 +133,3 @@ if __name__ == '__main__':
 
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))
-    if args.end2end:
-        if not args.ort:
-            info = f'trtexec --onnx={export_file} --saveEngine={export_file.replace(".onnx",".engine")}'
-            if args.dynamic_batch:
-                LOGGER.info('Dynamic batch export should define min/opt/max batchsize\n'+
-                            'We set min/opt/max = 1/16/32 default!')
-                wandh = 'x'.join(list(map(str,args.img_size)))
-                info += (f' --minShapes=images:1x3x{wandh}'+
-                f' --optShapes=images:16x3x{wandh}'+
-                f' --maxShapes=images:32x3x{wandh}'+
-                f' --shapes=images:16x3x{wandh}')
-            LOGGER.info('\nYou can export tensorrt engine use trtexec tools.\nCommand is:')
-            LOGGER.info(info)
