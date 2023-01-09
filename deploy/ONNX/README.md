@@ -135,7 +135,6 @@ python ./deploy/ONNX/eval_trt.py \
   --weights yolov6s.engine \
   --batch-size 1 \
   --data data/coco.yaml
-
 ```
 
 ## Dynamic Axes Inference
