@@ -22,6 +22,7 @@ model = dict(
         anchors=1,
         out_indices=[17, 20, 23],
         strides=[8, 16, 32],
+        atss_warmup_epoch=0,
         iou_type='siou',
         use_dfl=False,
         reg_max=0 #if use_dfl is False, please set reg_max to 0
