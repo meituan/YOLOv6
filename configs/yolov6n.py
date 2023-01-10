@@ -1,4 +1,4 @@
-# YOLOv6s model
+# YOLOv6n model
 model = dict(
     type='YOLOv6n',
     pretrained=None,
