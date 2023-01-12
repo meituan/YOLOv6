@@ -110,13 +110,13 @@ data_aug = dict(
 Single GPU
 
 ```shell
-python tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/data.yaml --device 0
+python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
-python -m torch.distributed.launch --nproc_per_node 4 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/data.yaml --device 0,1,2,3
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0,1,2,3,4,5,6,7
 ```
 
 
@@ -124,7 +124,7 @@ python -m torch.distributed.launch --nproc_per_node 4 tools/train.py --batch 256
 ## 4. Evaluation
 
 ```shell
-python tools/eval.py --data data/data.yaml  --weights output_dir/name/weights/best_ckpt.pt --device 0
+python tools/eval.py --data data/data.yaml  --weights output_dir/name/weights/best_ckpt.pt --task val --device 0
 ```
 
 
@@ -142,5 +142,5 @@ python tools/infer.py --weights output_dir/name/weights/best_ckpt.pt --source im
 Export as [ONNX](https://github.com/meituan/YOLOv6/tree/main/deploy/ONNX) Format
 
 ```shell
-python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --device 0
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0
 ```

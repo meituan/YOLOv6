@@ -97,8 +97,14 @@ pip install -r requirements.txt
 
 
 <details>
-<summary> Training</summary>
+<summary> Reproduce our results on COCO</summary>
 
+Please refer to [Train COCO Dataset](./docs/Train_coco_data.md).
+
+</details>
+
+<details open>
+<summary> Finetune on custom data</summary>
 
 Single GPU
 
@@ -117,9 +123,9 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 # P6 models
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0,1,2,3,4,5,6,7
 ```
-- fuse_ab: add anchor-based auxiliary branch and use Anchor Unified Training Mode(Not supported on P6 models)
+- fuse_ab: add anchor-based auxiliary branch and use Anchor Unified Training Mode (Not supported on P6 models currently)
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
-- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
+- data: prepare dataset and specify dataset paths in data.yaml ( [COCO](http://cocodataset.org), [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) )
 - make sure your dataset structure as follows:
 ```
 ├── coco
@@ -136,8 +142,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128
 │   ├── README.txt
 ```
 
-
-Reproduce our results on COCO ⭐️ [Train COCO Dataset](./docs/Train_coco_data.md)
+</details>
 
 <details>
 <summary>Resume training</summary>
@@ -160,12 +165,11 @@ Your can also specify a checkpoint path to `--resume` parameter by
 This will resume from the specific checkpoint you provide.
 
 </details>
-</details>
 
-<details>
+<details open>
 <summary> Evaluation</summary>
 
-Reproduce mAP on COCO val2017 dataset with 640×640 or 1280x1280 resolution ⭐️
+Reproduce mAP on COCO val2017 dataset with 640×640 or 1280x1280 resolution
 
 ```shell
 # P5 models
