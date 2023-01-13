@@ -142,5 +142,5 @@ python tools/infer.py --weights output_dir/name/weights/best_ckpt.pt --source im
 Export as [ONNX](https://github.com/meituan/YOLOv6/tree/main/deploy/ONNX) Format
 
 ```shell
-python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0 --dynamic-batch --end2end --ort
 ```
