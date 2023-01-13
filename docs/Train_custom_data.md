@@ -78,7 +78,7 @@ names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', '
 We use a config file to specify the network structure and training setting, including  optimizer and data augmentation hyperparameters.
 
 If you create a new config file, please put it under the `configs` directory.
-Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`.
+Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`. Download the pretrained models you want from according to your configuration [here](https://github.com/meituan/YOLOv6#benchmark).
 
 ```python
 ## YOLOv6s Model config file
