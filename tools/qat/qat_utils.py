@@ -40,14 +40,18 @@ def compute_amax(model, **kwargs):
     # Load Calib result
     for name, module in model.named_modules():
         if isinstance(module, quant_nn.TensorQuantizer):
-            print(F"{name:40}: {module}")
+            # print(F"{name:40}: {module}")
             if module._calibrator is not None:
                 #MinMaxCalib
-                if isinstance(module._calibrator, calib.MaxCalibrator):
-                    module.load_calib_amax()
-                else:
-                #HistogramCalib
-                    module.load_calib_amax(**kwargs)
+                try:
+                    if isinstance(module._calibrator, calib.MaxCalibrator):
+                        module.load_calib_amax()
+                    else:
+                    #HistogramCalib
+                        module.load_calib_amax(**kwargs)
+                except:
+                    RuntimeWarning("Layer {} is not corretcly calibrated!".format(name))
+                    continue
     model.cuda()
 
 def ptq_calibrate(model, train_loader, cfg):

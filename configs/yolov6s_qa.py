@@ -64,5 +64,4 @@ data_aug = dict(
     mixup=0.0,
 )
 
-# Choose Rep-block by the training Mode, choices=["repvgg", "hyper-search", "repopt"]
-training_mode='hyper_search'
+training_mode='qarepvgg'
