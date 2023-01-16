@@ -190,7 +190,7 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s6.pt --ta
 # P5 models
 python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 # P6 models
-python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir / video.mp4
+python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / imgdir / video.mp4
 ```
 </details>
 
