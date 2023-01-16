@@ -110,15 +110,23 @@ data_aug = dict(
 Single GPU
 
 ```shell
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16) if you want to do self-distillation training further.
 python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16) if you want to do self-distillation training further.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0,1,2,3,4,5,6,7
 ```
 
+Self-distillation training
+
+```shell
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16).
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --distill --teacher_model_path your_model_path --device 0,1,2,3,4,5,6,7
+```
 
 
 ## 4. Evaluation
