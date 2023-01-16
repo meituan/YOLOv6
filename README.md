@@ -15,7 +15,9 @@ English | [简体中文](README_cn.md)
 
 ## YOLOv6
 
-Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
+Implementation of paper:
+- [YOLOv6 v3.0: A Full-Scale Reloading](https://arxiv.org/abs/2301.05586) 🔥
+- [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 
 <p align="center">
   <img src="assets/speed_comparision_v3.png" align="middle" width = "1000" />
