@@ -7,6 +7,7 @@ import math
 import torch
 import numpy as np
 import os.path as osp
+from typing import Optional
 
 from tqdm import tqdm
 from pathlib import Path
@@ -20,8 +21,10 @@ from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 
+from yolov6.logger.wandb_inference_logger import WandbInferenceLogger
+
 class Inferer:
-    def __init__(self, source, weights, device, yaml, img_size, half):
+    def __init__(self, source, weights, device, yaml, img_size, half, inference_logger: Optional[WandbInferenceLogger] = None,):
 
         self.__dict__.update(locals())
 
@@ -33,8 +36,15 @@ class Inferer:
         self.model = DetectBackend(weights, device=self.device)
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
+        
+        if self.inference_logger is not None:
+            self.inference_logger.label_dictionary = {
+                idx: self.class_names[idx] for idx in range(len(self.class_names))
+            }
+        
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
+        self.inference_logger = inference_logger
 
         # Switch model to deploy status
         self.model_switch(self.model.model, self.img_size)
@@ -94,6 +104,7 @@ class Inferer:
 
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
+                
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -108,6 +119,12 @@ class Inferer:
                         self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
+            
+            if isinstance(self.inference_logger, WandbInferenceLogger):
+                self.inference_logger.in_infer(
+                    np.array(img_ori), img_path, reversed(det)
+                )
+                
 
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
@@ -150,6 +167,8 @@ class Inferer:
                         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_src)
+        
+        self.inference_logger.on_infer_end()
 
     @staticmethod
     def precess_image(img_src, img_size, stride, half):
