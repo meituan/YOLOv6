@@ -27,6 +27,11 @@ Implementation of paper:
 ## What's New
 
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
+    - Renew the neck of the detector with a BiC module and SimCSPSPPF Block.
+    - Propose an anchor-aided training (AAT) strategy.
+    - Involve a new self-distillation strategy for small models of YOLOv6.
+    - Expand YOLOv6 and hit a new
+SOTA performance on the COCO dataset.
 - [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
 - [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 - [2022.09.05] Release M/L models and update N/T/S models with enhanced performance. 
