@@ -594,30 +594,42 @@ class TrainValDataset(Dataset):
 
 
 class LoadData:
-    def __init__(self, path):
-        p = str(Path(path).resolve())  # os-agnostic absolute path
-        if os.path.isdir(p):
-            files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
-        elif os.path.isfile(p):
-            files = [p]  # files
+    def __init__(self, path, webcam, webcam_addr):
+        self.webcam = webcam
+        self.webcam_addr = webcam_addr
+        if webcam: # if use web camera
+            imgp = []
+            vidp = [int(webcam_addr) if webcam_addr.isdigit() else webcam_addr]
         else:
-            raise FileNotFoundError(f'Invalid path {p}')
-        imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
-        vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
+            p = str(Path(path).resolve())  # os-agnostic absolute path
+            if os.path.isdir(p):
+                files = sorted(glob.glob(os.path.join(p, '**/*.*'), recursive=True))  # dir
+            elif os.path.isfile(p):
+                files = [p]  # files
+            else:
+                raise FileNotFoundError(f'Invalid path {p}')
+            imgp = [i for i in files if i.split('.')[-1] in IMG_FORMATS]
+            vidp = [v for v in files if v.split('.')[-1] in VID_FORMATS]
         self.files = imgp + vidp
         self.nf = len(self.files)
         self.type = 'image'
-        if any(vidp):
+        if len(vidp) > 0:
             self.add_video(vidp[0])  # new video
         else:
             self.cap = None
-    @staticmethod
-    def checkext(path):
-        file_type = 'image' if path.split('.')[-1].lower() in IMG_FORMATS else 'video'
+
+    # @staticmethod
+    def checkext(self, path):
+        if self.webcam:
+            file_type = 'video'
+        else:
+            file_type = 'image' if path.split('.')[-1].lower() in IMG_FORMATS else 'video'
         return file_type
+
     def __iter__(self):
         self.count = 0
         return self
+
     def __next__(self):
         if self.count == self.nf:
             raise StopIteration
@@ -638,9 +650,11 @@ class LoadData:
             self.count += 1
             img = cv2.imread(path)  # BGR
         return img, path, self.cap
+        
     def add_video(self, path):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
     def __len__(self):
         return self.nf  # number of files
