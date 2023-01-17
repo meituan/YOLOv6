@@ -206,6 +206,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / i
 <details open>
 <summary> 教程 </summary>
 
+*  [用户手册（中文版）](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
 *  [训练 COCO 数据集](./docs/Train_coco_data.md)
 *  [训练自定义数据集](./docs/Train_custom_data.md)
 *  [测速](./docs/Test_speed.md)

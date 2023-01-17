@@ -218,6 +218,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / i
 <details open>
 <summary> Tutorials</summary>
 
+*  [User Guide(zh_CN)](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
 *  [Train COCO Dataset](./docs/Train_coco_data.md)
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
