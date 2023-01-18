@@ -105,6 +105,6 @@ def download_ckpt(path):
     # need to update the link with every release
     url = f"https://github.com/meituan/YOLOv6/releases/download/0.3.0/{basename}"
     r = requests.get(url, allow_redirects=True)
-    assert r.status_code == 200, "Unable to downlaod checpoints, manually download it"
+    assert r.status_code == 200, "Unable to download checkpoints, manually download it"
     open(path, 'wb').write(r.content)
-    LOGGER.info(f"checkpoint {basename} downlaoded and saved")
+    LOGGER.info(f"checkpoint {basename} downloaded and saved")
