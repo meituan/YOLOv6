@@ -72,7 +72,7 @@ class TrainValDataset(Dataset):
             self.batch_indices = np.floor(
                 np.arange(len(shapes)) / self.batch_size
             ).astype(
-                np.int
+                np.int_
             )  # batch indices of each image
             self.sort_files_shapes()
         t2 = time.time()
@@ -446,7 +446,7 @@ class TrainValDataset(Dataset):
                 shapes[i] = [1, 1 / mini]
         self.batch_shapes = (
             np.ceil(np.array(shapes) * self.img_size / self.stride + self.pad).astype(
-                np.int
+                np.int_
             )
             * self.stride
         )
