@@ -6,7 +6,9 @@
 
 ## YOLOv6
 
-官方论文: [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
+官方论文: 
+- [YOLOv6 v3.0: A Full-Scale Reloading](https://arxiv.org/abs/2301.05586) 🔥
+- [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 
 <p align="center">
   <img src="assets/speed_comparision_v3.png" align="middle" width = "1000" />
@@ -14,11 +16,15 @@
 
 
 ## 更新日志
-- [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级. ⭐️ [模型指标](#模型指标)
-- [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程。
+- [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级 ⭐️ [模型指标](#模型指标)
+    - 添加 BiC 模块 和 SimCSPSPPF 模块以增强检测网络颈部的表征能力。
+    - 提出一个锚点辅助训练 (AAT) 策略。
+    - 为 YOLOv6 小模型引入一个新的自蒸馏训练策略。
+    - 扩展 YOLOv6 并在 COCO 上取得了实时目标检测 SOTA 的精度和速度。
+- [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程
 - [2022.09.06] 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)
 - [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能  
-- [2022.06.23] 发布 N/T/S v1.0 版本模型。
+- [2022.06.23] 发布 N/T/S v1.0 版本模型
 
 ## 模型指标
 | 模型                                                       | 输入尺寸 | mAP<sup>val<br/>0.5:0.95              | 速度<sup>T4<br/>trt fp16 b1 <br/>(fps) | 速度<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
@@ -87,7 +93,14 @@ pip install -r requirements.txt
 </details>
 
 <details>
-<summary> 训练 </summary>
+<summary> 在 COCO 数据集上复现我们的结果</summary>
+
+请参考教程 [训练 COCO 数据集](./docs/Train_coco_data.md).
+
+</details>
+
+<details open>
+<summary> 在自定义数据集上微调模型 </summary>
 
 单卡
 
@@ -106,7 +119,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 # P6 models
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0,1,2,3,4,5,6,7
 ```
-- fuse_ab: 增加anchor-based预测分支并使用联合锚点训练模式(P6模型暂不支持)
+- fuse_ab: 增加anchor-based预测分支并使用联合锚点训练模式 (P6模型暂不支持此功能)
 - conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件；
 - data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
 - 确保您的数据集按照下面这种格式来组织；
@@ -123,7 +136,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128
 │   │   ├── val2017
 ```
 
-在COCO数据集复现我们的结果 ⭐️ [训练 COCO 数据集](./docs/Train_coco_data.md)
+</details>
 
 <details>
 <summary>恢复训练</summary>
@@ -147,11 +160,11 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 这将从您提供的模型路径恢复训练。
 
 </details>
-</details>
+
 
 <details>
 <summary> 评估</summary>
-在 COCO val2017 数据集上复现我们的结果（输入分辨率 640x640 或 1280x1280） ⭐️
+在 COCO val2017 数据集上复现我们的结果（输入分辨率 640x640 或 1280x1280）
 
 ```shell
 # P5 models
@@ -177,8 +190,16 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s6.pt --ta
 # P5 models
 python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 # P6 models
-python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir / video.mp4
+python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / imgdir / video.mp4
 ```
+如果您想使用本地摄像头或者网络摄像头，您可以运行:
+```shell
+# P5 models
+python tools/infer.py --weights yolov6s.pt --webcam --webcam-addr 0
+# P6 models
+python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-addr 0
+```
+`webcam-addr` 可以是本地摄像头的 ID，或者是 RTSP 地址。
 </details>
 
 <details>
@@ -193,8 +214,9 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir
 <details open>
 <summary> 教程 </summary>
 
+*  [用户手册（中文版）](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
 *  [训练 COCO 数据集](./docs/Train_coco_data.md)
-*  [训练自己的数据集](./docs/Train_custom_data.md)
+*  [训练自定义数据集](./docs/Train_custom_data.md)
 *  [测速](./docs/Test_speed.md)
 *  [ YOLOv6 量化教程](./docs/Tutorial%20of%20Quantization.md)
 </details>

@@ -15,7 +15,9 @@ English | [简体中文](README_cn.md)
 
 ## YOLOv6
 
-Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
+Implementation of paper:
+- [YOLOv6 v3.0: A Full-Scale Reloading](https://arxiv.org/abs/2301.05586) 🔥
+- [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 
 <p align="center">
   <img src="assets/speed_comparision_v3.png" align="middle" width = "1000" />
@@ -25,6 +27,11 @@ Implementation of paper - [YOLOv6: A Single-Stage Object Detection Framework for
 ## What's New
 
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
+    - Renew the neck of the detector with a BiC module and SimCSPSPPF Block.
+    - Propose an anchor-aided training (AAT) strategy.
+    - Involve a new self-distillation strategy for small models of YOLOv6.
+    - Expand YOLOv6 and hit a new
+SOTA performance on the COCO dataset.
 - [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
 - [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 - [2022.09.05] Release M/L models and update N/T/S models with enhanced performance. 
@@ -97,8 +104,14 @@ pip install -r requirements.txt
 
 
 <details>
-<summary> Training</summary>
+<summary> Reproduce our results on COCO</summary>
 
+Please refer to [Train COCO Dataset](./docs/Train_coco_data.md).
+
+</details>
+
+<details open>
+<summary> Finetune on custom data</summary>
 
 Single GPU
 
@@ -117,9 +130,9 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 # P6 models
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0,1,2,3,4,5,6,7
 ```
-- fuse_ab: add anchor-based auxiliary branch and use Anchor Unified Training Mode(Not supported on P6 models)
+- fuse_ab: add anchor-based auxiliary branch and use Anchor Unified Training Mode (Not supported on P6 models currently)
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
-- data: prepare [COCO](http://cocodataset.org) dataset, [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) and specify dataset paths in data.yaml
+- data: prepare dataset and specify dataset paths in data.yaml ( [COCO](http://cocodataset.org), [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) )
 - make sure your dataset structure as follows:
 ```
 ├── coco
@@ -136,8 +149,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128
 │   ├── README.txt
 ```
 
-
-Reproduce our results on COCO ⭐️ [Train COCO Dataset](./docs/Train_coco_data.md)
+</details>
 
 <details>
 <summary>Resume training</summary>
@@ -160,12 +172,11 @@ Your can also specify a checkpoint path to `--resume` parameter by
 This will resume from the specific checkpoint you provide.
 
 </details>
-</details>
 
-<details>
+<details open>
 <summary> Evaluation</summary>
 
-Reproduce mAP on COCO val2017 dataset with 640×640 or 1280x1280 resolution ⭐️
+Reproduce mAP on COCO val2017 dataset with 640×640 or 1280x1280 resolution
 
 ```shell
 # P5 models
@@ -191,8 +202,16 @@ Second, run inference with `tools/infer.py`
 # P5 models
 python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
 # P6 models
-python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir / video.mp4
+python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / imgdir / video.mp4
 ```
+If you want to inference on local camera or  web camera, you can run:
+```shell
+# P5 models
+python tools/infer.py --weights yolov6s.pt --webcam --webcam-addr 0
+# P6 models
+python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-addr 0
+```
+`webcam-addr` can be local camera number id or rtsp address.
 </details>
 
 <details>
@@ -207,6 +226,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 --source img.jpg / imgdir
 <details open>
 <summary> Tutorials</summary>
 
+*  [User Guide(zh_CN)](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
 *  [Train COCO Dataset](./docs/Train_coco_data.md)
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
