@@ -130,7 +130,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256
 # P6 models
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0,1,2,3,4,5,6,7
 ```
-- fuse_ab: add anchor-based auxiliary branch and use Anchor Unified Training Mode (Not supported on P6 models currently)
+- fuse_ab: add anchor-based auxiliary branch and use Anchor Aided Training Mode (Not supported on P6 models currently)
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
 - data: prepare dataset and specify dataset paths in data.yaml ( [COCO](http://cocodataset.org), [YOLO format coco labels](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip) )
 - make sure your dataset structure as follows:
