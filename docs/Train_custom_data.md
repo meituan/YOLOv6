@@ -78,7 +78,7 @@ names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', '
 We use a config file to specify the network structure and training setting, including  optimizer and data augmentation hyperparameters.
 
 If you create a new config file, please put it under the `configs` directory.
-Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`.
+Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`. Download the pretrained models you want from according to your configuration [here](https://github.com/meituan/YOLOv6#benchmark).
 
 ```python
 ## YOLOv6s Model config file
@@ -150,5 +150,5 @@ python tools/infer.py --weights output_dir/name/weights/best_ckpt.pt --source im
 Export as [ONNX](https://github.com/meituan/YOLOv6/tree/main/deploy/ONNX) Format
 
 ```shell
-python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0 --dynamic-batch --end2end --ort
 ```
