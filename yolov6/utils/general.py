@@ -3,19 +3,16 @@
 import os
 import glob
 import torch
-from pathlib import Path
 import requests
+from pathlib import Path
 from yolov6.utils.events import LOGGER
-
 
 def increment_name(path):
     '''increase save directory's id'''
     path = Path(path)
     sep = ''
     if path.exists():
-        path, suffix = (
-            (path.with_suffix(''), path.suffix) if path.is_file() else (path, '')
-        )
+        path, suffix = (path.with_suffix(''), path.suffix) if path.is_file() else (path, '')
         for n in range(1, 9999):
             p = f'{path}{sep}{n}{suffix}'
             if not os.path.exists(p):
@@ -83,25 +80,16 @@ def box_iou(box1, box2):
     area2 = box_area(box2.T)
 
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
-    inter = (
-        (
-            torch.min(box1[:, None, 2:], box2[:, 2:])
-            - torch.max(box1[:, None, :2], box2[:, :2])
-        )
-        .clamp(0)
-        .prod(2)
-    )
-    return inter / (
-        area1[:, None] + area2 - inter
-    )  # iou = inter / (area1 + area2 - inter)
+    inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
+    return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
 
 
 def download_ckpt(path):
     """Download checkpoints of the pretrained models"""
-
     basename = os.path.basename(path)
     dir = os.path.abspath(os.path.dirname(path))
     os.makedirs(dir, exist_ok=True)
+    LOGGER.info(f"checkpoint {basename} not exist, try to downloaded it from github.")
     # need to update the link with every release
     url = f"https://github.com/meituan/YOLOv6/releases/download/0.3.0/{basename}"
     r = requests.get(url, allow_redirects=True)
