@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-
+import os
 import warnings
-from pathlib import Path
-
 import numpy as np
+from pathlib import Path
 import torch
 import torch.nn as nn
-from torch.nn.parameter import Parameter
 import torch.nn.init as init
+from torch.nn.parameter import Parameter
+from yolov6.utils.general import download_ckpt
 
 
 class SiLU(nn.Module):
@@ -143,7 +143,7 @@ class SimCSPSPPF(nn.Module):
             warnings.simplefilter('ignore')
             y1 = self.m(x1)
             y2 = self.m(y1)
-            y3 =self.cv6(self.cv5(torch.cat([x1, y1, y2, self.m(y2)], 1)))
+            y3 = self.cv6(self.cv5(torch.cat([x1, y1, y2, self.m(y2)], 1)))
         return self.cv7(torch.cat((y0, y3), dim=1))
 
 class CSPSPPF(nn.Module):
@@ -168,7 +168,7 @@ class CSPSPPF(nn.Module):
             warnings.simplefilter('ignore')
             y1 = self.m(x1)
             y2 = self.m(y1)
-            y3 =self.cv6(self.cv5(torch.cat([x1, y1, y2, self.m(y2)], 1)))
+            y3 = self.cv6(self.cv5(torch.cat([x1, y1, y2, self.m(y2)], 1)))
         return self.cv7(torch.cat((y0, y3), dim=1))
 
 class Transpose(nn.Module):
@@ -400,6 +400,8 @@ class DetectBackend(nn.Module):
     def __init__(self, weights='yolov6s.pt', device=None, dnn=True):
 
         super().__init__()
+        if not os.path.exists(weights):
+            download_ckpt(weights) # try to download model from github automatically.
         assert isinstance(weights, str) and Path(weights).suffix == '.pt', f'{Path(weights).suffix} format is not supported.'
         from yolov6.utils.checkpoint import load_checkpoint
         model = load_checkpoint(weights, map_location=device)

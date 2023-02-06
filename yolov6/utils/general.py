@@ -3,8 +3,9 @@
 import os
 import glob
 import torch
+import requests
 from pathlib import Path
-
+from yolov6.utils.events import LOGGER
 
 def increment_name(path):
     '''increase save directory's id'''
@@ -57,6 +58,7 @@ def xywh2xyxy(bboxes):
     bboxes[..., 3] = bboxes[..., 1] + bboxes[..., 3]
     return bboxes
 
+
 def box_iou(box1, box2):
     # https://github.com/pytorch/vision/blob/master/torchvision/ops/boxes.py
     """
@@ -80,3 +82,17 @@ def box_iou(box1, box2):
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
     inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
     return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
+
+
+def download_ckpt(path):
+    """Download checkpoints of the pretrained models"""
+    basename = os.path.basename(path)
+    dir = os.path.abspath(os.path.dirname(path))
+    os.makedirs(dir, exist_ok=True)
+    LOGGER.info(f"checkpoint {basename} not exist, try to downloaded it from github.")
+    # need to update the link with every release
+    url = f"https://github.com/meituan/YOLOv6/releases/download/0.3.0/{basename}"
+    r = requests.get(url, allow_redirects=True)
+    assert r.status_code == 200, "Unable to download checkpoints, manually download it"
+    open(path, 'wb').write(r.content)
+    LOGGER.info(f"checkpoint {basename} downloaded and saved")
