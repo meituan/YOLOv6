@@ -8,7 +8,7 @@ English | [简体中文](README_cn.md)
 
  <div>
     </a>
-    <a href="[https://colab.research.google.com/github/meituan/YOLOv6/blob/main/turtorial.ipynb](https://colab.research.google.com/gist/HouSanDuo123/bdad4ad6706209d4e9275d2186d54289/tutorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+    <a href="https://colab.research.google.com/github/meituan/YOLOv6/blob/main/turtorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
      <a href="https://www.kaggle.com/code/housanduo/yolov6"><img src="https://kaggle.com/static/images/open-in-kaggle.svg" alt="Open In Kaggle"></a>
   </div>
  <br>
