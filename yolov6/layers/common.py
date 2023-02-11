@@ -357,10 +357,6 @@ class QARepVGGBlock(RepVGGBlock):
         kernel = kernel3x3 + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
         bias = bias3x3
 
-        # kernel1x1, bias1x1 = self.rbr_1x1.weight, self.rbr_1x1.bias #self._fuse_bn_tensor(self.rbr_1x1)
-        # kernelid, biasid = self._fuse_bn_tensor(self.rbr_identity)
-        # kernel, bias = kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1) + kernelid, bias3x3 + bias1x1 + biasid
-        # kernel = self.rbr_dense.weight + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
         if self.rbr_identity is not None:
             input_dim = self.in_channels // self.groups
             kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)
@@ -368,9 +364,7 @@ class QARepVGGBlock(RepVGGBlock):
                 kernel_value[i, i % input_dim, 1, 1] = 1
             id_tensor = torch.from_numpy(kernel_value).to(self.rbr_1x1.weight.device)
             kernel = kernel + id_tensor
-        # kernel, bias = self._f
         return kernel, bias
-        # return self._fuse_extra_bn_tensor(kernel, bias, self.bn)
 
     def _fuse_extra_bn_tensor(self, kernel, bias, branch):
         assert isinstance(branch, nn.BatchNorm2d)
@@ -603,19 +597,10 @@ class BiFusion(nn.Module):
             stride=2
         )
 
-    def insert_fakequant_after_upsample(self, num_bits, calib_method):
-        from pytorch_quantization import nn as quant_nn
-        from pytorch_quantization.tensor_quant import QuantDescriptor
-        input_default_desc = QuantDescriptor(num_bits=num_bits, calib_method=calib_method)
-        self.upsample_feat_quant = quant_nn.TensorQuantizer(input_default_desc)
-        self._QUANT = True
-
     def forward(self, x):
         x0 = self.upsample(x[0])
         x1 = self.cv1(x[1])
         x2 = self.downsample(self.cv2(x[2]))
-        if hasattr(self, '_QUANT') and self._QUANT is True:
-            x2 = self.upsample_feat_quant(x2)
         return self.cv3(torch.cat((x0, x1, x2), dim=1))
 
 

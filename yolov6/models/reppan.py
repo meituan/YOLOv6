@@ -210,13 +210,6 @@ class RepBiFPANNeck(nn.Module):
             block=block
         )
         
-    def upsample_enable_quant(self, num_bits, calib_method):
-        print("Insert fakequant after upsample")
-        # Insert fakequant after upsample op to build TensorRT engine
-        self.Bifusion1.insert_fakequant_after_upsample(num_bits, calib_method)
-        self.Bifusion1.insert_fakequant_after_upsample(num_bits, calib_method)
-        # global _QUANT
-        self._QUANT = True
 
     def forward(self, input):
 

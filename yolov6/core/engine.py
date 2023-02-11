@@ -541,15 +541,7 @@ class Trainer:
             save_calib_model(self.model, cfg)
     # QAT
     def quant_setup(self, model, cfg, device):
-        model.eval()
         if self.args.quant:
-            from yolov6.layers.common import RepVGGBlock
-            # switch all RepVGGBlock to deploy mode
-            for k, m in model.named_modules():
-                if isinstance(m, RepVGGBlock):
-                    m.switch_to_deploy()
-                    # print("Switch RepBlock {} to deploy mode.".format(k))
-
             from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
             qat_init_model_manu(model, cfg, self.args)
             # workaround
