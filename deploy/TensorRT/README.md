@@ -77,5 +77,6 @@ You can do testing on images using .trt weights, just give path of image directo
 python3 deploy/TensorRT/eval_yolo_trt.py -v -m model.trt \
 --imgs-dir /workdir/datasets/coco/images/val2017 \
 --annotations /workdir/datasets/coco/annotations/instances_val2017.json \
---conf-thres 0.40 --iou-thres 0.45
+--conf-thres 0.40 --iou-thres 0.45 \
+--is_coco
 ```

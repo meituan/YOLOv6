@@ -1,63 +1,91 @@
-"""eval_yolo.py
-
-This script is for evaluating mAP (accuracy) of YOLO models.
+"""
+This script is used for evaluating the performance of YOLOv6 TensorRT models.
 """
 import os
 import sys
 import json
 import argparse
 import math
-
 import cv2
 import torch
+import numpy as np
+from tqdm import tqdm
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+
 from Processor import Processor
-from tqdm import tqdm
 
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
-coco91class = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20,
-     21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-     41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-     59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
-     80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+from yolov6.utils.events import LOGGER
 
 
 def parse_args():
     """Parse input arguments."""
-    desc = 'Evaluate mAP of YOLO TRT model'
+    desc = 'Evaluate mAP of YOLOv6 TensorRT model'
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument(
-        '--imgs-dir', type=str, default='../coco/images/val2017',
-        help='directory of validation images ../coco/images/val2017')
-    parser.add_argument(
-        '--annotations', type=str, default='../coco/annotations/instances_val2017.json',
-        help='groundtruth annotations ../coco/annotations/instances_val2017.json')
+    parser.add_argument('--imgs-dir', type=str, default='../coco/images/val2017',
+        help='directory of validation dataset images.')
+    parser.add_argument('--labels-dir', type=str, default='../coco/labels/val2017',
+        help='directory of validation dataset labels.')
+    parser.add_argument('--annotations', type=str, default='../coco/annotations/instances_val2017.json',
+        help='coco format annotations of validation dataset.')
     parser.add_argument('--batch-size', type=int,
-                        default=1, help='batch size for training: default 64')
-    parser.add_argument(
-        '-c', '--category-num', type=int, default=80,
-        help='number of object categories [80]')
-    parser.add_argument(
-        '--img-size', nargs='+', type=int, default=[640, 640], help='image size')
-    parser.add_argument(
-        '-m', '--model', type=str, default='./weights/yolov5s-simple.trt',
+        default=1, help='batch size of evaluation.')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')
+    parser.add_argument('--model', '-m', type=str, default='./weights/yolov5s.trt',
         help=('trt model path'))
-    parser.add_argument(
-        '--conf-thres', type=float, default=0.03,
-        help='object confidence threshold')
-    parser.add_argument(
-        '--iou-thres', type=float, default=0.65,
+    parser.add_argument('--conf-thres', type=float, default=0.03,
+        help='confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.65,
         help='IOU threshold for NMS')
+    parser.add_argument('--class_num', type=int, default=3, help='class list for general datasets that must be specified')
+    parser.add_argument('--is_coco', action='store_true', help='whether the validation dataset is coco, default is False.')
     parser.add_argument('--test_load_size', type=int, default=634, help='load img resize when test')
     parser.add_argument('--letterbox_return_int', type=bool, default=True, help='return int offset for letterbox')
     parser.add_argument('--scale_exact', type=bool, default=True, help='use exact scale size to scale coords')
     parser.add_argument('--force_no_pad', type=bool, default=True, help='for no extra pad in letterbox')
-    parser.add_argument('-v', '--visualize', action="store_true", default=False, help='visualize demo')
+    parser.add_argument('--visualize', '-v', action="store_true", default=False, help='visualize demo')
     parser.add_argument('--num_imgs_to_visualize', type=int, default=10, help='number of images to visualize')
+    parser.add_argument('--do_pr_metric', type=bool, default=False, help='use pr_metric to evaluate models')
+    parser.add_argument('--plot_curve', type=bool, default=True, help='plot curve for pr_metric')
+    parser.add_argument('--plot_confusion_matrix', type=bool, default=False, help='plot confusion matrix ')
+    parser.add_argument('--verbose', type=bool, default=False, help='report mAP by class')
+    parser.add_argument('--save_dir',default='', help='whether use pr_metric')
+
     args = parser.parse_args()
     return args
 
+def scale_coords(scale_exact, img1_shape, coords, img0_shape, ratio_pad=None):
+        '''Rescale coords (xyxy) from img1_shape to img0_shape.'''
+        if ratio_pad is None:  # calculate from img0_shape
+            gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
+            if scale_exact:
+                gain = [img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1]]
+            pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
+        else:
+            gain = ratio_pad[0]
+            pad = ratio_pad[1]
+
+        coords[:, [0, 2]] -= pad[0]  # x padding
+        if scale_exact:
+            coords[:, [0, 2]] /= gain[1]  # x gain
+        else:
+            coords[:, [0, 2]] /= gain[0]  # raw x gain
+        coords[:, [1, 3]] -= pad[1]  # y padding
+        coords[:, [1, 3]] /= gain[0]  # y gain
+
+        if isinstance(coords, torch.Tensor):  # faster individually
+            coords[:, 0].clamp_(0, img0_shape[1])  # x1
+            coords[:, 1].clamp_(0, img0_shape[0])  # y1
+            coords[:, 2].clamp_(0, img0_shape[1])  # x2
+            coords[:, 3].clamp_(0, img0_shape[0])  # y2
+        else:  # np.array (faster grouped)
+            coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
+            coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
+        return coords
 
 def check_args(args):
     """Check and make sure command-line arguments are valid."""
@@ -67,31 +95,45 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_thres, non_coco,
-                    batch_size=1, test_load_size=640, visualize=False,  num_imgs_to_visualize=0):
+def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matrix, processor, imgs_dir, labels_dir, val_jpgs, results_file, conf_thres, iou_thres, is_coco, batch_size=1, test_load_size=640, visualize=False, num_imgs_to_visualize=0):
     """Run detection on each jpg and write results to file."""
     results = []
-    # pbar = tqdm(jpgs, desc="TRT-Model test in val datasets.")
-    pbar = tqdm(range(math.ceil(len(jpgs)/batch_size)), desc="TRT-Model test in val datasets.")
+    pbar = tqdm(range(math.ceil(len(val_jpgs)/batch_size)), desc="TRT-Model test in val datasets.")
     idx = 0
     num_visualized = 0
+    if do_pr_metric:
+            stats= []
+            seen = 0
+            iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
+            niou = iouv.numel()
+            if plot_confusion_matrix:
+                from yolov6.utils.metrics import ConfusionMatrix
+                confusion_matrix = ConfusionMatrix(nc=len(model_names))
     for _ in pbar:
-        imgs = torch.randn((batch_size,3,640,640), dtype=torch.float32, device=torch.device('cuda:0'))
+        imgs = torch.randn((batch_size,3,640, 640), dtype=torch.float32, device=torch.device('cuda:0'))
         source_imgs = []
         image_ids = []
         shapes = []
+
         for i in range(batch_size):
-            if (idx == len(jpgs)): break
-            img = cv2.imread(os.path.join(imgs_dir, jpgs[idx]))
+            if (idx == len(val_jpgs)): break
+            img = cv2.imread(os.path.join(imgs_dir, val_jpgs[idx]))
+            imgs_name = os.path.splitext(val_jpgs[idx])[0]
+            labelpath = os.path.join(labels_dir, imgs_name+ '.txt')
+            with open(labelpath, "r") as f:
+                    target = [
+                        x.split() for x in f.read().strip().splitlines() if len(x)
+                    ]
+                    target = np.array(target ,dtype=np.float32)
+
             img_src = img.copy()
-            # shapes.append(img.shape)
             h0, w0 = img.shape[:2]
             r = test_load_size / max(h0, w0)
             if r != 1:
                 img = cv2.resize(
                     img,
                     (int(w0 * r), int(h0 * r)),
-                    interpolation=cv2.INTER_AREA
+                    interpolation = cv2.INTER_AREA
                     if r < 1 else cv2.INTER_LINEAR,
                 )
             h, w = img.shape[:2]
@@ -99,14 +141,20 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
             source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
             shapes.append(shape)
-            image_ids.append(int(jpgs[idx].split('.')[0].split('_')[-1]))
+            if is_coco:
+                image_ids.append(int(val_jpgs[idx].split('.')[0].split('_')[-1]))
+            else:
+                image_ids.append(val_jpgs[idx].split('.')[0].split('_')[-1])
             idx += 1
+
         output = processor.inference(imgs)
-        
+
         for j in range(len(shapes)):
-            pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres=conf_thres, iou_thres=iou_thres)
+            pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres = conf_thres, iou_thres = iou_thres)
+
             if visualize and num_visualized < num_imgs_to_visualize:
                 image = source_imgs[i]
+
             for p in pred:
                 x = float(p[0])
                 y = float(p[1])
@@ -114,12 +162,45 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
                 h = float(p[3] - p[1])
                 s = float(p[4])
                 results.append({'image_id': image_ids[j],
-                                'category_id': coco91class[int(p[5])] if not non_coco else int(p[5]),
+                                'category_id': data_class[int(p[5])] if is_coco else int(p[5]),
                                 'bbox': [round(x, 3) for x in [x, y, w, h]],
                                 'score': round(s, 5)})
 
                 if visualize and num_visualized < num_imgs_to_visualize:
                     cv2.rectangle(image, (int(x), int(y)), (int(x+w), int(y+h)), (255, 0, 0), 1)
+
+            if do_pr_metric:
+                import copy
+                labels = target.copy()
+                nl = len(labels)
+                tcls = labels[:, 0].tolist() if nl else []  # target class
+                seen += 1
+
+                if len(pred) == 0:
+                    if nl:
+                        stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
+                    continue
+
+                # Predictions
+                predn = pred.clone()
+                # Assign all predictions as incorrect
+                correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
+                if nl:
+                    from yolov6.utils.nms import xywh2xyxy
+                    # target boxes
+                    tbox = xywh2xyxy(labels[:,1:5])
+                    tbox[:, [0, 2]] *= shapes[j][0][1]
+                    tbox[:, [1, 3]] *= shapes[j][0][0]
+
+                    labelsn = torch.cat((torch.from_numpy(labels[:,0:1]).cpu(), torch.from_numpy(tbox).cpu()), 1)  # native-space labels
+
+                    from yolov6.utils.metrics import process_batch
+
+                    correct = process_batch(predn.cpu(), labelsn.cpu(), iouv)
+                    if plot_confusion_matrix:
+                        confusion_matrix.process_batch(predn, labelsn)
+                # Append statistics (correct, conf, pcls, tcls)
+                stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
             if visualize and num_visualized < num_imgs_to_visualize:
                 print("saving to %d.jpg" % (num_visualized))
@@ -128,6 +209,7 @@ def generate_results(processor, imgs_dir, jpgs, results_file, conf_thres, iou_th
 
     with open(results_file, 'w') as f:
         f.write(json.dumps(results, indent=4))
+    return stats, seen
 
 
 def main():
@@ -146,13 +228,32 @@ def main():
     model_prefix = args.model.replace('.trt', '').split('/')[-1]
     results_file = 'results_{}.json'.format(model_prefix)
 
+    if args.is_coco:
+        data_class = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20,
+                21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+                59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
+                80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+        model_names = list(range(0, len(data_class)))
+    else:
+        data_class = list(range(0, args.class_num))
+        model_names = list(range(0, args.class_num))
+
     # setup processor
     processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
     jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
-    generate_results(processor, args.imgs_dir, jpgs, results_file, args.conf_thres, args.iou_thres,
-                     non_coco=False, batch_size=args.batch_size, test_load_size=args.test_load_size,
+    #Eliminate data with missing labels
+    val_jpgs=[]
+    for jpg in jpgs:
+        imgs_name = os.path.splitext(jpg)[0]
+        labelpath = os.path.join(args.labels_dir, imgs_name+ '.txt')
+        if os.path.exists(labelpath):
+            val_jpgs.append(jpg)
+        else:
+            continue
+    #targets=[j for j in os.listdir(args.labels_dir) if j.endswith('.txt')]
+    stats, seen=generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, val_jpgs, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
                      visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize)
-
 
     # Run COCO mAP evaluation
     # Reference: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb
@@ -164,6 +265,41 @@ def main():
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
+
+    # Run PR_metric evaluation
+    if args.do_pr_metric:
+        # Compute statistics
+        stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+        if len(stats) and stats[0].any():
+            from yolov6.utils.metrics import ap_per_class
+            p, r, ap, f1, ap_class = ap_per_class(*stats, plot=args.plot_curve, save_dir=args.save_dir, names=model_names)
+            AP50_F1_max_idx = len(f1.mean(0)) - f1.mean(0)[::-1].argmax() -1
+            LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
+            ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
+            mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
+            nt = np.bincount(stats[3].astype(np.int64), minlength=len(model_names))  # number of targets per class
+
+            # Print results
+            s = ('%-16s' + '%12s' * 7) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
+            LOGGER.info(s)
+            pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
+            LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, f1.mean(0)[AP50_F1_max_idx], map50, map))
+
+            pr_metric_result = (map50, map)
+            print("pr_metric results:", pr_metric_result)
+
+            # Print results per class
+            if args.verbose and len(model_names) > 1:
+                for i, c in enumerate(ap_class):
+                    LOGGER.info(pf % (model_names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx],
+                                        f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
+
+            if args.plot_confusion_matrix:
+                confusion_matrix.plot(save_dir=args.save_dir, names=list(model_names))
+        else:
+            LOGGER.info("Calculate metric failed, might check dataset.")
+            pr_metric_result = (0.0, 0.0)
+
 
 
 if __name__ == '__main__':
