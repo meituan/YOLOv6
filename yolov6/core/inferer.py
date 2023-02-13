@@ -69,7 +69,8 @@ class Inferer:
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
-        for img_src, img_path, vid_cap in tqdm(self.files):
+        frame_num = 0
+        for img_src, img_path, vid_cap in tqdm(self.files):            
             img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
@@ -102,7 +103,7 @@ class Inferer:
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf)
+                        line = (cls, *xywh, conf, frame_num)
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -112,7 +113,7 @@ class Inferer:
 
                         self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
 
-                img_src = np.asarray(img_ori)
+                img_src = np.asarray(img_ori)            
 
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
@@ -155,6 +156,10 @@ class Inferer:
                         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_src)
+            
+            # increment frame number
+            frame_num += 1
+
 
     @staticmethod
     def precess_image(img_src, img_size, stride, half):
