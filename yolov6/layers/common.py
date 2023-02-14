@@ -473,7 +473,6 @@ class LinearAddBlock(nn.Module):
 
 class DetectBackend(nn.Module):
     def __init__(self, weights='yolov6s.pt', device=None, dnn=True):
-
         super().__init__()
         if not os.path.exists(weights):
             download_ckpt(weights) # try to download model from github automatically.
