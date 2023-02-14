@@ -1,12 +1,11 @@
 import os
 import math
 import pathlib
-import cv2
 import torch 
 import numpy as np
 from PIL import Image 
 import matplotlib.pyplot as plt 
-from typing import List, Optional
+
 from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.utils.nms import non_max_suppression
@@ -65,7 +64,7 @@ def check_img_size(img_size, s=32, floor=0):
 
     if new_size != img_size:
         LOGGER.info(f'WARNING: --img-size {img_size} must be multiple of max stride {s}, updating to {new_size}')
-    return new_size if isinstance(img_size,list) else [new_size]*2
+    return new_size if isinstance(img_size, list) else [new_size] * 2
 
 
 def precess_image(path, img_size, stride):
@@ -109,7 +108,6 @@ class Detector(DetectBackend):
         labels = det[:,5].long()
         prediction = {'boxes':boxes,'scores':scores,'labels':labels}
         return prediction
-        
     
     def predict(self, img_path:str):
         img, img_src = precess_image(img_path, self.img_size, 32)
