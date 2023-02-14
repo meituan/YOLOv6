@@ -58,6 +58,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 def scale_coords(scale_exact, img1_shape, coords, img0_shape, ratio_pad=None):
         '''Rescale coords (xyxy) from img1_shape to img0_shape.'''
         if ratio_pad is None:  # calculate from img0_shape
@@ -87,6 +88,7 @@ def scale_coords(scale_exact, img1_shape, coords, img0_shape, ratio_pad=None):
             coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
         return coords
 
+
 def check_args(args):
     """Check and make sure command-line arguments are valid."""
     if not os.path.isdir(args.imgs_dir):
@@ -110,21 +112,24 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=len(model_names))
     for _ in pbar:
-        imgs = torch.randn((batch_size,3,640, 640), dtype=torch.float32, device=torch.device('cuda:0'))
+        # imgs = torch.randn((batch_size,3,640, 640), dtype=torch.float32, device=torch.device('cuda:0'))
+        imgs = []
         source_imgs = []
         image_ids = []
         shapes = []
+        targets = []
 
         for i in range(batch_size):
             if (idx == len(val_jpgs)): break
             img = cv2.imread(os.path.join(imgs_dir, val_jpgs[idx]))
             imgs_name = os.path.splitext(val_jpgs[idx])[0]
-            labelpath = os.path.join(labels_dir, imgs_name+ '.txt')
-            with open(labelpath, "r") as f:
+            label_path = os.path.join(labels_dir, imgs_name+ '.txt')
+            with open(label_path, "r") as f:
                     target = [
                         x.split() for x in f.read().strip().splitlines() if len(x)
                     ]
                     target = np.array(target ,dtype=np.float32)
+                    targets.append(target)
 
             img_src = img.copy()
             h0, w0 = img.shape[:2]
@@ -137,7 +142,8 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
                     if r < 1 else cv2.INTER_LINEAR,
                 )
             h, w = img.shape[:2]
-            imgs[i], pad = processor.pre_process(img)
+            preprocessed_img, pad = processor.pre_process(img)
+            imgs.append(preprocessed_img)
             source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
             shapes.append(shape)
@@ -146,8 +152,7 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
             else:
                 image_ids.append(val_jpgs[idx].split('.')[0].split('_')[-1])
             idx += 1
-
-        output = processor.inference(imgs)
+        output = processor.inference(torch.stack(imgs, axis=0))
 
         for j in range(len(shapes)):
             pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres = conf_thres, iou_thres = iou_thres)
@@ -171,6 +176,7 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
 
             if do_pr_metric:
                 import copy
+                target = targets[j]
                 labels = target.copy()
                 nl = len(labels)
                 tcls = labels[:, 0].tolist() if nl else []  # target class
@@ -234,7 +240,16 @@ def main():
                 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
                 59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
                 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
-        model_names = list(range(0, len(data_class)))
+        model_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train',
+                     'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter',
+                     'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra',
+                     'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
+                     'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 
+                     'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 
+                     'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 
+                     'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 
+                     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 
+                     'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
     else:
         data_class = list(range(0, args.class_num))
         model_names = list(range(0, args.class_num))
@@ -252,7 +267,7 @@ def main():
         else:
             continue
     #targets=[j for j in os.listdir(args.labels_dir) if j.endswith('.txt')]
-    stats, seen=generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, val_jpgs, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
+    stats, seen = generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, val_jpgs, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
                      visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize)
 
     # Run COCO mAP evaluation
@@ -299,7 +314,6 @@ def main():
         else:
             LOGGER.info("Calculate metric failed, might check dataset.")
             pr_metric_result = (0.0, 0.0)
-
 
 
 if __name__ == '__main__':
