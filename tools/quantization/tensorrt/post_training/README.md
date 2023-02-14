@@ -30,7 +30,7 @@ or want to create a new one.
 
 ## INT8 Calibration
 
-See [ImagenetCalibrator.py](ImagenetCalibrator.py) for a reference implementation
+See [Calibrator.py](Calibrator.py) for a reference implementation
 of TensorRT's [IInt8EntropyCalibrator2](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/infer/Int8/EntropyCalibrator2.html).
 
 This class can be tweaked to work for other kinds of models, inputs, etc.
@@ -43,7 +43,7 @@ However, to calibrate using different data or a different model, you can do so w
 * This requires that you've mounted a dataset, such as Imagenet, to use for calibration.
     * Add something like `-v /imagenet:/imagenet` to your Docker command in Step (1)
       to mount a dataset found locally at `/imagenet`.
-* You can specify your own `preprocess_func` by defining it inside of `ImageCalibrator.py`
+* You can specify your own `preprocess_func` by defining it inside of `Calibrator.py`
 
 ```bash
 # Path to dataset to use for calibration.
