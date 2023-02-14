@@ -21,25 +21,27 @@ if str(ROOT) not in sys.path:
 
 from yolov6.utils.events import LOGGER
 
+IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
+IMG_FORMATS.extend([f.upper() for f in IMG_FORMATS])
 
 def parse_args():
     """Parse input arguments."""
     desc = 'Evaluate mAP of YOLOv6 TensorRT model'
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--imgs-dir', type=str, default='../coco/images/val2017',
+    parser.add_argument('--imgs_dir', type=str, default='../coco/images/val2017',
         help='directory of validation dataset images.')
-    parser.add_argument('--labels-dir', type=str, default='../coco/labels/val2017',
+    parser.add_argument('--labels_dir', type=str, default='../coco/labels/val2017',
         help='directory of validation dataset labels.')
     parser.add_argument('--annotations', type=str, default='../coco/annotations/instances_val2017.json',
         help='coco format annotations of validation dataset.')
-    parser.add_argument('--batch-size', type=int,
+    parser.add_argument('--batch_size', type=int,
         default=1, help='batch size of evaluation.')
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='image size')
+    parser.add_argument('--img_size', nargs='+', type=int, default=[640, 640], help='image size')
     parser.add_argument('--model', '-m', type=str, default='./weights/yolov5s.trt',
         help=('trt model path'))
-    parser.add_argument('--conf-thres', type=float, default=0.03,
+    parser.add_argument('--conf_thres', type=float, default=0.03,
         help='confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.65,
+    parser.add_argument('--iou_thres', type=float, default=0.65,
         help='IOU threshold for NMS')
     parser.add_argument('--class_num', type=int, default=3, help='class list for general datasets that must be specified')
     parser.add_argument('--is_coco', action='store_true', help='whether the validation dataset is coco, default is False.')
@@ -97,10 +99,10 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matrix, processor, imgs_dir, labels_dir, val_jpgs, results_file, conf_thres, iou_thres, is_coco, batch_size=1, test_load_size=640, visualize=False, num_imgs_to_visualize=0):
+def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matrix, processor, imgs_dir, labels_dir, valid_images, results_file, conf_thres, iou_thres, is_coco, batch_size=1, test_load_size=640, visualize=False, num_imgs_to_visualize=0):
     """Run detection on each jpg and write results to file."""
     results = []
-    pbar = tqdm(range(math.ceil(len(val_jpgs)/batch_size)), desc="TRT-Model test in val datasets.")
+    pbar = tqdm(range(math.ceil(len(valid_images)/batch_size)), desc="TRT-Model test in val datasets.")
     idx = 0
     num_visualized = 0
     if do_pr_metric:
@@ -112,17 +114,16 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=len(model_names))
     for _ in pbar:
-        # imgs = torch.randn((batch_size,3,640, 640), dtype=torch.float32, device=torch.device('cuda:0'))
-        imgs = []
+        preprocessed_imgs = []
         source_imgs = []
         image_ids = []
         shapes = []
         targets = []
 
         for i in range(batch_size):
-            if (idx == len(val_jpgs)): break
-            img = cv2.imread(os.path.join(imgs_dir, val_jpgs[idx]))
-            imgs_name = os.path.splitext(val_jpgs[idx])[0]
+            if (idx == len(valid_images)): break
+            img = cv2.imread(os.path.join(imgs_dir, valid_images[idx]))
+            imgs_name = os.path.splitext(valid_images[idx])[0]
             label_path = os.path.join(labels_dir, imgs_name+ '.txt')
             with open(label_path, "r") as f:
                     target = [
@@ -143,16 +144,16 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
                 )
             h, w = img.shape[:2]
             preprocessed_img, pad = processor.pre_process(img)
-            imgs.append(preprocessed_img)
+            preprocessed_imgs.append(preprocessed_img)
             source_imgs.append(img_src)
             shape = (h0, w0), ((h / h0, w / w0), pad)
             shapes.append(shape)
             if is_coco:
-                image_ids.append(int(val_jpgs[idx].split('.')[0].split('_')[-1]))
+                image_ids.append(int(valid_images[idx].split('.')[0].split('_')[-1]))
             else:
-                image_ids.append(val_jpgs[idx].split('.')[0].split('_')[-1])
+                image_ids.append(valid_images[idx].split('.')[0].split('_')[-1])
             idx += 1
-        output = processor.inference(torch.stack(imgs, axis=0))
+        output = processor.inference(torch.stack(preprocessed_imgs, axis=0))
 
         for j in range(len(shapes)):
             pred = processor.post_process(output[j].unsqueeze(0), shapes[j], conf_thres = conf_thres, iou_thres = iou_thres)
@@ -256,18 +257,23 @@ def main():
 
     # setup processor
     processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
-    jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
-    #Eliminate data with missing labels
-    val_jpgs=[]
-    for jpg in jpgs:
-        imgs_name = os.path.splitext(jpg)[0]
-        labelpath = os.path.join(args.labels_dir, imgs_name+ '.txt')
-        if os.path.exists(labelpath):
-            val_jpgs.append(jpg)
+    image_names = [p for p in os.listdir(args.imgs_dir) if p.split(".")[-1].lower() in IMG_FORMATS]
+    # Eliminate data with missing labels.
+    with open(args.annotations) as f:
+        coco_format_annotation = json.load(f)
+    # Get image names from coco format annotations. 
+    coco_format_imgs = [x['file_name'] for x in coco_format_annotation['images']]
+    valid_images = []
+    for img_name in image_names:
+        img_name_wo_ext = os.path.splitext(img_name)[0]
+        label_path = os.path.join(args.labels_dir, img_name_wo_ext + '.txt')
+        if os.path.exists(label_path) and img_name in coco_format_imgs:
+            valid_images.append(img_name)
         else:
             continue
+    assert len(valid_images) > 0, 'No valid images are found. Please check you image format or whether annotation file is match.'
     #targets=[j for j in os.listdir(args.labels_dir) if j.endswith('.txt')]
-    stats, seen = generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, val_jpgs, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
+    stats, seen = generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, valid_images, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
                      visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize)
 
     # Run COCO mAP evaluation
