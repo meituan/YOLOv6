@@ -122,8 +122,8 @@ class Detector(DetectBackend):
              return out
           
         import pandas as pd 
-        for k in out.keys():
-          out[k] = out[k].tolist()
+        for k in ['boxes','scores','labels']:
+            out[k] = out[k].tolist()
         dfout = pd.DataFrame(out)
         return dfout 
       
