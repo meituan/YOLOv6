@@ -96,7 +96,7 @@ class Detector(DetectBackend):
         self.iou_thres = iou_thres
         self.max_det = max_det 
         
-    def forward(self, x:torch.Tensor, src_shape:tuple[int]):
+    def forward(self, x, src_shape):
         pred_results = super().forward(x)
         classes = None # the classes to keep
         det = non_max_suppression(pred_results, self.conf_thres, self.iou_thres,
@@ -109,7 +109,7 @@ class Detector(DetectBackend):
         prediction = {'boxes':boxes,'scores':scores,'labels':labels}
         return prediction
     
-    def predict(self, img_path:str):
+    def predict(self, img_path):
         img, img_src = precess_image(img_path, self.img_size, 32)
         img = img.to(self.device)
         if len(img.shape) == 3:
@@ -121,7 +121,7 @@ class Detector(DetectBackend):
         return out 
     
     def show_predict(self,
-                     img_path : str,
+                     img_path,
                      min_score=0.5,
                      figsize=(16, 16),
                      color='lawngreen',
@@ -130,7 +130,7 @@ class Detector(DetectBackend):
         boxes, scores, classes = prediction['boxes'], prediction['scores'], prediction['classes']
         visualize_detections(Image.open(img_path),
                              boxes, classes, scores,
-                             min_score=min_score, color=color
+                             min_score=min_score, figsize = figsize,  color=color, linewidth=linewidth
                             )
         
 
