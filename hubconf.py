@@ -11,7 +11,6 @@ from yolov6.layers.common import DetectBackend
 from yolov6.utils.nms import non_max_suppression
 from yolov6.data.data_augment import letterbox
 from yolov6.core.inferer import Inferer
-from yolov6.utils.events import LOGGER
 
 
 PATH_YOLOv6 = pathlib.Path(__file__).parent
@@ -165,11 +164,6 @@ def yolov6m(class_names=CLASS_NAMES,device = DEVICE,img_size = 640, conf_thres=0
 def yolov6l(class_names=CLASS_NAMES,device = DEVICE,img_size = 640, conf_thres=0.25, iou_thres=0.45, max_det = 1000):
     return create_model('yolov6l', class_names, device, img_size = img_size, conf_thres=conf_thres, 
                     iou_thres = iou_thres, max_det = max_det)
-
-
-# def yolov6x(class_names=CLASS_NAMES,device=DEVICE,img_size = 640, conf_thres=0.25, iou_thres=0.45, max_det = 1000):
-#     return create_model('yolov6x', class_names, device, img_size = img_size, conf_thres=conf_thres, 
-#                     iou_thres = iou_thres, max_det = max_det)
 
 
 def custom(ckpt_path,class_names,device=DEVICE,img_size = 640, conf_thres=0.25, iou_thres=0.45, max_det = 1000):
