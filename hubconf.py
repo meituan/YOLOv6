@@ -108,7 +108,7 @@ class Detector(DetectBackend):
         prediction = {'boxes':boxes,'scores':scores,'labels':labels}
         return prediction
     
-    def predict(self, img_path):
+    def predict(self, img_path, to_pandas = False):
         img, img_src = precess_image(img_path, self.img_size, 32)
         img = img.to(self.device)
         if len(img.shape) == 3:
@@ -117,7 +117,16 @@ class Detector(DetectBackend):
         prediction = self.forward(img, img_src.shape)
         out = {k : v.cpu().numpy() for k, v in prediction.items()}
         out['classes'] = [self.class_names[i] for i in out['labels']]
-        return out 
+        
+        if not to_pandas:
+             return out
+          
+        import pandas as pd 
+        for k in out.keys:
+          out[k] = out[k].tolist()
+        dfout = pd.DataFrame(out)
+        return dfout 
+      
     
     def show_predict(self,
                      img_path,
