@@ -57,7 +57,7 @@ class Calibrator(trt.IInt8MinMaxCalibrator):
             f.write(cache)
 
 
-def precess_image(img_src, img_size, stride):
+def process_image(img_src, img_size, stride):
     '''Process image before image inference.'''
     image = letterbox(img_src, img_size, auto=False, return_int=True)[0]
     # Convert
@@ -88,7 +88,7 @@ class DataLoader:
             for i in range(self.batch_size):
                 assert os.path.exists(self.img_list[i + self.index * self.batch_size]), 'not found!!'
                 img = cv2.imread(self.img_list[i + self.index * self.batch_size])
-                img = precess_image(img, self.input_h, 32)
+                img = process_image(img, self.input_h, 32)
                 self.calibration_data[i] = img
 
             self.index += 1

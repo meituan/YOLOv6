@@ -70,7 +70,7 @@ class Inferer:
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
         for img_src, img_path, vid_cap in tqdm(self.files):
-            img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
+            img, img_src = self.process_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
@@ -157,7 +157,7 @@ class Inferer:
                     vid_writer.write(img_src)
 
     @staticmethod
-    def precess_image(img_src, img_size, stride, half):
+    def process_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
         image = letterbox(img_src, img_size, stride=stride)[0]
         # Convert
