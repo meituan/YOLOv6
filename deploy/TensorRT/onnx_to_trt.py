@@ -143,8 +143,8 @@ def main():
         '--qat', action='store_true',
         help='whether the onnx model is qat; if it is, the int8 calibrator is not needed')
     # If enable int8(not post-QAT model), then set the following
-    parser.add_argument('--img-size', type=int,
-                        default=640, help='image size of model input')
+    parser.add_argument('--img-size', nargs='+', type=int,
+                        default=[640, 640], help='image size of model input, the order is: height width')
     parser.add_argument('--batch-size', type=int,
                         default=128, help='batch size for training: default 64')
     parser.add_argument('--num-calib-batch', default=6, type=int,
@@ -159,8 +159,10 @@ def main():
 
     if args.dtype == "int8" and not args.qat:
         from calibrator import DataLoader, Calibrator
+        if len(args.img_size) == 1:
+            args.img_size = [args.img_size[0], args.img_size[0]]
         calib_loader = DataLoader(args.batch_size, args.num_calib_batch, args.calib_img_dir,
-                                  args.img_size, args.img_size)
+                                  args.img_size[1], args.img_size[0])
         engine = build_engine_from_onnx(args.model, args.dtype, args.verbose,
                               int8_calib=True, calib_loader=calib_loader, calib_cache=args.calib_cache)
     else:
