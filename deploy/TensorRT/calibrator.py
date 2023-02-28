@@ -22,6 +22,9 @@ trt.IInt8EntropyCalibrator2
 trt.IInt8MinMaxCalibrator
 """
 
+IMG_FORMATS = [".bmp", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".dng", ".webp", ".mpo"]
+IMG_FORMATS.extend([f.upper() for f in IMG_FORMATS])
+
 class Calibrator(trt.IInt8MinMaxCalibrator):
     def __init__(self, stream, cache_file=""):
         trt.IInt8MinMaxCalibrator.__init__(self)
@@ -74,7 +77,7 @@ class DataLoader:
         self.input_h = input_h
         self.input_w = input_w
         # self.img_list = [i.strip() for i in open('calib.txt').readlines()]
-        self.img_list = glob.glob(os.path.join(calib_img_dir, "*.jpg"))
+        self.img_list = [os.path.join(calib_img_dir, x) for x in os.listdir(calib_img_dir) if os.path.splitext(x)[-1] in IMG_FORMATS]
         assert len(self.img_list) > self.batch_size * self.length, \
             '{} must contains more than '.format(calib_img_dir) + str(self.batch_size * self.length) + ' images to calib'
         print('found all {} images to calib.'.format(len(self.img_list)))
@@ -86,9 +89,10 @@ class DataLoader:
     def next_batch(self):
         if self.index < self.length:
             for i in range(self.batch_size):
-                assert os.path.exists(self.img_list[i + self.index * self.batch_size]), 'not found!!'
+                assert os.path.exists(self.img_list[i + self.index * self.batch_size]), f'{self.img_list[i + self.index * self.batch_size]} not found!!'
                 img = cv2.imread(self.img_list[i + self.index * self.batch_size])
-                img = process_image(img, self.input_h, 32)
+                img = process_image(img, [self.input_h, self.input_w], 32)
+
                 self.calibration_data[i] = img
 
             self.index += 1
