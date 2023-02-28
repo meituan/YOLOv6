@@ -121,7 +121,7 @@ def run(data,
 
     This function is the main process of evaluataion, supporting image file and dir containing images.
     It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
-    Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
+    Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' processes the
     evaluation of inference speed of model.pt.
 
     """
