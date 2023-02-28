@@ -87,7 +87,7 @@ class Inferer:
                 # Create output files in nested dirs that mirrors the structure of the images' dirs
                 rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
                 save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
-                txt_path = osp.join(save_dir, rel_path, osp.splitext(osp.basename(img_path))[0])
+                txt_path = osp.join(save_dir, rel_path, 'labels', osp.splitext(osp.basename(img_path))[0])
                 os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
