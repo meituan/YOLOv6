@@ -105,9 +105,9 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
     pbar = tqdm(range(math.ceil(len(valid_images)/batch_size)), desc="TRT-Model test in val datasets.")
     idx = 0
     num_visualized = 0
+    stats= []
+    seen = 0
     if do_pr_metric:
-            stats= []
-            seen = 0
             iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
             niou = iouv.numel()
             if plot_confusion_matrix:
