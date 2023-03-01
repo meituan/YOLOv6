@@ -77,13 +77,15 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
 
 
 class Processor():
-    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0'), return_int=False, scale_exact=False, force_no_pad=False):
+    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0'), return_int=False, scale_exact=False, force_no_pad=False, is_end2end=False):
         # load tensorrt engine)
         self.return_int = return_int
         self.scale_exact = scale_exact
         self.force_no_pad = force_no_pad
+        self.is_end2end = is_end2end
         Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
         self.logger = trt.Logger(trt.Logger.INFO)
+        trt.init_libnvinfer_plugins(self.logger, namespace="")
         self.runtime = trt.Runtime(self.logger)
         with open(model, "rb") as f:
             self.engine = self.runtime.deserialize_cuda_engine(f.read())
@@ -133,7 +135,7 @@ class Processor():
         """Preprocess an image before TRT YOLO inferencing.
         """
         input_shape = input_shape if input_shape is not None else self.input_shape
-        image, ratio, pad = letterbox(img_src, input_shape, auto=False, return_int=self.return_int)
+        image, ratio, pad = letterbox(img_src, input_shape, auto=False, return_int=self.return_int, scaleup=True)
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image)).to(self.device).float()
@@ -144,7 +146,14 @@ class Processor():
         self.binding_addrs[self.input_names[0]] = int(inputs.data_ptr())
         #self.binding_addrs['x2paddle_image_arrays'] = int(inputs.data_ptr())
         self.context.execute_v2(list(self.binding_addrs.values()))
-        output = self.bindings[self.output_names[0]].data
+        if self.is_end2end:
+            nums = self.bindings['num_dets'].data
+            boxes = self.bindings['det_boxes'].data
+            scores = self.bindings['det_scores'].data
+            classes = self.bindings['det_classes'].data
+            output = torch.cat((boxes, scores[:,:,None], classes[:,:,None]), axis=-1)
+        else:
+            output = self.bindings[self.output_names[0]].data
         #output = self.bindings['save_infer_model/scale_0.tmp_0'].data
         return output
 
@@ -174,7 +183,10 @@ class Processor():
         return torch.cat(z, 1)
 
     def post_process(self, outputs, img_shape, conf_thres=0.5, iou_thres=0.6):
-        det_t = self.non_max_suppression(outputs, conf_thres, iou_thres, multi_label=True)
+        if self.is_end2end:
+            det_t = outputs
+        else:
+            det_t = self.non_max_suppression(outputs, conf_thres, iou_thres, multi_label=True)
         self.scale_coords(self.input_shape, det_t[0][:, :4], img_shape[0], img_shape[1])
         return det_t[0]
 
