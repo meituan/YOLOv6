@@ -78,7 +78,7 @@ names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', '
 We use a config file to specify the network structure and training setting, including  optimizer and data augmentation hyperparameters.
 
 If you create a new config file, please put it under the `configs` directory.
-Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`.
+Or just use the provided config file in `$YOLOV6_HOME/configs/*_finetune.py`. Download the pretrained model which you want to use from [here](https://github.com/meituan/YOLOv6#benchmark).
 
 ```python
 ## YOLOv6s Model config file
@@ -110,21 +110,29 @@ data_aug = dict(
 Single GPU
 
 ```shell
-python tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/data.yaml --device 0
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16) if you want to do self-distillation training further.
+python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
-python -m torch.distributed.launch --nproc_per_node 4 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/data.yaml --device 0,1,2,3
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16) if you want to do self-distillation training further.
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0,1,2,3,4,5,6,7
 ```
 
+Self-distillation training
+
+```shell
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16).
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --distill --teacher_model_path your_model_path --device 0,1,2,3,4,5,6,7
+```
 
 
 ## 4. Evaluation
 
 ```shell
-python tools/eval.py --data data/data.yaml  --weights output_dir/name/weights/best_ckpt.pt --device 0
+python tools/eval.py --data data/data.yaml  --weights output_dir/name/weights/best_ckpt.pt --task val --device 0
 ```
 
 
@@ -142,5 +150,10 @@ python tools/infer.py --weights output_dir/name/weights/best_ckpt.pt --source im
 Export as [ONNX](https://github.com/meituan/YOLOv6/tree/main/deploy/ONNX) Format
 
 ```shell
-python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --device 0
+# Without NMS OP, pure model.
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0
+# If you want to run with ONNX-Runtime (NMS integrated).
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0 --dynamic-batch --end2end --ort
+# If you want to run with TensorRT (NMS integrated).
+python deploy/ONNX/export_onnx.py --weights output_dir/name/weights/best_ckpt.pt --simplify --device 0 --dynamic-batch --end2end
 ```

@@ -14,6 +14,7 @@ from pycocotools.cocoeval import COCOeval
 from yolov6.data.data_load import create_dataloader
 from yolov6.utils.events import LOGGER, NCOLS
 from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
 
@@ -65,6 +66,8 @@ class Evaler:
 
     def init_model(self, model, weights, task):
         if task != 'train':
+            if not os.path.exists(weights):
+                download_ckpt(weights)
             model = load_checkpoint(weights, map_location=self.device)
             self.stride = int(model.stride.max())
             if self.device.type != 'cpu':

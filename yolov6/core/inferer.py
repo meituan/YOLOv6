@@ -21,7 +21,7 @@ from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 
 class Inferer:
-    def __init__(self, source, weights, device, yaml, img_size, half):
+    def __init__(self, source, webcam, webcam_addr, weights, device, yaml, img_size, half):
 
         self.__dict__.update(locals())
 
@@ -50,9 +50,10 @@ class Inferer:
             self.model(torch.zeros(1, 3, *self.img_size).to(self.device).type_as(next(self.model.model.parameters())))  # warmup
 
         # Load data
-        self.files = LoadData(source)
+        self.webcam = webcam
+        self.webcam_addr = webcam_addr
+        self.files = LoadData(source, webcam, webcam_addr)
         self.source = source
-
 
 
     def model_switch(self, model, img_size):
@@ -69,7 +70,7 @@ class Inferer:
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
         for img_src, img_path, vid_cap in tqdm(self.files):
-            img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
+            img, img_src = self.process_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
             if len(img.shape) == 3:
                 img = img[None]
@@ -79,11 +80,15 @@ class Inferer:
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
             t2 = time.time()
 
-            # Create output files in nested dirs that mirrors the structure of the images' dirs
-            rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
-            save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
-            txt_path = osp.join(save_dir, rel_path, osp.splitext(osp.basename(img_path))[0])
-            os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
+            if self.webcam:
+                save_path = osp.join(save_dir, self.webcam_addr)
+                txt_path = osp.join(save_dir, self.webcam_addr)
+            else:
+                # Create output files in nested dirs that mirrors the structure of the images' dirs
+                rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
+                save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
+                txt_path = osp.join(save_dir, rel_path, 'labels', osp.splitext(osp.basename(img_path))[0])
+                os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src.copy()
@@ -152,7 +157,7 @@ class Inferer:
                     vid_writer.write(img_src)
 
     @staticmethod
-    def precess_image(img_src, img_size, stride, half):
+    def process_image(img_src, img_size, stride, half):
         '''Process image before image inference.'''
         image = letterbox(img_src, img_size, stride=stride)[0]
         # Convert

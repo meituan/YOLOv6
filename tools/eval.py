@@ -79,7 +79,7 @@ def get_args_parser(add_help=True):
         args.force_no_pad = eval_params[eval_model_name]["force_no_pad"]
         args.not_infer_on_rect = eval_params[eval_model_name]["not_infer_on_rect"]
         #force params
-        args.img_size = 640
+        #args.img_size = 640
         args.conf_thres = 0.03
         args.iou_thres = 0.65
         args.task = "val"
@@ -121,7 +121,7 @@ def run(data,
 
     This function is the main process of evaluataion, supporting image file and dir containing images.
     It has tasks of 'val', 'train' and 'speed'. Task 'train' processes the evaluation during training phase.
-    Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' precesses the
+    Task 'val' processes the evaluation purely and return the mAP of model.pt. Task 'speed' processes the
     evaluation of inference speed of model.pt.
 
     """

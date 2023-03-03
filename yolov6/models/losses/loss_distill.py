@@ -20,7 +20,7 @@ class ComputeLoss:
                  grid_cell_offset=0.5,
                  num_classes=80,
                  ori_img_size=640,
-                 warmup_epoch=4,
+                 warmup_epoch=0,
                  use_dfl=True,
                  reg_max=16,
                  iou_type='giou',
@@ -70,7 +70,7 @@ class ComputeLoss:
     ):
 
         feats, pred_scores, pred_distri = outputs
-        t_feats, t_pred_scores, t_pred_distri = t_outputs
+        t_feats, t_pred_scores, t_pred_distri = t_outputs[0], t_outputs[-2], t_outputs[-1]
         anchors, anchor_points, n_anchors_list, stride_tensor = \
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
         t_anchors, t_anchor_points, t_n_anchors_list, t_stride_tensor = \
@@ -218,7 +218,6 @@ class ComputeLoss:
         d_loss_cls = F.kl_div(log_pred_student, pred_teacher, reduction="sum")
         d_loss_cls *= temperature**2
         return d_loss_cls
-
     def distill_loss_cw(self, s_feats, t_feats,  temperature=1):
         N,C,H,W = s_feats[0].shape
         # print(N,C,H,W)
@@ -242,7 +241,7 @@ class ComputeLoss:
                            log_target=True) * (temperature * temperature)/ (N*C)
         # print(loss_cw)
         return loss_cw
-
+        
     def preprocess(self, targets, batch_size, scale_tensor):
         targets_list = np.zeros((batch_size, 1, 5)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):
