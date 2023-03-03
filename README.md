@@ -25,7 +25,7 @@ Implementation of paper:
 
 
 ## What's New
-- [2023.3.2] Updates [base models](configs/base/README.md) to version 0.3.
+- [2023.03.02] Update [base models](configs/base/README.md) to version 3.0.
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
     - Renew the neck of the detector with a BiC module and SimCSPSPPF Block.
     - Propose an anchor-aided training (AAT) strategy.
