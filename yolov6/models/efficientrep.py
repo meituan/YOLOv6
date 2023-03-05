@@ -189,7 +189,7 @@ class EfficientRep6(nn.Module):
                 block=block,
             )
         )
-        
+
         self.ERBlock_5 = nn.Sequential(
             block(
                 in_channels=channels_list[3],
@@ -366,7 +366,7 @@ class CSPBepBackbone(nn.Module):
 
 class CSPBepBackbone_P6(nn.Module):
     """
-    CSPBepBackbone+P6 module. 
+    CSPBepBackbone+P6 module.
     """
 
     def __init__(
@@ -442,7 +442,7 @@ class CSPBepBackbone_P6(nn.Module):
         channel_merge_layer = SPPF if block == ConvWrapper else SimSPPF
         if cspsppf:
             channel_merge_layer = CSPSPPF if block == ConvWrapper else SimCSPSPPF
-       
+
         self.ERBlock_5 = nn.Sequential(
             block(
                 in_channels=channels_list[3],
@@ -494,5 +494,4 @@ class CSPBepBackbone_P6(nn.Module):
         x = self.ERBlock_6(x)
         outputs.append(x)
 
-        return tuple(outputs)   
-
+        return tuple(outputs)

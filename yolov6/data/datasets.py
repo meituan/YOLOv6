@@ -41,8 +41,10 @@ for k, v in ExifTags.TAGS.items():
         break
 
 
+
 class TrainValDataset(Dataset):
     '''YOLOv6 train_loader/val_loader, loads images and labels for training and validation.'''
+    # NOTE final data loader
     def __init__(
         self,
         img_dir,
@@ -89,11 +91,13 @@ class TrainValDataset(Dataset):
         During validation, letterbox augment is applied.
         """
         # Mosaic Augmentation
+        # TODO 去掉Mosaic
         if self.augment and random.random() < self.hyp["mosaic"]:
-            img, labels = self.get_mosaic(index)
+            img, labels = jself.get_mosaic(index)
             shapes = None
 
             # MixUp augmentation
+            # TODO 增加mixup
             if random.random() < self.hyp["mixup"]:
                 img_other, labels_other = self.get_mosaic(
                     random.randint(0, len(self.img_paths) - 1)
@@ -108,6 +112,7 @@ class TrainValDataset(Dataset):
                 img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
+            # TODO test
             shape = (
                 self.batch_shapes[self.batch_indices[index]]
                 if self.rect
@@ -125,6 +130,7 @@ class TrainValDataset(Dataset):
                 w *= ratio
                 h *= ratio
                 # new boxes
+                # TODO angle
                 boxes = np.copy(labels[:, 1:])
                 boxes[:, 0] = (
                     w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
@@ -141,6 +147,7 @@ class TrainValDataset(Dataset):
                 labels[:, 1:] = boxes
 
             if self.augment:
+                # TODO test
                 img, labels = random_affine(
                     img,
                     labels,
@@ -157,6 +164,7 @@ class TrainValDataset(Dataset):
             labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
             labels[:, [2, 4]] = labels[:, [2, 4]].clip(0, h - 1e-3)  # y1, y2
 
+            # TODO add angle
             boxes = np.copy(labels[:, 1:])
             boxes[:, 0] = ((labels[:, 1] + labels[:, 3]) / 2) / w  # x center
             boxes[:, 1] = ((labels[:, 2] + labels[:, 4]) / 2) / h  # y center
@@ -359,7 +367,7 @@ class TrainValDataset(Dataset):
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
                 )
-
+# TODO 添加angle
         img_paths, labels = list(
             zip(
                 *[
@@ -501,6 +509,7 @@ class TrainValDataset(Dataset):
                         x.split() for x in f.read().strip().splitlines() if len(x)
                     ]
                     labels = np.array(labels, dtype=np.float32)
+                # TODO
                 if len(labels):
                     assert all(
                         len(l) == 5 for l in labels
@@ -532,6 +541,7 @@ class TrainValDataset(Dataset):
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
+        # NOTE 修改pycoco这块
         # for evaluation with pycocotools
         dataset = {"categories": [], "annotations": [], "images": []}
         for i, class_name in enumerate(class_names):
@@ -650,11 +660,11 @@ class LoadData:
             self.count += 1
             img = cv2.imread(path)  # BGR
         return img, path, self.cap
-        
+
     def add_video(self, path):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
+
     def __len__(self):
         return self.nf  # number of files

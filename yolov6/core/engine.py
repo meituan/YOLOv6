@@ -49,11 +49,14 @@ class Trainer:
         self.main_process = self.rank in [-1, 0]
         self.save_dir = args.save_dir
         # get data loader
+        # TODO change this
         self.data_dict = load_yaml(args.data_path)
         self.num_classes = self.data_dict["nc"]
+        # NOTE data loader
         self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
         self.distill_ns = True if self.args.distill and self.cfg.model.type in ["YOLOv6n", "YOLOv6s"] else False
+        # NOTE change model
         model = self.get_model(args, cfg, self.num_classes, device)
         if self.args.distill:
             if self.args.fuse_ab:
@@ -132,9 +135,13 @@ class Trainer:
 
     # Training loop for batchdata
     def train_in_steps(self, epoch_num, step_num):
+        # NOTE images and targets
+        # TODO targets 位数+1
+        # NOTE Targets: [bs, Labels, 7] [class_id, x, y, w, h, angle, mix?] 相对大小?
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
+            # TODO
             self.plot_train_batch(images, targets)
             write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type="train")
 
@@ -271,6 +278,8 @@ class Trainer:
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0)  # AP50, AP50_95
 
+        # NOTE Loss 计算
+        # TODO
         self.compute_loss = ComputeLoss(
             num_classes=self.data_dict["nc"],
             ori_img_size=self.img_size,
@@ -373,6 +382,7 @@ class Trainer:
 
     @staticmethod
     def get_data_loader(args, cfg, data_dict):
+        # TODO
         train_path, val_path = data_dict["train"], data_dict["val"]
         # check data
         nc = int(data_dict["nc"])
@@ -426,6 +436,8 @@ class Trainer:
     def get_model(self, args, cfg, nc, device):
         model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
         weights = cfg.model.pretrained
+        # NOTE load weights
+        # TODO
         if weights:  # finetune if pretrained model is set
             if not os.path.exists(weights):
                 download_ckpt(weights)

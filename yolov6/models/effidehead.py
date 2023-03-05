@@ -30,12 +30,14 @@ class Detect(nn.Module):
         self.grid_cell_size = 5.0
 
         # Init decouple head
+        # TODO add angle
         self.stems = nn.ModuleList()
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
         self.cls_preds = nn.ModuleList()
         self.reg_preds = nn.ModuleList()
 
+        # TODO add angle layers
         # Efficient decoupled head layers
         for i in range(num_layers):
             idx = i*5
@@ -69,10 +71,12 @@ class Detect(nn.Module):
 
     def forward(self, x):
         if self.training:
+            # NOTE for training
             cls_score_list = []
             reg_distri_list = []
 
             for i in range(self.nl):
+                # TODO add angle layers
                 x[i] = self.stems[i](x[i])
                 cls_x = x[i]
                 reg_x = x[i]
@@ -90,6 +94,7 @@ class Detect(nn.Module):
 
             return x, cls_score_list, reg_distri_list
         else:
+            # NOTE for eval
             cls_score_list = []
             reg_dist_list = []
             anchor_points, stride_tensor = generate_anchors(
@@ -132,7 +137,9 @@ class Detect(nn.Module):
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
 
     chx = [6, 8, 10] if num_layers == 3 else [8, 9, 10, 11]
-
+    # TODO add angle layers
+    # TODO angle 输出写写死
+    # TODO angle 先直接用回归 看看loss降不降低
     head_layers = nn.Sequential(
         # stem0
         Conv(
