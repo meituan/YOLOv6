@@ -85,7 +85,7 @@ class Trainer:
             if self.main_process:
                 self.ema.ema.load_state_dict(self.ckpt["ema"].float().state_dict())
                 self.ema.updates = self.ckpt["updates"]
-        self.model = self.parallel_model(args, model, device)
+        self.model = self.parallel_model(args, model, device) # NOTE dp/ddp
         self.model.nc, self.model.names = self.data_dict["nc"], self.data_dict["names"]
 
         self.max_epoch = args.epochs
@@ -96,7 +96,7 @@ class Trainer:
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
-
+        # TODO change loss_num and info
         self.loss_num = 3
         self.loss_info = ["Epoch", "iou_loss", "dfl_loss", "cls_loss"]
         if self.args.distill:
@@ -137,7 +137,7 @@ class Trainer:
     def train_in_steps(self, epoch_num, step_num):
         # NOTE images and targets
         # TODO targets 位数+1
-        # NOTE Targets: [bs, Labels, 7] [class_id, x, y, w, h, angle, mix?] 相对大小?
+        # NOTE Targets: torch [num_labels_all_batchs, 7] [bs_id, class_id, x, y, w, h, angle] 相对值
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
@@ -437,7 +437,7 @@ class Trainer:
         model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
         weights = cfg.model.pretrained
         # NOTE load weights
-        # TODO
+        # TODO 预训练
         if weights:  # finetune if pretrained model is set
             if not os.path.exists(weights):
                 download_ckpt(weights)

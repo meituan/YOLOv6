@@ -67,7 +67,7 @@ class TrainValDataset(Dataset):
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
-        self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
+        self.img_paths, self.labels = self.get_imgs_labels(self.img_dir) # TODO, check this
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -93,7 +93,7 @@ class TrainValDataset(Dataset):
         # Mosaic Augmentation
         # TODO 去掉Mosaic
         if self.augment and random.random() < self.hyp["mosaic"]:
-            img, labels = jself.get_mosaic(index)
+            img, labels = self.get_mosaic(index) # NOTE get_mosaic 现在不可使用,还有问题
             shapes = None
 
             # MixUp augmentation
@@ -129,7 +129,7 @@ class TrainValDataset(Dataset):
             if labels.size:
                 w *= ratio
                 h *= ratio
-                # new boxes
+                # NOTE new boxes [class_id, x, y, w, h] 相对值 -> [class_id, x1, y1, x2, y2] 绝对值 怕数据增强溢出
                 # TODO angle
                 boxes = np.copy(labels[:, 1:])
                 boxes[:, 0] = (
@@ -160,10 +160,11 @@ class TrainValDataset(Dataset):
 
         if len(labels):
             h, w = img.shape[:2]
-
+            # NOTE labels array [[class_id, x1, y1, x2, y2]] 绝对值, resize后
             labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
             labels[:, [2, 4]] = labels[:, [2, 4]].clip(0, h - 1e-3)  # y1, y2
 
+            # NOTE labels array [[class_id, x, y, w, h]] 相对值, 回到之前
             # TODO add angle
             boxes = np.copy(labels[:, 1:])
             boxes[:, 0] = ((labels[:, 1] + labels[:, 3]) / 2) / w  # x center
@@ -228,10 +229,10 @@ class TrainValDataset(Dataset):
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         valid_img_record = osp.join(
             osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
-        )
+        ) # '/home/haohao/HRSC2016_new/images/.train.json'
         NUM_THREADS = min(8, os.cpu_count())
 
-        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
+        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True) # NOTE 查找所有 img_path
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
@@ -317,7 +318,7 @@ class TrainValDataset(Dataset):
             with Pool(NUM_THREADS) as pool:
                 pbar = pool.imap(
                     TrainValDataset.check_label_files, zip(img_paths, label_paths)
-                )
+                ) # NOTE 线程, check_label_files
                 pbar = tqdm(pbar, total=len(label_paths)) if self.main_process else pbar
                 for (
                     img_path,
@@ -381,7 +382,7 @@ class TrainValDataset(Dataset):
                 ]
             )
         )
-        self.img_info = img_info
+        self.img_info = img_info # {'img_path': {'shape':(); 'labels':[[]] }}
         LOGGER.info(
             f"{self.task}: Final numbers of valid images: {len(img_paths)}/ labels: {len(labels)}. "
         )
@@ -509,7 +510,7 @@ class TrainValDataset(Dataset):
                         x.split() for x in f.read().strip().splitlines() if len(x)
                     ]
                     labels = np.array(labels, dtype=np.float32)
-                # TODO
+                # TODO 上面读入数据, 下面check
                 if len(labels):
                     assert all(
                         len(l) == 5 for l in labels

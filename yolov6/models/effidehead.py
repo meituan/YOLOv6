@@ -16,7 +16,7 @@ class Detect(nn.Module):
         super().__init__()
         assert head_layers is not None
         self.nc = num_classes  # number of classes
-        self.no = num_classes + 5  # number of outputs per anchor
+        self.no = num_classes + 5  # number of outputs per anchor TODO change this
         self.nl = num_layers  # number of detection layers
         self.grid = [torch.zeros(1)] * num_layers
         self.prior_prob = 1e-2

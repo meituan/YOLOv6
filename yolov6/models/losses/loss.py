@@ -29,19 +29,19 @@ class ComputeLoss:
                      'dfl': 0.5}
                  ):
 
-        self.fpn_strides = fpn_strides
-        self.grid_cell_size = grid_cell_size
-        self.grid_cell_offset = grid_cell_offset
+        self.fpn_strides = fpn_strides # NOTE [8, 16, 32]
+        self.grid_cell_size = grid_cell_size # NOTE 5
+        self.grid_cell_offset = grid_cell_offset # NOTE 0.5
         self.num_classes = num_classes
         self.ori_img_size = ori_img_size
 
         self.warmup_epoch = warmup_epoch
-        self.warmup_assigner = ATSSAssigner(9, num_classes=self.num_classes)
-        self.formal_assigner = TaskAlignedAssigner(topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0)
+        self.warmup_assigner = ATSSAssigner(9, num_classes=self.num_classes) # NOTE ATSS
+        self.formal_assigner = TaskAlignedAssigner(topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0) # NOTE TAL
 
         self.use_dfl = use_dfl
         self.reg_max = reg_max
-        self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False)
+        self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False) # NOTE 投影矩阵 dfl 乘矩阵
         self.iou_type = iou_type
         self.varifocal_loss = VarifocalLoss().cuda()
         self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type).cuda()
@@ -64,21 +64,21 @@ class ComputeLoss:
         gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
-        # targets
+        # NOTE [x, y, w, h] 相对值 -> [x, y, x, y] 绝对值
         targets =self.preprocess(targets, batch_size, gt_bboxes_scale)
-        gt_labels = targets[:, :, :1]
+        gt_labels = targets[:, :, :1] # NOTE [bs, MAX_Num_labels_per_img, 1]
         gt_bboxes = targets[:, :, 1:] #xyxy
         # TODO add
         mask_gt = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
 
         # pboxes
         anchor_points_s = anchor_points / stride_tensor
-        pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri) #xyxy
+        pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri) # NOTE 相对值 xyxy [bs, 13125/8400, 4]
 
         try:
+            # TODO
             if epoch_num < self.warmup_epoch:
                 target_labels, target_bboxes, target_scores, fg_mask = \
-                    # TODO
                     self.warmup_assigner(
                         anchors,
                         n_anchors_list,
@@ -87,8 +87,8 @@ class ComputeLoss:
                         mask_gt,
                         pred_bboxes.detach() * stride_tensor)
             else:
-                target_labels, target_bboxes, target_scores, fg_mask = \
                     # TODO
+                target_labels, target_bboxes, target_scores, fg_mask = \
                     self.formal_assigner(
                         pred_scores.detach(),
                         pred_bboxes.detach() * stride_tensor,
@@ -149,7 +149,7 @@ class ComputeLoss:
         if step_num % 10 == 0:
             torch.cuda.empty_cache()
 
-        # rescale bbox
+        # NOTE rescale bbox 相对特征图的值
         target_bboxes /= stride_tensor
 
         # cls loss
@@ -177,6 +177,7 @@ class ComputeLoss:
                          (self.loss_weight['class'] * loss_cls).unsqueeze(0))).detach()
 
     def preprocess(self, targets, batch_size, scale_tensor):
+        # TODO change this 添加角度
         targets_list = np.zeros((batch_size, 1, 5)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):
             targets_list[int(item[0])].append(item[1:])

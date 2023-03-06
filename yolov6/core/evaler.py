@@ -136,10 +136,11 @@ class Evaler:
 
             # post-process
             t3 = time_sync()
+            # TODO change this
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
-
+            # NOTE self.do_pr_metric
             if self.do_pr_metric:
                 import copy
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])

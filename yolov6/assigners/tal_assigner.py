@@ -8,7 +8,7 @@ class TaskAlignedAssigner(nn.Module):
                  topk=13,
                  num_classes=80,
                  alpha=1.0,
-                 beta=6.0, 
+                 beta=6.0,
                  eps=1e-9):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk
@@ -55,7 +55,7 @@ class TaskAlignedAssigner(nn.Module):
         cycle, step, self.bs = (1, self.bs, self.bs) if self.n_max_boxes <= 100 else (self.bs, 1, 1)
         target_labels_lst, target_bboxes_lst, target_scores_lst, fg_mask_lst = [], [], [], []
         # loop batch dim in case of numerous object box
-        for i in range(cycle):
+        for i in range(cycle): # TODO change this
             start, end = i*step, (i+1)*step
             pd_scores_ = pd_scores[start:end, ...]
             pd_bboxes_ = pd_bboxes[start:end, ...]
