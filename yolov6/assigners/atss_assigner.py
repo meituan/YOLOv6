@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from yolov6.assigners.iou2d_calculator import iou2d_calculator
 from yolov6.assigners.assigner_utils import dist_calculator, select_candidates_in_gts, select_highest_overlaps, iou_calculator
-
 class ATSSAssigner(nn.Module):
     '''Adaptive Training Sample Selection Assigner'''
     def __init__(self,
@@ -20,8 +19,9 @@ class ATSSAssigner(nn.Module):
                 n_level_bboxes,
                 gt_labels,
                 gt_bboxes,
+                gt_obb,
                 mask_gt,
-                pd_bboxes):
+                pd_bboxes=None):
         r"""This code is based on
             https://github.com/fcjian/TOOD/blob/master/mmdet/core/bbox/assigners/atss_assigner.py
 
@@ -48,8 +48,6 @@ class ATSSAssigner(nn.Module):
                    torch.zeros([self.bs, self.n_anchors, 4]).to(device), \
                    torch.zeros([self.bs, self.n_anchors, self.num_classes]).to(device), \
                    torch.zeros([self.bs, self.n_anchors]).to(device)
-
-
         overlaps = iou2d_calculator(gt_bboxes.reshape([-1, 4]), anc_bboxes)
         overlaps = overlaps.reshape([self.bs, -1, self.n_anchors])
 
@@ -73,9 +71,9 @@ class ATSSAssigner(nn.Module):
         target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(
             mask_pos, overlaps, self.n_max_boxes)
 
-        # assigned target
+        # assigned target 接下俩进行样本的分配任务
         target_labels, target_bboxes, target_scores = self.get_targets(
-            gt_labels, gt_bboxes, target_gt_idx, fg_mask)
+            gt_labels, gt_obb, target_gt_idx, fg_mask)
 
         # soft label with iou
         if pd_bboxes is not None:
@@ -91,7 +89,9 @@ class ATSSAssigner(nn.Module):
                                mask_gt):
 
         mask_gt = mask_gt.repeat(1, 1, self.topk).bool()
+        # 重复最后一维度，将mask_gt 转换成[bs,max_len,9]
         level_distances = torch.split(distances, n_level_bboxes, dim=-1)
+        # 
         is_in_candidate_list = []
         candidate_idxs = []
         start_idx = 0
@@ -142,17 +142,20 @@ class ATSSAssigner(nn.Module):
                     fg_mask):
 
         # assigned target labels
+        # 分配样本
         batch_idx = torch.arange(self.bs, dtype=gt_labels.dtype, device=gt_labels.device)
         batch_idx = batch_idx[...,None]
+        # target_idx [bs, num_anchor] #所对应的正样本数的id
         target_gt_idx = (target_gt_idx + batch_idx * self.n_max_boxes).long()
         target_labels = gt_labels.flatten()[target_gt_idx.flatten()]
         target_labels = target_labels.reshape([self.bs, self.n_anchors])
+        # 拉回到对应的正Anchor的shape,同同时
         target_labels = torch.where(fg_mask > 0,
             target_labels, torch.full_like(target_labels, self.bg_idx))
 
         # assigned target boxes
-        target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx.flatten()]
-        target_bboxes = target_bboxes.reshape([self.bs, self.n_anchors, 4])
+        target_bboxes = gt_bboxes.reshape([-1, 5])[target_gt_idx.flatten()]
+        target_bboxes = target_bboxes.reshape([self.bs, self.n_anchors, 5])
 
         # assigned target scores
         target_scores = F.one_hot(target_labels.long(), self.num_classes + 1).float()
