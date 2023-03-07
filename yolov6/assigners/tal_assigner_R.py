@@ -22,9 +22,11 @@ class TaskAlignedAssigner(nn.Module):
     def forward(self,
                 pd_scores,
                 pd_bboxes,
+                pd_angles,
                 anc_points,
                 gt_labels,
                 gt_bboxes,
+                gt_angles,
                 mask_gt):
         """This code referenced to
            https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
@@ -49,18 +51,20 @@ class TaskAlignedAssigner(nn.Module):
             device = gt_bboxes.device
             return torch.full_like(pd_scores[..., 0], self.bg_idx).to(device), \
                    torch.zeros_like(pd_bboxes).to(device), \
+                   torch.zeros_like(pd_angles).to(device), \
                    torch.zeros_like(pd_scores).to(device), \
                    torch.zeros_like(pd_scores[..., 0]).to(device)
 
         cycle, step, self.bs = (1, self.bs, self.bs) if self.n_max_boxes <= 100 else (self.bs, 1, 1)
         target_labels_lst, target_bboxes_lst, target_scores_lst, fg_mask_lst = [], [], [], []
         # loop batch dim in case of numerous object box
-        for i in range(cycle): # TODO change this
+        for i in range(cycle):  # TODO change this
             start, end = i*step, (i+1)*step
             pd_scores_ = pd_scores[start:end, ...]
             pd_bboxes_ = pd_bboxes[start:end, ...]
             gt_labels_ = gt_labels[start:end, ...]
             gt_bboxes_ = gt_bboxes[start:end, ...]
+            gt_angles_ = gt_angles[start:end, ...]
             mask_gt_   = mask_gt[start:end, ...]
 
             mask_pos, align_metric, overlaps = self.get_pos_mask(
@@ -70,8 +74,8 @@ class TaskAlignedAssigner(nn.Module):
                 mask_pos, overlaps, self.n_max_boxes)
 
             # assigned target
-            target_labels, target_bboxes, target_scores = self.get_targets(
-                gt_labels_, gt_bboxes_, target_gt_idx, fg_mask)
+            target_labels, target_bboxes, target_angles, target_scores = self.get_targets(
+                gt_labels_, gt_bboxes_, gt_angles_, target_gt_idx, fg_mask)
 
             # normalize
             align_metric *= mask_pos
@@ -92,7 +96,7 @@ class TaskAlignedAssigner(nn.Module):
         target_scores = torch.cat(target_scores_lst, 0)
         fg_mask = torch.cat(fg_mask_lst, 0)
 
-        return target_labels, target_bboxes, target_scores, fg_mask.bool()
+        return target_labels, target_bboxes, target_angles, target_scores, fg_mask.bool()
 
     def get_pos_mask(self,
                      pd_scores,
@@ -152,6 +156,7 @@ class TaskAlignedAssigner(nn.Module):
     def get_targets(self,
                     gt_labels,
                     gt_bboxes,
+                    gt_angles,
                     target_gt_idx,
                     fg_mask):
 
@@ -170,4 +175,7 @@ class TaskAlignedAssigner(nn.Module):
         target_scores = torch.where(fg_scores_mask > 0, target_scores,
                                         torch.full_like(target_scores, 0))
 
-        return target_labels, target_bboxes, target_scores
+        # assigned angle boxes
+        target_angles = gt_angles.reshape([-1, 1])[target_gt_idx]
+
+        return target_labels, target_bboxes, target_angles, target_scores

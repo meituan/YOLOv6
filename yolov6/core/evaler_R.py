@@ -122,6 +122,8 @@ class Evaler:
 
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
 
+            # NOTE 暂时这么设置
+            targets = targets[.., :-1]
             # pre-process
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)

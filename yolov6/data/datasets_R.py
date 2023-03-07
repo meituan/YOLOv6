@@ -112,7 +112,7 @@ class TrainValDataset(Dataset):
                 img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
-            # TODO test
+            # TODO test, letterbox 应该不会影响angle的变化, 只有ratio
             shape = (
                 self.batch_shapes[self.batch_indices[index]]
                 if self.rect
@@ -129,8 +129,8 @@ class TrainValDataset(Dataset):
             if labels.size:
                 w *= ratio
                 h *= ratio
-                # NOTE new boxes [class_id, x, y, w, h] 相对值 -> [class_id, x1, y1, x2, y2] 绝对值 怕数据增强溢出
-                # TODO angle
+                # NOTE new boxes [class_id, x, y, w, h, angle] 相对值 -> [class_id, x1, y1, x2, y2, angle] 绝对值 怕数据增强溢出
+                # REVIEW 原代码不影响 agnle load
                 boxes = np.copy(labels[:, 1:])
                 boxes[:, 0] = (
                     w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
@@ -160,12 +160,12 @@ class TrainValDataset(Dataset):
 
         if len(labels):
             h, w = img.shape[:2]
-            # NOTE labels array [[class_id, x1, y1, x2, y2]] 绝对值, resize后
+            # NOTE labels array [[class_id, x1, y1, x2, y2, angle]] 绝对值, resize后
             labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
             labels[:, [2, 4]] = labels[:, [2, 4]].clip(0, h - 1e-3)  # y1, y2
 
-            # NOTE labels array [[class_id, x, y, w, h]] 相对值, 回到之前
-            # TODO add angle
+            # NOTE labels array [[class_id, x, y, w, h, angle]] 相对值, 回到之前
+            # REVIEW add angle 源代码不影响 angle 维度
             boxes = np.copy(labels[:, 1:])
             boxes[:, 0] = ((labels[:, 1] + labels[:, 3]) / 2) / w  # x center
             boxes[:, 1] = ((labels[:, 2] + labels[:, 4]) / 2) / h  # y center
@@ -176,7 +176,9 @@ class TrainValDataset(Dataset):
         if self.augment:
             img, labels = self.general_augment(img, labels)
 
-        labels_out = torch.zeros((len(labels), 6))
+        # NOTE labels_out [len(labels), bs_id, class_id, x, y, w, h, angle] 相对值
+        # NOTE 6 -> 7
+        labels_out = torch.zeros((len(labels), 7))
         if len(labels):
             labels_out[:, 1:] = torch.from_numpy(labels)
 
@@ -227,12 +229,13 @@ class TrainValDataset(Dataset):
     def get_imgs_labels(self, img_dir):
 
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
+        # '/home/haohao/HRSC2016_new/images/.train.json'
         valid_img_record = osp.join(
             osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
-        ) # '/home/haohao/HRSC2016_new/images/.train.json'
+        )
         NUM_THREADS = min(8, os.cpu_count())
 
-        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True) # NOTE 查找所有 img_path
+        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)  # NOTE 查找所有 img_path
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
@@ -318,7 +321,7 @@ class TrainValDataset(Dataset):
             with Pool(NUM_THREADS) as pool:
                 pbar = pool.imap(
                     TrainValDataset.check_label_files, zip(img_paths, label_paths)
-                ) # NOTE 线程, check_label_files
+                )  # NOTE 线程, check_label_files
                 pbar = tqdm(pbar, total=len(label_paths)) if self.main_process else pbar
                 for (
                     img_path,
@@ -368,7 +371,7 @@ class TrainValDataset(Dataset):
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
                 )
-# TODO 添加angle
+        # REVIEW 添加angle
         img_paths, labels = list(
             zip(
                 *[
@@ -376,7 +379,7 @@ class TrainValDataset(Dataset):
                         img_path,
                         np.array(info["labels"], dtype=np.float32)
                         if info["labels"]
-                        else np.zeros((0, 5), dtype=np.float32),
+                        else np.zeros((0, 6), dtype=np.float32), # NOTE 5 -> 6
                     )
                     for img_path, info in img_info.items()
                 ]
@@ -510,16 +513,16 @@ class TrainValDataset(Dataset):
                         x.split() for x in f.read().strip().splitlines() if len(x)
                     ]
                     labels = np.array(labels, dtype=np.float32)
-                # TODO 上面读入数据, 下面check
+                # REVIEW 上面读入数据, 下面check
                 if len(labels):
                     assert all(
-                        len(l) == 5 for l in labels
+                        len(l) == 6 for l in labels
                     ), f"{lb_path}: wrong label format."
                     assert (
                         labels >= 0
                     ).all(), f"{lb_path}: Label values error: all values in label file must > 0"
                     assert (
-                        labels[:, 1:] <= 1
+                        labels[:, 1:5] <= 1
                     ).all(), f"{lb_path}: Label values error: all coordinates must be normalized"
 
                     _, indices = np.unique(labels, axis=0, return_index=True)
@@ -542,7 +545,7 @@ class TrainValDataset(Dataset):
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
-        # NOTE 修改pycoco这块
+        # TODO: for pycocotools
         # for evaluation with pycocotools
         dataset = {"categories": [], "annotations": [], "images": []}
         for i, class_name in enumerate(class_names):

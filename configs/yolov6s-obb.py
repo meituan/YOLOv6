@@ -23,10 +23,13 @@ model = dict(
         out_indices=[17, 20, 23],
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
+        # NOTE 可以选择, 包括 giou/ciou/siou
         iou_type="giou",
         use_dfl=False,  # set to True if you want to further train with distillation
         reg_max=0,  # set to 16 if you want to further train with distillation
         distill_weight={"class": 1.0, "dfl": 1.0, },
+        angle_max=1,
+        angle_fitting_methods='regression',
     ),
 )
 
@@ -47,13 +50,15 @@ data_aug = dict(
     hsv_s=0.7,
     hsv_v=0.4,
     degrees=0.0,
-    # NOTE translate 可能有bug
+    # NOTE translate 可能对obb有bug
     # translate=0.1,
     translate=0.0,
     scale=0.5,
     shear=0.0,
     flipud=0.0,
     fliplr=0.5,
-    mosaic=1.0,
+    # NOTE mosaic 对obb有bug
+    mosaic=0.0,
+    # NOTE 可以增加 for obb
     mixup=0.0,
 )

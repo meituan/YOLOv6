@@ -112,7 +112,7 @@ class TrainValDataset(Dataset):
                 img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
-            # TODO test
+            # REVIEW resize 不会影响
             shape = (
                 self.batch_shapes[self.batch_indices[index]]
                 if self.rect
@@ -365,10 +365,11 @@ class TrainValDataset(Dataset):
                 save_path = osp.join(
                     save_dir, "instances_" + osp.basename(img_dir) + ".json"
                 )
+                # NOTE for val datasets
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
                 )
-# TODO 添加angle
+        # TODO 添加angle
         img_paths, labels = list(
             zip(
                 *[

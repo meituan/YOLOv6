@@ -17,10 +17,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
 import tools.eval as eval
-from yolov6.data.data_load import create_dataloader
-from yolov6.models.yolo import build_model
+from yolov6.data.data_load_R import create_dataloader
+from yolov6.models.yolo_R import build_model
 
-from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
+from yolov6.models.losses.loss_R import ComputeLoss as ComputeLoss
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
@@ -30,7 +30,7 @@ from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
-from yolov6.utils.nms import xywh2xyxy
+from yolov6.utils.nms_R import xywh2xyxy
 from yolov6.utils.general import download_ckpt
 
 
@@ -49,7 +49,6 @@ class Trainer:
         self.main_process = self.rank in [-1, 0]
         self.save_dir = args.save_dir
         # get data loader
-        # TODO change this
         self.data_dict = load_yaml(args.data_path)
         self.num_classes = self.data_dict["nc"]
         # NOTE data loader
@@ -96,9 +95,9 @@ class Trainer:
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
-        # TODO change loss_num and info
-        self.loss_num = 3
-        self.loss_info = ["Epoch", "iou_loss", "dfl_loss", "cls_loss"]
+        # REVIEW loss_num and info
+        self.loss_num = 4
+        self.loss_info = ["Epoch", "iou_loss", "dfl_loss", "cls_loss", "ang_loss"]
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ["cwd_loss"]
@@ -136,7 +135,6 @@ class Trainer:
     # Training loop for batchdata
     def train_in_steps(self, epoch_num, step_num):
         # NOTE images and targets
-        # TODO targets 位数+1
         # NOTE Targets: torch [num_labels_all_batchs, 7] [bs_id, class_id, x, y, w, h, angle] 相对值
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
@@ -253,8 +251,8 @@ class Trainer:
                 not_infer_on_rect=get_cfg_value(self.cfg.eval_params, "not_infer_on_rect", False),
                 scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact", False),
                 verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
-                do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
-                do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
+                do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", False),
+                do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", True),
                 plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
                 plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
             )
@@ -279,7 +277,7 @@ class Trainer:
         self.evaluate_results = (0, 0)  # AP50, AP50_95
 
         # NOTE Loss 计算
-        # TODO
+        # REVIEW
         self.compute_loss = ComputeLoss(
             num_classes=self.data_dict["nc"],
             ori_img_size=self.img_size,
@@ -288,6 +286,8 @@ class Trainer:
             reg_max=self.cfg.model.head.reg_max,
             iou_type=self.cfg.model.head.iou_type,
             fpn_strides=self.cfg.model.head.strides,
+            angle_max=self.cfg.model.head.angle_max,
+            angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
         )
 
         if self.args.fuse_ab:
@@ -382,7 +382,7 @@ class Trainer:
 
     @staticmethod
     def get_data_loader(args, cfg, data_dict):
-        # TODO
+        # REVIEW
         train_path, val_path = data_dict["train"], data_dict["val"]
         # check data
         nc = int(data_dict["nc"])
