@@ -4,7 +4,7 @@
 
 > 分成五个部分进行分别改造，
 > 
->- 数据处理 
+>- 数据处理  :heavy_check_mark: Add RandomCrop RandomFlip 
 > 
 >- 模型  :heavy_check_mark: update reg_dfl and angle_dfl
 > - 分配
@@ -30,7 +30,7 @@
 
 **重点关注train eval部分**
 
-- [ ] head头部分的定义，包含head_layers，和最终的detect部分，detect部分包含train和eval两种，需要仔细改动并加以考虑
+- [ ] head头部分的定义，包含head_layers，和最终的detect部分，detect部分包含train和eval两种，需要仔细改动并加以考虑 :heavy_check_mark:
 - [ ] 额外的蒸馏和fuse_ab部分
 
 ### 分配
@@ -47,7 +47,7 @@
 - [ ] Angle loss的实现，包含回归，分类，dfl三种形式，先实现简单的
   - [ ] 回归
   - [ ] 分类
-  - [ ] dfl
+  - [ ] dfl :heavy_check_mark:
 - [ ] loss计算过程中的维度变化
 
 ### pr计算
