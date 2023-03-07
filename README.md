@@ -4,11 +4,11 @@
 
 > 分成五个部分进行分别改造，
 > 
->- 数据处理
+>- 数据处理 
 > 
->- 模型
+>- 模型  :heavy_check_mark: update reg_dfl and angle_dfl
 > - 分配
-> - loss
+> - loss :heavy_check_mark: update yolo-obb loss version
 > - pr_metric 
 
 **角度部分维度变化比较多**，*维度可能得先考虑不要写死，写成活的，方便传参，和后面修改*
@@ -37,7 +37,7 @@
 
 **分配部分主要关注TAL，这个部分考虑先仅改动hbb部分的维匹配，后面再引入角度**
 
-- [ ] TAL部分
+- [ ] TAL部分 
 - [ ] 后续考虑引入角度
 
 ### Loss
