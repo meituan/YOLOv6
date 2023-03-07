@@ -4,7 +4,7 @@
 
 > 分成五个部分进行分别改造，
 > 
->- 数据处理 
+>- 数据处理  :heavy_check_mark: Add RandomCrop RandomFlip 
 > 
 >- 模型  :heavy_check_mark: update reg_dfl and angle_dfl
 > - 分配
