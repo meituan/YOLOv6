@@ -16,7 +16,7 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
-import tools.eval as eval
+import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
 from yolov6.models.yolo_R import build_model
 

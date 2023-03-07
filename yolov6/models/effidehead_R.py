@@ -193,7 +193,7 @@ class Detect(nn.Module):
             return torch.cat(
                 [
                     pred_bboxes,
-                    # angle_fitting_list,
+                    angle_fitting_list,
                     torch.ones((b, pred_bboxes.shape[1], 1), device=pred_bboxes.device, dtype=pred_bboxes.dtype),
                     cls_score_list,
                 ],

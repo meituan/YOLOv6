@@ -13,7 +13,7 @@ from pycocotools.cocoeval import COCOeval
 
 from yolov6.data.data_load import create_dataloader
 from yolov6.utils.events import LOGGER, NCOLS
-from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.nms_R import non_max_suppression, non_max_suppression_obb
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
@@ -42,7 +42,9 @@ class Evaler:
                  do_coco_metric=True,
                  do_pr_metric=False,
                  plot_curve=True,
-                 plot_confusion_matrix=False
+                 plot_confusion_matrix=False,
+                 angle_max=180,
+                 angle_fitting_methods='regression'
                  ):
         assert do_pr_metric or do_coco_metric, 'ERROR: at least set one val metric'
         self.data = data
@@ -63,6 +65,8 @@ class Evaler:
         self.do_pr_metric = do_pr_metric
         self.plot_curve = plot_curve
         self.plot_confusion_matrix = plot_confusion_matrix
+        self.angle_max=angle_max
+        self.angle_fitting_methods=angle_fitting_methods
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -117,13 +121,14 @@ class Evaler:
             iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
             niou = iouv.numel()
             if self.plot_confusion_matrix:
-                from yolov6.utils.metrics import ConfusionMatrix
+                # from yolov6.utils.metrics import ConfusionMatrix
+                from yolov6.utils.metrics_R import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
 
             # NOTE 暂时这么设置
-            targets = targets[.., :-1]
+            # targets = targets[..., :-1]
             # pre-process
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
@@ -133,6 +138,7 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
+            # NOTE [BS, x, y, w, h, angle, conf, classes ] angle转化完, 绝对值
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 
@@ -140,6 +146,8 @@ class Evaler:
             t3 = time_sync()
             # TODO change this
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            # outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
             # NOTE self.do_pr_metric
@@ -181,7 +189,7 @@ class Evaler:
                 correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
                 if nl:
 
-                    from yolov6.utils.nms import xywh2xyxy
+                    from yolov6.utils.nms_R import xywh2xyxy
 
                     # target boxes
                     tbox = xywh2xyxy(labels[:, 1:5])
@@ -192,14 +200,14 @@ class Evaler:
 
                     labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
 
-                    from yolov6.utils.metrics import process_batch
-
+                    from yolov6.utils.metrics_R import process_batch
                     correct = process_batch(predn, labelsn, iouv)
+
                     if self.plot_confusion_matrix:
                         confusion_matrix.process_batch(predn, labelsn)
 
                 # Append statistics (correct, conf, pcls, tcls)
-                stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+                stats.append((correct.cpu(), pred[:, 5].cpu(), pred[:, 6].cpu(), tcls))
 
         if self.do_pr_metric:
             # Compute statistics
