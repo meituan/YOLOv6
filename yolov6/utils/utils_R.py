@@ -4,7 +4,7 @@ import math
 import cv2
 import numpy as np
 import torch
-
+import mmcv.ops.box_iou_rotated as rotate_iou
 
 def bbox_flip(bboxes, img_shape, direction='horizontal'):
     """Flip bboxes horizontally or vertically.
@@ -808,3 +808,100 @@ def dist_torch(point1, point2):
     return torch.norm(point1 - point2, dim=-1)
 
 
+
+def check_points_in_polys(points, polys):
+    """Check whether point is in rotated boxes
+    Args:
+        points (tensor): (1, L, 2) anchor points
+        polys (tensor): [B, N, 4, 2] gt_polys
+        eps (float): default 1e-9
+    Returns:
+        is_in_polys (tensor): (B, N, L)
+    """
+    # [1, L, 2] -> [1, 1, L, 2]
+    points = points.unsqueeze(0)
+    # [B, N, 4, 2] -> [B, N, 1, 2]
+    a, b, c, d = polys.split(4, axis=2)
+    ab = b - a
+    ad = d - a
+    # [B, N, L, 2]
+    ap = points - a
+    # [B, N, 1]
+    norm_ab = torch.sum(ab * ab, axis=-1)
+    # [B, N, 1]
+    norm_ad = torch.sum(ad * ad, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ab = torch.sum(ap * ab, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ad = torch.sum(ap * ad, axis=-1)
+    # [B, N, L] <A, B> = |A|*|B|*cos(theta)
+    is_in_polys = (
+        (ap_dot_ab >= 0)
+        & (ap_dot_ab <= norm_ab)
+        & (ap_dot_ad >= 0)
+        & (ap_dot_ad <= norm_ad)
+    )
+    return is_in_polys
+
+
+def check_points_in_polys(points, polys):
+    """Check whether point is in rotated boxes
+    Args:
+        points (tensor): (1, L, 2) anchor points
+        polys (tensor): [B, N, 4, 2] gt_polys
+        eps (float): default 1e-9
+    Returns:
+        is_in_polys (tensor): (B, N, L)
+    """
+    # [1, L, 2] -> [1, 1, L, 2]
+    points = points.unsqueeze(0)
+    # [B, N, 4, 2] -> [B, N, 1, 2]
+    a, b, c, d = torch.split(points,[1,1,1,1],axis=2)
+    ab = b - a
+    ad = d - a
+    # [B, N, L, 2]
+    ap = points - a
+    # [B, N, 1]
+    norm_ab = torch.sum(ab * ab, axis=-1)
+    # [B, N, 1]
+    norm_ad = torch.sum(ad * ad, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ab = torch.sum(ap * ab, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ad = torch.sum(ap * ad, axis=-1)
+    # [B, N, L] <A, B> = |A|*|B|*cos(theta)
+    is_in_polys = (
+        (ap_dot_ab >= 0)
+        & (ap_dot_ab <= norm_ab)
+        & (ap_dot_ad >= 0)
+        & (ap_dot_ad <= norm_ad)
+    )
+    return is_in_polys
+
+
+def check_points_in_rotated_boxes(points, boxes):
+    """Check whether point is in rotated boxes
+    Args:
+        points (tensor): (1, L, 2) anchor points
+        boxes (tensor): [B, N, 5] gt_bboxes
+        eps (float): default 1e-9
+
+    Returns:
+        is_in_box (tensor): (B, N, L)
+    """
+    # [B, N, 5] -> [B, N, 4, 2]
+    polys = obb2poly(boxes,version='oc')
+    return check_points_in_polys(points, polys)
+
+def rotated_iou_similarity(box1,box2):
+    """Calculate rotate iou of box1 and box2
+    Args:
+        box1 (Tensor): box with the shape [N,M1,5] 
+        box2 (Tensor): box with the shape [N,M2,5]
+    Return:
+        iou (Tensor): box between box1 and box2 with shape [N,M1,M2]
+    """
+    rotated_ious = []
+    for b1, b2 in zip(box1, box2):
+        rotated_ious.append(rotate_iou(b1, b2))
+    return torch.stack(rotated_ious,axis=0)
