@@ -30,7 +30,7 @@ from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
-from yolov6.utils.nms_R import xywh2xyxy
+from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
 from yolov6.utils.general import download_ckpt
 
 
@@ -84,7 +84,7 @@ class Trainer:
             if self.main_process:
                 self.ema.ema.load_state_dict(self.ckpt["ema"].float().state_dict())
                 self.ema.updates = self.ckpt["updates"]
-        self.model = self.parallel_model(args, model, device) # NOTE dp/ddp
+        self.model = self.parallel_model(args, model, device)  # NOTE dp/ddp
         self.model.nc, self.model.names = self.data_dict["nc"], self.data_dict["names"]
 
         self.max_epoch = args.epochs
@@ -175,7 +175,11 @@ class Trainer:
     def eval_and_save(self):
         remaining_epochs = self.max_epoch - self.epoch
         eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
-        is_val_epoch = (not self.args.eval_final_only or (remaining_epochs == 1)) and (self.epoch % eval_interval == 0)
+        is_val_epoch = (
+            (not self.args.eval_final_only or (remaining_epochs == 1))
+            and (self.epoch % eval_interval == 0)
+            and (self.epoch != 0)
+        )
         if self.main_process:
             self.ema.update_attr(self.model, include=["nc", "names", "stride"])  # update attributes for ema model
             if is_val_epoch:
@@ -502,6 +506,7 @@ class Trainer:
         return lr_scheduler, lf
 
     def plot_train_batch(self, images, targets, max_size=1920, max_subplots=16):
+        # TODO test
         # Plot train_batch with labels
         if isinstance(images, torch.Tensor):
             images = images.cpu().float().numpy()
@@ -542,8 +547,9 @@ class Trainer:
             if len(targets) > 0:
                 ti = targets[targets[:, 0] == i]  # image targets
                 boxes = xywh2xyxy(ti[:, 2:6]).T
+                angles = ti[:, 6:7]
                 classes = ti[:, 1].astype("int")
-                labels = ti.shape[1] == 6  # labels if no conf column
+                labels = ti.shape[1] == 7  # labels if no conf column
                 if boxes.shape[1]:
                     if boxes.max() <= 1.01:  # if normalized with tolerance 0.01
                         boxes[[0, 2]] *= w  # scale to pixels
@@ -552,21 +558,30 @@ class Trainer:
                         boxes *= scale
                 boxes[[0, 2]] += x
                 boxes[[1, 3]] += y
-                for j, box in enumerate(boxes.T.tolist()):
+                boxes_xywh = xyxy2xywh(boxes.T)
+                for j, (box, angle, box_xy) in enumerate(zip(boxes_xywh.tolist(), angles.tolist(), boxes.T.tolist())):
                     box = [int(k) for k in box]
                     cls = classes[j]
                     color = tuple([int(x) for x in self.color[cls]])
                     cls = self.data_dict["names"][cls] if self.data_dict["names"] else cls
                     if labels:
                         label = f"{cls}"
-                        cv2.rectangle(mosaic, (box[0], box[1]), (box[2], box[3]), color, thickness=1)
+                        # import ipdb
+                        # ipdb.set_trace()
+                        rect = ((box[0], box[1]), (box[2], box[3]), int(angle[0]))
+                        poly = cv2.boxPoints(rect)
+                        poly = np.int0(poly)
+                        cv2.drawContours(
+                            mosaic, contours=[poly], contourIdx=-1, color=color, thickness=1, lineType=cv2.LINE_AA
+                        )
                         cv2.putText(
-                            mosaic, label, (box[0], box[1] - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=1
+                            mosaic, label, (int(box_xy[0]), int(box_xy[1]) - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=1
                         )
         self.vis_train_batch = mosaic.copy()
 
     def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=5):
         # plot validation predictions
+        # TODO test
         self.vis_imgs_list = []
         for (vis_output, vis_path) in zip(vis_outputs, vis_paths):
             vis_output_array = vis_output.cpu().numpy()  # xyxy
@@ -576,13 +591,24 @@ class Trainer:
                 y_tl = int(vis_bbox[1])
                 x_br = int(vis_bbox[2])
                 y_br = int(vis_bbox[3])
-                box_score = vis_bbox[4]
-                cls_id = int(vis_bbox[5])
+                angle = int(vis_bbox[4])
+                box_score = vis_bbox[5]
+                cls_id = int(vis_bbox[6])
                 # draw top n bbox
                 if box_score < vis_conf or bbox_idx > vis_max_box_num:
                     break
-                cv2.rectangle(
-                    ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]), thickness=1
+                # cv2.rectangle(
+                #     ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]), thickness=1
+                # )
+                cx = int((vis_bbox[0] + vis_bbox[2]) / 2)
+                cy = int((vis_bbox[1] + vis_bbox[3]) / 2)
+                w = int(vis_bbox[2] - vis_bbox[0])
+                h = int(vis_bbox[3] - vis_bbox[1])
+                rect = ((cx, cy), (w, h), angle)
+                poly = cv2.boxPoints(rect)
+                poly = np.int0(poly)
+                cv2.drawContours(
+                    ori_img, contours=[poly], contourIdx=-1, color=tuple([int(x) for x in self.color[cls_id]]), thickness=1, lineType=cv2.LINE_AA
                 )
                 cv2.putText(
                     ori_img,
