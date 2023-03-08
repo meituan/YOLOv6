@@ -286,6 +286,7 @@ class Trainer:
             reg_max=self.cfg.model.head.reg_max,
             iou_type=self.cfg.model.head.iou_type,
             fpn_strides=self.cfg.model.head.strides,
+            loss_weight=self.cfg.loss.loss_weight,
             angle_max=self.cfg.model.head.angle_max,
             angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
         )

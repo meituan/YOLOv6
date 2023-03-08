@@ -177,6 +177,7 @@ class Detect(nn.Module):
                     # NOTE sigmoid / softmax
                     # [b, C, h, w]
                     angle_output = torch.sigmoid(angle_output)
+                    # angle_output = torch.softmax(angle_output)
                     angle_output = torch.argmax(angle_output, dim=1, keepdim=True)
                 elif self.angle_fitting_methods == 'MGAR':
                     # TODO MGAR

@@ -229,26 +229,22 @@ class VarifocalLoss(nn.Module):
 
         return loss
 
-def gaussian_label(label: int, num_class: int, u=0, sig=6.0):
-    """
-    转换成CSL Labels:
-        用高斯窗口函数根据角度θ的周期性赋予gt labels同样的周期性，使得损失函数在计算边界处时可以做到“差值很大但loss很小”；
-        并且使得其labels具有环形特征，能够反映各个θ之间的角度距离
-    @param label: 当前box的θ类别  shape(1)
-    @param num_class: θ类别数量=180
-    @param u: 高斯函数中的μk
-    @param sig: 高斯函数中的σ
-    @return: 高斯离散数组:将高斯函数的最高值设置在θ所在的位置，例如label为45，则将高斯分布数列向右移动直至x轴为45时，取值为1 shape(180)
-    """
-    # floor()返回数字的下舍整数   ceil() 函数返回数字的上入整数  range(-90,90)
-    # 以num_class=180为例，生成从-90到89的数字整形list  shape(180)
-    x = np.array(range(math.floor(-num_class / 2), math.ceil(num_class / 2), 1))
-    y_sig = np.exp(-((x - u) ** 2) / (2 * sig ** 2))  # shape(180) 为-90到89的经高斯公式计算后的数值
-    # 将高斯函数的最高值设置在θ所在的位置，例如label为45，则将高斯分布数列向右移动直至x轴为45时，取值为1
-    return np.concatenate(
-        [y_sig[math.ceil(num_class / 2) - label :], y_sig[: math.ceil(num_class / 2) - label]],
-        axis=0,
-    )
+
+def gaussian_label(target_angles: torch.Tensor, angle_max: int, u=0, sig=6.0):
+    # NOTE target_angles [nums_label, 1]
+    # NOTE gaussian angles [nums_label, angle_max]
+    smooth_label = torch.zeros_like(target_angles).repeat(1, angle_max).to(device=target_angles.device).type_as(target_angles)
+    target_angles_long = target_angles.long()
+
+    base_radius_range = torch.arange(-angle_max // 2, angle_max // 2, device=target_angles.device)
+    radius_range = (base_radius_range + target_angles_long) % angle_max
+    smooth_value = torch.exp(-torch.pow(base_radius_range, 2) / (2 * sig ** 2))
+
+    if isinstance(smooth_value, torch.Tensor):
+        smooth_value = smooth_value.unsqueeze(0).repeat(smooth_label.size(0), 1).type_as(target_angles)
+
+    return smooth_label.scatter(1, radius_range, smooth_value)
+
 
 class AngleLoss(nn.Module):
     def __init__(self, angle_max, angle_fitting_methods):
@@ -268,16 +264,16 @@ class AngleLoss(nn.Module):
             target_angle_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 1])
             pred_angle_pos = torch.masked_select(pred_angles, angle_mask).reshape([-1, self.angle_max])
             target_angle_pos = torch.masked_select(target_angles, target_angle_mask).reshape([-1, 1])
+            # NOTE 需不需要乘这个
             angle_weight = torch.masked_select(target_scores.sum(-1), fg_mask).unsqueeze(-1)
 
             if self.angle_fitting_methods == 'regression':
                 loss_angle = F.smooth_l1_loss(pred_angle_pos, target_angle_pos, reduction='none') * angle_weight
 
             elif self.angle_fitting_methods == 'csl':
-                # TODO
-                pass
-                # one_hot_label =
-                # loss_angle = self.bce(pred_angle_pos, one_hot_label)
+                csl_gaussian_target_angle_pos = gaussian_label(target_angle_pos, self.angle_max)
+                loss_angle = self.bce(pred_angle_pos, csl_gaussian_target_angle_pos) * angle_weight
+
             # dfl loss
             elif self.angle_fitting_methods == 'dfl':
                 target_angle_pos = target_angle_pos / ( 180.0 / (self.angle_max - 1))

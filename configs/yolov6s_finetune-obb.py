@@ -25,10 +25,27 @@ model = dict(
         iou_type="giou",
         use_dfl=False,  # set to True if you want to further train with distillation
         reg_max=0,  # set to 16 if you want to further train with distillation
-        distill_weight={"class": 1.0, "dfl": 1.0,},
-        angle_max=1,
-        angle_fitting_methods='regression',
+        distill_weight={"class": 1.0, "dfl": 1.0, },
+        # NOTE for angle regression
+        # angle_fitting_methods='regression',
+        # angle_max=1,
+        # NOTE for angle csl
+        angle_fitting_methods='csl',
+        angle_max=180,
+        # NOTE for angle dfl
+        # angle_fitting_methods='dfl',
+        # angle_max=180,
+        # NOTE for angle MGAR
+        # angle_fitting_methods='MGAR',
+        # angle_max=5,
     ),
+)
+
+loss = dict(
+    # NOTE for angle regression
+    # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
+    # NOTE for angle classification
+    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
 )
 
 solver = dict(
