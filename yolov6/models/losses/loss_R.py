@@ -285,7 +285,7 @@ class AngleLoss(nn.Module):
                 loss_angle = loss_angle.sum() / target_scores_sum
 
         else:
-            loss_angle = pred_dist.sum() * 0.0
+            loss_angle = pred_angles.sum() * 0.0
 
 
         return loss_angle
