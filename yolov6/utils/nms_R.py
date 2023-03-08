@@ -132,6 +132,7 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
     """
 
     # NOTE [N, x, y, w, h, angle, conf, classes]
+    # NOTE [N, 0, 1, 2, 3, 4,      5,      6:]
     num_classes = prediction.shape[2] - 6  # number of classes
     pred_candidates = torch.logical_and(prediction[..., 5] > conf_thres, torch.max(prediction[..., 6:], axis=-1)[0] > conf_thres)  # candidates
     # Check the parameters.
@@ -141,7 +142,7 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
     # Function settings.
     max_wh = 4096  # maximum box width and height
     max_nms = 30000  # maximum number of boxes put into torchvision.ops.nms()
-    time_limit = 10.0  # quit the function when nms cost time exceed the limit time.
+    time_limit = 100.0  # quit the function when nms cost time exceed the limit time.
     multi_label &= num_classes > 1  # multiple labels per box
 
     tik = time.time()
@@ -158,14 +159,15 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
 
         # (center x, center y, width, height) to (x1, y1, x2, y2)
         box = xywh2xyxy(x[:, :4])
+        angle = x[:, 4:5].clone()
 
         # Detections matrix's shape is  (n,6), each row represents (xyxy, conf, cls)
         if multi_label:
             box_idx, class_idx = (x[:, 6:] > conf_thres).nonzero(as_tuple=False).T
-            x = torch.cat((box[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1)
+            x = torch.cat((box[box_idx], angle[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1)
         else:  # Only keep the class with highest scores.
             conf, class_idx = x[:, 6:].max(1, keepdim=True)
-            x = torch.cat((box, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
+            x = torch.cat((box, angle, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class, only keep boxes whose category is in classes.
         if classes is not None:

@@ -123,6 +123,9 @@ class Detect(nn.Module):
                 angle_feat = self.angle_convs[i](angle_x)
                 angle_output = self.angle_preds[i](angle_feat)
 
+                if self.angle_fitting_methods == 'regression':
+                    angle_output = angle_output ** 2
+
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
@@ -165,7 +168,9 @@ class Detect(nn.Module):
                     reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
                     reg_output = self.proj_conv(F.softmax(reg_output, dim=1))
 
-                if self.angle_fitting_methods == "dfl":
+                if self.angle_fitting_methods == 'regression':
+                    angle_output = angle_output ** 2
+                elif self.angle_fitting_methods == "dfl":
                     angle_output = angle_output.reshape([-1, 1, self.angle_max + 1, l]).permute(0, 2, 1, 3)
                     angle_output = self.proj_angle_conv(F.softmax(angle_output, dim=1))
                 elif self.angle_fitting_methods == 'csl':

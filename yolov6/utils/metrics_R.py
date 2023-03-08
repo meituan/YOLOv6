@@ -159,6 +159,7 @@ def process_batch(detections, labels, iouv):
     correct = np.zeros((detections.shape[0], iouv.shape[0])).astype(bool)
     # iou = general.box_iou(labels[:, 1:], detections[:, :4])
     iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
+    iou = torch.from_numpy(iou)
     correct_class = labels[:, 0:1] == detections[:, 6]
     for i in range(len(iouv)):
         x = torch.where((iou >= iouv[i]) & correct_class)  # IoU > threshold and classes match

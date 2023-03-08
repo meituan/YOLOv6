@@ -25,7 +25,7 @@ from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
 
-from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg
+from yolov6.utils.events_R import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler

@@ -145,8 +145,8 @@ class Evaler:
             # post-process
             t3 = time_sync()
             # TODO change this
-            outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
-            # outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            # outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
 
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
@@ -193,12 +193,13 @@ class Evaler:
 
                     # target boxes
                     tbox = xywh2xyxy(labels[:, 1:5])
+                    angle = labels[:, -1:].clone()
                     tbox[:, [0, 2]] *= imgs[si].shape[1:][1]
                     tbox[:, [1, 3]] *= imgs[si].shape[1:][0]
 
                     self.scale_coords(imgs[si].shape[1:], tbox, shapes[si][0], shapes[si][1])  # native-space labels
 
-                    labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
+                    labelsn = torch.cat((labels[:, 0:1], tbox, angle), 1)  # native-space labels
 
                     from yolov6.utils.metrics_R import process_batch
                     correct = process_batch(predn, labelsn, iouv)

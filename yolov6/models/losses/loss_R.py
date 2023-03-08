@@ -174,7 +174,7 @@ class ComputeLoss:
         )
 
         # angle loss
-        loss_angle = self.angle_loss(pred_angles, target_angles, target_scores, target_scores_sum, fg_mask) * 0
+        loss_angle = self.angle_loss(pred_angles, target_angles, target_scores, target_scores_sum, fg_mask)
 
         loss = (
             self.loss_weight["class"] * loss_cls
