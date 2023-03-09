@@ -111,7 +111,6 @@ class Detect(nn.Module):
             reg_distri_list = []
             angle_fitting_list = []
             for i in range(self.nl):
-                # TODO add angle layers
                 x[i] = self.stems[i](x[i])
                 cls_x = x[i]
                 reg_x = x[i]

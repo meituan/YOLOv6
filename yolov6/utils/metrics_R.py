@@ -231,7 +231,10 @@ class ConfusionMatrix:
         gt_classes = labels[:, 0].int()
         detection_classes = detections[:, 6].int()
         # TODO FIXME
-        iou = general.box_iou(labels[:, 1:], detections[:, :4])
+        # iou = general.box_iou(labels[:, 1:], detections[:, :4])
+
+        iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
+        iou = torch.from_numpy(iou)
 
         x = torch.where(iou > self.iou_thres)
         if x[0].shape[0]:
@@ -278,6 +281,7 @@ class ConfusionMatrix:
             nc, nn = self.nc, len(names)  # number of classes, names
             sn.set(font_scale=1.0 if nc < 50 else 0.8)  # for label size
             labels = (0 < nn < 99) and (nn == nc)  # apply names to ticklabels
+            import warnings
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")  # suppress empty matrix RuntimeWarning: All-NaN slice encountered
                 sn.heatmap(

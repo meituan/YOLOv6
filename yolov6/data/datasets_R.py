@@ -72,7 +72,6 @@ class TrainValDataset(Dataset):
         self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)  # TODO, check this
 
-        # REVIEW
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -95,12 +94,10 @@ class TrainValDataset(Dataset):
         During validation, letterbox augment is applied.
         """
         # Mosaic Augmentation
-        # TODO mosaic_obb test
         if self.augment and random.random() < self.hyp["mosaic"]:
             img, labels = self.get_mosaic_obb(index)  # NOTE get_mosaic_obb 现在不可使用,还有问题
             shapes = None
             # MixUp augmentation
-            # TODO mixup 放到后面
             if random.random() < self.hyp["mixup_mosaic"]:
                 img_other, labels_other = self.get_mosaic_obb(random.randint(0, len(self.img_paths) - 1))
                 img, labels = mixup(img, labels, img_other, labels_other)
@@ -115,7 +112,6 @@ class TrainValDataset(Dataset):
                 img, labels = mixup(img, labels, img_other, labels_other)
 
         if len(labels):
-            # TODO
             # NOTE 统一到归一化之后的[x, y, w, h, angle] angle [0, 180) 需不需要转换到radius??
             h, w = img.shape[:2]
             labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
@@ -291,7 +287,6 @@ class TrainValDataset(Dataset):
                     os.mkdir(save_dir)
                 save_path = osp.join(save_dir, "instances_" + osp.basename(img_dir) + ".json")
                 TrainValDataset.generate_coco_format_labels(img_info, self.class_names, save_path)
-        # REVIEW 添加angle
         img_paths, labels = list(
             zip(
                 *[
@@ -333,7 +328,6 @@ class TrainValDataset(Dataset):
             img, (h0, w0), (h, w) = self.load_image(index)
 
         # Letterbox
-        # TODO test, letterbox 应该不会影响angle的变化, 只有ratio
         shape = self.batch_shapes[self.batch_indices[index]] if self.rect else self.img_size  # final letterboxed shape
         if self.hyp and "letterbox_return_int" in self.hyp:
             img, ratio, pad = letterbox(
@@ -372,15 +366,12 @@ class TrainValDataset(Dataset):
             img, hgain=self.hyp["hsv_h"], sgain=self.hyp["hsv_s"], vgain=self.hyp["hsv_v"],
         )
 
-        # TODO Flip up-down
         if random.random() < self.hyp["flipud"]:
             img, labels = RFlipVertical(img, labels)
 
-        # TODO Flip left-right
         if random.random() < self.hyp["fliplr"]:
             img, labels = RFlipHorizontal(img, labels)
 
-        # TODO Flip rotate
         if random.random() < self.hyp["rotate"]:
             img, labels = RRotate(img, labels)
 
@@ -456,7 +447,6 @@ class TrainValDataset(Dataset):
                 with open(lb_path, "r") as f:
                     labels = [x.split() for x in f.read().strip().splitlines() if len(x)]
                     labels = np.array(labels, dtype=np.float32)
-                # REVIEW 上面读入数据, 下面check
                 if len(labels):
                     assert all(len(l) == 6 for l in labels), f"{lb_path}: wrong label format."
                     assert (labels >= 0).all(), f"{lb_path}: Label values error: all values in label file must > 0"
@@ -484,7 +474,6 @@ class TrainValDataset(Dataset):
 
     @staticmethod
     def generate_coco_format_labels(img_info, class_names, save_path):
-        # TODO: for pycocotools
         # for evaluation with pycocotools
         dataset = {"categories": [], "annotations": [], "images": []}
         for i, class_name in enumerate(class_names):

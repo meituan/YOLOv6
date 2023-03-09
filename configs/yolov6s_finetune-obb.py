@@ -82,8 +82,8 @@ eval_params = dict(
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,
-    plot_curve=False,
-    plot_confusion_matrix=False,
+    plot_curve=True,
+    plot_confusion_matrix=True,
     # NOTE VOC12 VOC07 COCO
     ap_method="VOC12",
 )

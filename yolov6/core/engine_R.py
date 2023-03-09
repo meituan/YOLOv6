@@ -140,7 +140,7 @@ class Trainer:
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
             # TODO
-            self.plot_train_batch(images, targets)
+            # self.plot_train_batch(images, targets)
             write_tbimg(self.tblogger, self.vis_train_batch, self.step + self.max_stepnum * self.epoch, type="train")
 
         # forward
