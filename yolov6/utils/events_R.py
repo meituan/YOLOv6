@@ -77,7 +77,7 @@ class RichStreamAndFileLogger(object):
         # * StreamHandler -> rich
         file_handler = logging.FileHandler(self.log_file_name, encoding="utf-8")
         console_handler = OBRichHandler(
-            rich_tracebacks=True, tracebacks_show_locals=True, log_time_format="[%Y-%m-%d %H:%M:%S:%S]"
+            rich_tracebacks=True, tracebacks_show_locals=True, log_time_format="[%m-%d %H:%M]"
         )
 
         file_formatter = logging.Formatter(

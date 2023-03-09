@@ -49,7 +49,7 @@ loss = dict(
 )
 
 solver = dict(
-    optim="SGD",
+    optim="AdamW",
     lr_scheduler="Cosine",
     lr0=0.0032,
     lrf=0.12,
@@ -82,8 +82,8 @@ eval_params = dict(
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,
-    plot_curve=True,
-    plot_confusion_matrix=True,
+    plot_curve=False,
+    plot_confusion_matrix=False,
     # NOTE VOC12 VOC07 COCO
     ap_method="VOC12",
 )

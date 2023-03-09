@@ -53,7 +53,7 @@ loss = dict(
     loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
 )
 solver = dict(
-    optim="SGD",
+    optim="AdamW",
     lr_scheduler="Cosine",
     lr0=0.0032,
     lrf=0.12,
