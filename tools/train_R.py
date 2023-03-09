@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 
 from yolov6.core.engine_R import Trainer
 from yolov6.utils.config import Config
-from yolov6.utils.events import LOGGER, save_yaml
+from yolov6.utils.events_R import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
 from yolov6.utils.general import increment_name, find_latest_checkpoint
 
@@ -49,8 +49,7 @@ def get_args_parser(add_help=True):
     parser.add_argument("--resume", nargs="?", const=True, default=False, help="resume the most recent training")
     parser.add_argument(
         "--write_trainbatch_tb",
-        default=True,
-        # action="store_true",
+        action="store_true",
         help="write train_batch image to tensorboard once an epoch, may slightly slower train speed if open",
     )
     parser.add_argument(

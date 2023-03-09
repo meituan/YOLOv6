@@ -30,7 +30,7 @@ from .data_augment_R import (
     RFlipHorizontal,
     RRotate,
 )
-from yolov6.utils.events import LOGGER
+from yolov6.utils.events_R import LOGGER
 
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]

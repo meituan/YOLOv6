@@ -185,8 +185,6 @@ def process_batch(detections, labels, iouv):
 
 
 def obb_box_iou(boxes1, boxes2):
-    boxes1 = xyxy2xywh(boxes1)
-    boxes2 = xyxy2xywh(boxes2)
     area1 = boxes1[:, 2] * boxes1[:, 3]
     area2 = boxes2[:, 2] * boxes2[:, 3]
     ious = []

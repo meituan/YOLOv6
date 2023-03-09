@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import ImageFont
 from collections import deque
 
-from yolov6.utils.events import LOGGER, load_yaml
+from yolov6.utils.events_R import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets_R import LoadData

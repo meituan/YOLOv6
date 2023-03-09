@@ -592,23 +592,16 @@ class Trainer:
             vis_output_array = vis_output.cpu().numpy()  # xyxy
             ori_img = cv2.imread(vis_path)
             for bbox_idx, vis_bbox in enumerate(vis_output_array):
-                x_tl = int(vis_bbox[0])
-                y_tl = int(vis_bbox[1])
-                x_br = int(vis_bbox[2])
-                y_br = int(vis_bbox[3])
+                cx = int(vis_bbox[0])
+                cy = int(vis_bbox[1])
+                w = int(vis_bbox[2])
+                h = int(vis_bbox[3])
                 angle = int(vis_bbox[4])
                 box_score = vis_bbox[5]
                 cls_id = int(vis_bbox[6])
                 # draw top n bbox
                 if box_score < vis_conf or bbox_idx > vis_max_box_num:
                     break
-                # cv2.rectangle(
-                #     ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]), thickness=1
-                # )
-                cx = int((vis_bbox[0] + vis_bbox[2]) / 2)
-                cy = int((vis_bbox[1] + vis_bbox[3]) / 2)
-                w = int(vis_bbox[2] - vis_bbox[0])
-                h = int(vis_bbox[3] - vis_bbox[1])
                 rect = ((cx, cy), (w, h), angle)
                 poly = cv2.boxPoints(rect)
                 poly = np.int0(poly)
@@ -618,11 +611,11 @@ class Trainer:
                 cv2.putText(
                     ori_img,
                     f"{self.data_dict['names'][cls_id]}: {box_score:.2f}",
-                    (x_tl, y_tl - 10),
+                    (cx - 5, cy - 5),
                     cv2.FONT_HERSHEY_COMPLEX,
                     0.5,
                     tuple([int(x) for x in self.color[cls_id]]),
-                    thickness=1,
+                    thickness=2,
                 )
             self.vis_imgs_list.append(torch.from_numpy(ori_img[:, :, ::-1].copy()))
 

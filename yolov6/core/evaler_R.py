@@ -12,7 +12,7 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 from yolov6.data.data_load import create_dataloader
-from yolov6.utils.events import LOGGER, NCOLS
+from yolov6.utils.events_R import LOGGER, NCOLS
 from yolov6.utils.nms_R import non_max_suppression_obb
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
@@ -158,8 +158,6 @@ class Evaler:
 
             # post-process
             t3 = time_sync()
-            # TODO change this
-            # outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
 
             self.speed_result[3] += time_sync() - t3  # post-process time
@@ -171,7 +169,7 @@ class Evaler:
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            # pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
@@ -203,11 +201,8 @@ class Evaler:
                 # Assign all predictions as incorrect
                 correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
                 if nl:
-
-                    from yolov6.utils.nms_R import xywh2xyxy
-
                     # target boxes
-                    tbox = xywh2xyxy(labels[:, 1:5])
+                    tbox = labels[:, 1:5]
                     angle = labels[:, -1:].clone()
                     tbox[:, [0, 2]] *= imgs[si].shape[1:][1]
                     tbox[:, [1, 3]] *= imgs[si].shape[1:][0]
@@ -420,7 +415,8 @@ class Evaler:
         return y
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
-        """Rescale coords (xyxy) from img1_shape to img0_shape."""
+        # """Rescale coords (xyxy) from img1_shape to img0_shape."""
+        """Rescale coords (xywh) from img1_shape to img0_shape."""
         if ratio_pad is None:  # calculate from img0_shape
             gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
             if self.scale_exact:
@@ -430,22 +426,22 @@ class Evaler:
             gain = ratio_pad[0]
             pad = ratio_pad[1]
 
-        coords[:, [0, 2]] -= pad[0]  # x padding
+        coords[:, 0] -= pad[0]  # x padding
         if self.scale_exact:
-            coords[:, [0, 2]] /= gain[1]  # x gain
+            coords[:, [0, 2]] /= gain[1]  # x w gain
         else:
             coords[:, [0, 2]] /= gain[0]  # raw x gain
-        coords[:, [1, 3]] -= pad[1]  # y padding
-        coords[:, [1, 3]] /= gain[0]  # y gain
+        coords[:, 1] -= pad[1]  # y padding
+        coords[:, [1, 3]] /= gain[0]  # y h gain
 
         if isinstance(coords, torch.Tensor):  # faster individually
-            coords[:, 0].clamp_(0, img0_shape[1])  # x1
-            coords[:, 1].clamp_(0, img0_shape[0])  # y1
-            coords[:, 2].clamp_(0, img0_shape[1])  # x2
-            coords[:, 3].clamp_(0, img0_shape[0])  # y2
+            coords[:, 0].clamp_(0, img0_shape[1])  # x
+            coords[:, 1].clamp_(0, img0_shape[0])  # y
+            # coords[:, 2].clamp_(0, img0_shape[1])  # x2
+            # coords[:, 3].clamp_(0, img0_shape[0])  # y2
         else:  # np.array (faster grouped)
-            coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
-            coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
+            coords[:, 0] = coords[:, 0].clip(0, img0_shape[1])
+            coords[:, 1] = coords[:, 1].clip(0, img0_shape[0])
         return coords
 
     def convert_to_coco_format(self, outputs, imgs, paths, shapes, ids):

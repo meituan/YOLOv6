@@ -128,7 +128,7 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
         max_det:(int), max number of output bboxes.
 
     Returns:
-         list of detections, echo item is one tensor with shape (num_boxes, 6), 6 is for [xyxy, conf, cls].
+         list of detections, echo item is one tensor with shape (num_boxes, 6), 6 is for [xywh, conf, cls].
     """
 
     # NOTE [N, x, y, w, h, angle, conf, classes]
@@ -157,8 +157,8 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
         # confidence multiply the objectness
         x[:, 6:] *= x[:, 5:6]  # conf = obj_conf * cls_conf
 
-        # (center x, center y, width, height) to (x1, y1, x2, y2)
-        box = xywh2xyxy(x[:, :4])
+        # (center x, center y, width, height)
+        box = x[:, :4]
         angle = x[:, 4:5].clone()
 
         # Detections matrix's shape is  (n,6), each row represents (xyxy, conf, cls)
@@ -182,9 +182,9 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
 
         # Batched NMS
         class_offset = x[:, 6:7] * (0 if agnostic else max_wh)  # classes
-        boxes, scores = x[:, :4] + class_offset, x[:, 5]  # boxes (offset by class), scores
+        boxes, scores = x[:, :4], x[:, 5]  # boxes (offset by class), scores
 
-        boxes_xywh = xyxy2xywh(boxes)
+        boxes_xywh = boxes.clone()
         boxes_xy = (boxes_xywh[:, :2].clone() + class_offset).cpu().numpy()
         boxes_wh = boxes_xywh[:, 2:4].clone().cpu().numpy()
         boxes_angle = x[:, 4].clone().cpu().numpy()
