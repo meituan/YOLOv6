@@ -8,11 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import cv2
+
 # import warnings
 from . import general
 from yolov6.utils.nms_R import xyxy2xywh
 
-def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names=()):
+
+def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names=(), AP_method="VOC12"):
     """ Compute the average precision, given the recall and precision curves.
     Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
     # Arguments
@@ -59,7 +61,7 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names
 
             # AP from recall-precision curve
             for j in range(tp.shape[1]):
-                ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
+                ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j], method=AP_method)
                 if plot and j == 0:
                     py.append(np.interp(px, mrec, mpre))  # precision at mAP@0.5
 
@@ -76,7 +78,7 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names
     return p, r, ap, f1, unique_classes.astype("int32")
 
 
-def compute_ap(recall, precision):
+def compute_ap(recall, precision, method="VOC12"):
     """ Compute the average precision, given the recall and precision curves
     # Arguments
         recall:    The recall curve (list)
@@ -93,14 +95,22 @@ def compute_ap(recall, precision):
     mpre = np.flip(np.maximum.accumulate(np.flip(mpre)))
 
     # Integrate area under curve
-    method = "interp"  # methods: 'continuous', 'interp'
-    if method == "interp":
+    # NOTE: continous: VOC12， interp： COCO
+    if method == "COCO" or method == "coco" or method == "interp":
         x = np.linspace(0, 1, 101)  # 101-point interp (COCO)
         ap = np.trapz(np.interp(x, mrec, mpre), x)  # integrate
-    else:  # 'continuous'
+    elif method == "VOC12" or method == "voc12":  # 'continuous'
         i = np.where(mrec[1:] != mrec[:-1])[0]  # points where x axis (recall) changes
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])  # area under curve
-
+    else:
+        # NOTE VOC07
+        ap = 0.0
+        for t in np.arange(0.0, 1.1, 0.1):
+            if np.sum(recall >= t) == 0:
+                p = 0
+            else:
+                p = np.max(precision[recall >= t])
+            ap = ap + p / 11.0
     return ap, mpre, mrec
 
 
@@ -198,6 +208,7 @@ def obb_box_iou(boxes1, boxes2):
         ious.append(temp_ious)
     return np.array(ious, dtype=np.float32)
 
+
 class ConfusionMatrix:
     # Updated version of https://github.com/kaanakan/object_detection_confusion_matrix
     def __init__(self, nc, conf=0.25, iou_thres=0.45):
@@ -205,7 +216,6 @@ class ConfusionMatrix:
         self.nc = nc  # number of classes
         self.conf = conf
         self.iou_thres = iou_thres
-
 
     def process_batch(self, detections, labels):
         """

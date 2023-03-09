@@ -215,7 +215,7 @@ class Evaler:
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
 
-                from yolov6.utils.metrics import ap_per_class
+                from yolov6.utils.metrics_R import ap_per_class
                 p, r, ap, f1, ap_class = ap_per_class(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
                 AP50_F1_max_idx = len(f1.mean(0)) - f1.mean(0)[::-1].argmax() -1
                 LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
