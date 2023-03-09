@@ -27,10 +27,10 @@ def get_args_parser(add_help=True):
     parser.add_argument("--data-path", default="./data/HRSC2016.yaml", type=str, help="path of dataset")
     parser.add_argument("--conf-file", default="./configs/yolov6s_finetune-obb.py", type=str, help="experiments description file")
     parser.add_argument("--img-size", default=800, type=int, help="train, val image size (pixels)")
-    parser.add_argument("--batch-size", default=32, type=int, help="total batch size for all GPUs")
+    parser.add_argument("--batch-size", default=1, type=int, help="total batch size for all GPUs")
     parser.add_argument("--epochs", default=400, type=int, help="number of total epochs to run")
     parser.add_argument("--workers", default=8, type=int, help="number of data loading workers (default: 8)")
-    parser.add_argument("--device", default="0", type=str, help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    parser.add_argument("--device", default="1", type=str, help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
     parser.add_argument("--eval-interval", default=20, type=int, help="evaluate at every interval epochs")
     parser.add_argument("--eval-final-only", action="store_true", help="only evaluate at the final epoch")
     parser.add_argument(
@@ -49,7 +49,8 @@ def get_args_parser(add_help=True):
     parser.add_argument("--resume", nargs="?", const=True, default=False, help="resume the most recent training")
     parser.add_argument(
         "--write_trainbatch_tb",
-        action="store_true",
+        default=True,
+        # action="store_true",
         help="write train_batch image to tensorboard once an epoch, may slightly slower train speed if open",
     )
     parser.add_argument(

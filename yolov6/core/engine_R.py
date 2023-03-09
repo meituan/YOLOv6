@@ -449,7 +449,8 @@ class Trainer:
             LOGGER.info(f"Loading state_dict from {weights} for fine-tuning...")
             model = load_state_dict(weights, model, map_location=device)
 
-        LOGGER.info("Model: {}".format(model))
+        # NOTE 隐藏
+        # LOGGER.info("Model: {}".format(model))
         return model
 
     def get_teacher_model(self, args, cfg, nc, device):
@@ -459,7 +460,8 @@ class Trainer:
         if weights:  # finetune if pretrained model is set
             LOGGER.info(f"Loading state_dict from {weights} for teacher")
             model = load_state_dict(weights, model, map_location=device)
-        LOGGER.info("Model: {}".format(model))
+        # NOTE 隐藏
+        # LOGGER.info("Model: {}".format(model))
         # Do not update running means and running vars
         for module in model.modules():
             if isinstance(module, torch.nn.BatchNorm2d):
@@ -546,7 +548,7 @@ class Trainer:
             )  # filename
             if len(targets) > 0:
                 ti = targets[targets[:, 0] == i]  # image targets
-                boxes = xywh2xyxy(ti[:, 2:6]).T
+                boxes = ti[:, 2:6].T
                 angles = ti[:, 6:7]
                 classes = ti[:, 1].astype("int")
                 labels = ti.shape[1] == 7  # labels if no conf column
@@ -556,26 +558,24 @@ class Trainer:
                         boxes[[1, 3]] *= h
                     elif scale < 1:  # absolute coords need scale if image scales
                         boxes *= scale
-                boxes[[0, 2]] += x
-                boxes[[1, 3]] += y
-                boxes_xywh = xyxy2xywh(boxes.T)
-                for j, (box, angle, box_xy) in enumerate(zip(boxes_xywh.tolist(), angles.tolist(), boxes.T.tolist())):
+                boxes[[0]] += x
+                boxes[[1]] += y
+                # boxes_xywh = xyxy2xywh(boxes.T)
+                for j, (box, angle) in enumerate(zip(boxes.T.tolist(), angles.tolist())):
                     box = [int(k) for k in box]
                     cls = classes[j]
                     color = tuple([int(x) for x in self.color[cls]])
                     cls = self.data_dict["names"][cls] if self.data_dict["names"] else cls
                     if labels:
                         label = f"{cls}"
-                        # import ipdb
-                        # ipdb.set_trace()
                         rect = ((box[0], box[1]), (box[2], box[3]), int(angle[0]))
                         poly = cv2.boxPoints(rect)
                         poly = np.int0(poly)
                         cv2.drawContours(
-                            mosaic, contours=[poly], contourIdx=-1, color=color, thickness=1, lineType=cv2.LINE_AA
+                            mosaic, contours=[poly], contourIdx=-1, color=color, thickness=2, lineType=cv2.LINE_AA
                         )
                         cv2.putText(
-                            mosaic, label, (int(box_xy[0]), int(box_xy[1]) - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=1
+                            mosaic, label, (int(box[0] - 5), int(box[1] - 5)), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=2
                         )
         self.vis_train_batch = mosaic.copy()
 

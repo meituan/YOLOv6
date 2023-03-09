@@ -20,12 +20,15 @@ from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from .data_augment import (
+from .data_augment_R import (
     augment_hsv,
     letterbox,
     mixup,
     random_affine,
-    mosaic_augmentation,
+    mosaic_augmentation_obb,
+    RFlipVertical,
+    RFlipHorizontal,
+    RRotate,
 )
 from yolov6.utils.events import LOGGER
 
@@ -91,21 +94,21 @@ class TrainValDataset(Dataset):
         During validation, letterbox augment is applied.
         """
         # Mosaic Augmentation
-        # TODO 去掉Mosaic, 需要从配置config 这块做
+        # TODO mosaic_obb test
         if self.augment and random.random() < self.hyp["mosaic"]:
-            img, labels = self.get_mosaic(index) # NOTE get_mosaic 现在不可使用,还有问题
+            img, labels = self.get_mosaic_obb(index) # NOTE get_mosaic_obb 现在不可使用,还有问题
             shapes = None
-
             # MixUp augmentation
-            # TODO 增加mixup
+            # TODO mixup 放到后面
             if random.random() < self.hyp["mixup"]:
-                img_other, labels_other = self.get_mosaic(
+                img_other, labels_other = self.get_mosaic_obb(
                     random.randint(0, len(self.img_paths) - 1)
                 )
                 img, labels = mixup(img, labels, img_other, labels_other)
 
         else:
-            # Load image
+            # NOTE Load image no mixup and mosaic
+            # NOTE 根据 img_size 做reisze, 这个部分不会影响相对值label的变化
             if self.hyp and "test_load_size" in self.hyp:
                 img, (h0, w0), (h, w) = self.load_image(index, self.hyp["test_load_size"])
             else:
@@ -129,52 +132,62 @@ class TrainValDataset(Dataset):
             if labels.size:
                 w *= ratio
                 h *= ratio
-                # NOTE new boxes [class_id, x, y, w, h, angle] 相对值 -> [class_id, x1, y1, x2, y2, angle] 绝对值 怕数据增强溢出
-                # REVIEW 原代码不影响 agnle load
+                # NOTE ratio w/h 同概率
                 boxes = np.copy(labels[:, 1:])
-                boxes[:, 0] = (
-                    w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
-                )  # top left x
-                boxes[:, 1] = (
-                    h * (labels[:, 2] - labels[:, 4] / 2) + pad[1]
-                )  # top left y
-                boxes[:, 2] = (
-                    w * (labels[:, 1] + labels[:, 3] / 2) + pad[0]
-                )  # bottom right x
-                boxes[:, 3] = (
-                    h * (labels[:, 2] + labels[:, 4] / 2) + pad[1]
-                )  # bottom right y
+                # boxes[:, 0] = (
+                #     w * (labels[:, 1] - labels[:, 3] / 2) + pad[0]
+                # )  # top left x
+                # boxes[:, 1] = (
+                #     h * (labels[:, 2] - labels[:, 4] / 2) + pad[1]
+                # )  # top left y
+                # boxes[:, 2] = (
+                #     w * (labels[:, 1] + labels[:, 3] / 2) + pad[0]
+                # )  # bottom right x
+                # boxes[:, 3] = (
+                #     h * (labels[:, 2] + labels[:, 4] / 2) + pad[1]
+                # )  # bottom right y
+
+                boxes[:, 0] = w * boxes[:, 0] + pad[0]
+                boxes[:, 1] = h * boxes[:, 1] + pad[1]
+                boxes[:, 2] = w * boxes[:, 2]
+                boxes[:, 3] = h * boxes[:, 3]
+
                 labels[:, 1:] = boxes
 
-            if self.augment:
-                # TODO test
-                img, labels = random_affine(
-                    img,
-                    labels,
-                    degrees=self.hyp["degrees"],
-                    translate=self.hyp["translate"],
-                    scale=self.hyp["scale"],
-                    shear=self.hyp["shear"],
-                    new_shape=(self.img_size, self.img_size),
-                )
-
-        if len(labels):
-            h, w = img.shape[:2]
-            # NOTE labels array [[class_id, x1, y1, x2, y2, angle]] 绝对值, resize后
-            labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
-            labels[:, [2, 4]] = labels[:, [2, 4]].clip(0, h - 1e-3)  # y1, y2
-
-            # NOTE labels array [[class_id, x, y, w, h, angle]] 相对值, 回到之前
-            # REVIEW add angle 源代码不影响 angle 维度
-            boxes = np.copy(labels[:, 1:])
-            boxes[:, 0] = ((labels[:, 1] + labels[:, 3]) / 2) / w  # x center
-            boxes[:, 1] = ((labels[:, 2] + labels[:, 4]) / 2) / h  # y center
-            boxes[:, 2] = (labels[:, 3] - labels[:, 1]) / w  # width
-            boxes[:, 3] = (labels[:, 4] - labels[:, 2]) / h  # height
-            labels[:, 1:] = boxes
+            # NOTE 放弃 affine
+            # if self.augment:
+                # img, labels = random_affine(
+                #     img,
+                #     labels,
+                #     degrees=self.hyp["degrees"],
+                #     translate=self.hyp["translate"],
+                #     scale=self.hyp["scale"],
+                #     shear=self.hyp["shear"],
+                #     new_shape=(self.img_size, self.img_size),
+                # )
+                # pass
 
         if self.augment:
             img, labels = self.general_augment(img, labels)
+
+        if len(labels):
+            # TODO
+            # NOTE 统一到归一化之后的[x, y, w, h, angle] angle [0, 180) 需不需要转换到radius??
+            h, w = img.shape[:2]
+            labels[:, [1, 3]] = labels[:, [1, 3]].clip(0, w - 1e-3)  # x1, x2
+            labels[:, [2, 4]] = labels[:, [2, 4]].clip(0, h - 1e-3)  # y1, y2
+
+            boxes = np.copy(labels[:, 1:])
+            # boxes[:, 0] = ((labels[:, 1] + labels[:, 3]) / 2) / w  # x center
+            # boxes[:, 1] = ((labels[:, 2] + labels[:, 4]) / 2) / h  # y center
+            # boxes[:, 2] = (labels[:, 3] - labels[:, 1]) / w  # width
+            # boxes[:, 3] = (labels[:, 4] - labels[:, 2]) / h  # height
+            boxes[:, 0] /= w
+            boxes[:, 1] /= h
+            boxes[:, 2] /= w
+            boxes[:, 3] /= h
+            labels[:, 1:] = boxes
+
 
         # NOTE labels_out [len(labels), bs_id, class_id, x, y, w, h, angle] 相对值
         # NOTE 6 -> 7
@@ -391,7 +404,7 @@ class TrainValDataset(Dataset):
         )
         return img_paths, labels
 
-    def get_mosaic(self, index):
+    def get_mosaic_obb(self, index):
         """Gets images and labels after mosaic augments"""
         indices = [index] + random.choices(
             range(0, len(self.img_paths)), k=3
@@ -405,7 +418,7 @@ class TrainValDataset(Dataset):
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
-        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp)
+        img, labels = mosaic_augmentation_obb(self.img_size, imgs, hs, ws, labels, self.hyp)
         return img, labels
 
     def general_augment(self, img, labels):
@@ -422,17 +435,18 @@ class TrainValDataset(Dataset):
             vgain=self.hyp["hsv_v"],
         )
 
-        # Flip up-down
+        # TODO Flip up-down
         if random.random() < self.hyp["flipud"]:
-            img = np.flipud(img)
-            if nl:
-                labels[:, 2] = 1 - labels[:, 2]
+            img, labels = RFlipVertical(img, labels)
 
-        # Flip left-right
+        # TODO Flip left-right
         if random.random() < self.hyp["fliplr"]:
-            img = np.fliplr(img)
-            if nl:
-                labels[:, 1] = 1 - labels[:, 1]
+            img, labels = RFlipHorizontal(img, labels)
+
+        # TODO Flip rotate
+        if random.random() < self.hyp["rotate"]:
+            img, labels = RRotate(img, labels)
+
 
         return img, labels
 
