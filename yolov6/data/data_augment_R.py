@@ -340,13 +340,15 @@ def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
         labels_per_img = labels[i].copy()
         if labels_per_img.size:
             # NOTE 输出全部转变为真实值, [x, y, w, h, angle]
+            # x [padw, padw + w]
+            # y [padh, padh + h]
             boxes = np.copy(labels_per_img[:, 1:])
             boxes[:, 0] = w * boxes[:, 0] + padw  # center x
             boxes[:, 1] = h * boxes[:, 1] + padh  # center y
             boxes[:, 2] = w * boxes[:, 2]  # longSide / w
             boxes[:, 3] = h * boxes[:, 3]  # shortSide / h
             # NOTE filter
-            valid_inds = filter_box_candidates(boxes, w, h, min_bbox_size=4)
+            valid_inds = filter_box_candidates(boxes, x1a, x2a, y1a, y2a, min_bbox_size=4)
             labels_per_img[:, 1:] = boxes
             labels_per_img = labels_per_img[valid_inds]
 
@@ -356,6 +358,7 @@ def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
     labels4 = np.concatenate(labels4, 0)
 
     # NOTE 不做affine,一个是label不好调整, 另一个参考mmyolo的RTM, affine会造成影响
+    # NOTE img5, labels4 需要重新resize
     # img4, labels4 = random_affine(img4, labels4,
     #                               degrees=hyp['degrees'],
     #                               translate=hyp['translate'],
@@ -363,15 +366,29 @@ def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
     #                               shear=hyp['shear'],
     #                               new_shape=(img_size, img_size))
 
+    img4 = cv2.resize(img4, (img_size, img_size))
+    labels4[:, 1:5] /= 2.0
+
     return img4, labels4
 
 
-def filter_box_candidates(bboxes, w, h, min_bbox_size=4):
+def filter_box_candidates(bboxes, w_min, w_max, h_min, h_max, min_bbox_size=4, ratio=0.25):
     """Filter out small bboxes and outside bboxes after Mosaic."""
-    # TODO 截断resize情况,比较复杂
     bbox_x, bbox_y, bbox_w, bbox_h = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
+    # TODO 截断resize情况,比较复杂, 考虑中心点到边界距离
+    # 比例截断系数, 0.5 * 0.3
+    ratio *= 0.5
     valid_inds = (
-        (bbox_x > 0) & (bbox_x < w) & (bbox_y > 0) & (bbox_y < h) & (bbox_w > min_bbox_size) & (bbox_h > min_bbox_size)
+        (bbox_x > w_min)
+        & (bbox_x < w_max)
+        & (bbox_y > h_min)
+        & (bbox_y < h_max)
+        & ((bbox_x + ratio * bbox_w) < w_max)
+        & ((bbox_x - ratio * bbox_w) > w_min)
+        & ((bbox_y + ratio * bbox_h) < h_max)
+        & ((bbox_y - ratio * bbox_h) > h_min)
+        & (bbox_w > min_bbox_size)
+        & (bbox_h > min_bbox_size)
     )
     valid_inds = np.nonzero(valid_inds)[0]
     return valid_inds

@@ -14,7 +14,7 @@ from . import general
 from yolov6.utils.nms_R import xyxy2xywh
 
 
-def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names=(), AP_method="VOC12"):
+def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names=(), ap_method="VOC12"):
     """ Compute the average precision, given the recall and precision curves.
     Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
     # Arguments
@@ -61,7 +61,7 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names
 
             # AP from recall-precision curve
             for j in range(tp.shape[1]):
-                ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j], method=AP_method)
+                ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j], ap_method=ap_method)
                 if plot and j == 0:
                     py.append(np.interp(px, mrec, mpre))  # precision at mAP@0.5
 
@@ -78,7 +78,7 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names
     return p, r, ap, f1, unique_classes.astype("int32")
 
 
-def compute_ap(recall, precision, method="VOC12"):
+def compute_ap(recall, precision, ap_method="VOC12"):
     """ Compute the average precision, given the recall and precision curves
     # Arguments
         recall:    The recall curve (list)
@@ -96,10 +96,10 @@ def compute_ap(recall, precision, method="VOC12"):
 
     # Integrate area under curve
     # NOTE: continous: VOC12， interp： COCO
-    if method == "COCO" or method == "coco" or method == "interp":
+    if ap_method == "COCO" or ap_method == "coco" or ap_method == "interp":
         x = np.linspace(0, 1, 101)  # 101-point interp (COCO)
         ap = np.trapz(np.interp(x, mrec, mpre), x)  # integrate
-    elif method == "VOC12" or method == "voc12":  # 'continuous'
+    elif ap_method == "VOC12" or ap_method == "voc12":  # 'continuous'
         i = np.where(mrec[1:] != mrec[:-1])[0]  # points where x axis (recall) changes
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])  # area under curve
     else:
@@ -230,6 +230,7 @@ class ConfusionMatrix:
         detections = detections[detections[:, 5] > self.conf]
         gt_classes = labels[:, 0].int()
         detection_classes = detections[:, 6].int()
+        # TODO FIXME
         iou = general.box_iou(labels[:, 1:], detections[:, :4])
 
         x = torch.where(iou > self.iou_thres)

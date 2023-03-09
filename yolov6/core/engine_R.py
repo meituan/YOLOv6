@@ -227,6 +227,9 @@ class Trainer:
                 dataloader=self.val_loader,
                 save_dir=self.save_dir,
                 task="train",
+                angle_max=self.cfg.model.head.angle_max,
+                angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
+                ap_method="VOC12"
             )
         else:
 
@@ -259,6 +262,9 @@ class Trainer:
                 do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", True),
                 plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
                 plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                angle_max=self.cfg.model.head.angle_max,
+                angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
+                ap_method=get_cfg_value(self.cfg.eval_params, "ap_method", False),
             )
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
@@ -508,7 +514,6 @@ class Trainer:
         return lr_scheduler, lf
 
     def plot_train_batch(self, images, targets, max_size=1920, max_subplots=16):
-        # TODO test
         # Plot train_batch with labels
         if isinstance(images, torch.Tensor):
             images = images.cpu().float().numpy()
@@ -608,7 +613,7 @@ class Trainer:
                 poly = cv2.boxPoints(rect)
                 poly = np.int0(poly)
                 cv2.drawContours(
-                    ori_img, contours=[poly], contourIdx=-1, color=tuple([int(x) for x in self.color[cls_id]]), thickness=1, lineType=cv2.LINE_AA
+                    ori_img, contours=[poly], contourIdx=-1, color=tuple([int(x) for x in self.color[cls_id]]), thickness=2, lineType=cv2.LINE_AA
                 )
                 cv2.putText(
                     ori_img,

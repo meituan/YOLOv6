@@ -116,6 +116,9 @@ def run(data,
         plot_curve=False,
         plot_confusion_matrix=False,
         config_file=None,
+        angle_max=180,
+        angle_fitting_methods="regression",
+        ap_method="VOC12",
         ):
     """ Run the evaluation process
 
@@ -144,7 +147,9 @@ def run(data,
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
                 test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect, scale_exact,
-                verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix)
+                verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix, \
+                angle_max, angle_fitting_methods, ap_method)
+
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
 
