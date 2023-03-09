@@ -2,35 +2,29 @@
 # -*- coding:utf-8 -*-
 
 import glob
-from io import UnsupportedOperation
+import hashlib
+import json
 import os
 import os.path as osp
 import random
-import json
 import time
-import hashlib
-from pathlib import Path
-
+from io import UnsupportedOperation
 from multiprocessing.pool import Pool
+from pathlib import Path
 
 import cv2
 import numpy as np
 import torch
 from PIL import ExifTags, Image, ImageOps
+# from tqdm import tqdm
+from rich.progress import track
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
-from .data_augment_R import (
-    augment_hsv,
-    letterbox,
-    mixup,
-    random_affine,
-    mosaic_augmentation_obb,
-    RFlipVertical,
-    RFlipHorizontal,
-    RRotate,
-)
 from yolov6.utils.events_R import LOGGER
+
+from .data_augment_R import (RFlipHorizontal, RFlipVertical, RRotate,
+                             augment_hsv, letterbox, mixup,
+                             mosaic_augmentation_obb, random_affine)
 
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
@@ -200,7 +194,7 @@ class TrainValDataset(Dataset):
             nc, msgs = 0, []  # number corrupt, messages
             LOGGER.info(f"{self.task}: Checking formats of images with {NUM_THREADS} process(es): ")
             with Pool(NUM_THREADS) as pool:
-                pbar = tqdm(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
+                pbar = track(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
                 for img_path, shape_per_img, nc_per_img, msg in pbar:
                     if nc_per_img == 0:  # not corrupted
                         img_info[img_path] = {"shape": shape_per_img}
@@ -250,7 +244,7 @@ class TrainValDataset(Dataset):
                 pbar = pool.imap(
                     TrainValDataset.check_label_files, zip(img_paths, label_paths)
                 )  # NOTE 线程, check_label_files
-                pbar = tqdm(pbar, total=len(label_paths)) if self.main_process else pbar
+                pbar = track(pbar, total=len(label_paths)) if self.main_process else pbar
                 for (img_path, labels_per_file, nc_per_file, nm_per_file, nf_per_file, ne_per_file, msg,) in pbar:
                     if nc_per_file == 0:
                         img_info[img_path]["labels"] = labels_per_file
@@ -481,7 +475,7 @@ class TrainValDataset(Dataset):
 
         ann_id = 0
         LOGGER.info(f"Convert to COCO format")
-        for i, (img_path, info) in enumerate(tqdm(img_info.items())):
+        for i, (img_path, info) in enumerate(track(img_info.items())):
             labels = info["labels"] if info["labels"] else []
             img_id = osp.splitext(osp.basename(img_path))[0]
             img_w, img_h = info["shape"]

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import argparse
-from logging import Logger
 import os
-import yaml
 import os.path as osp
+import sys
+import warnings
+from logging import Logger
 from pathlib import Path
+
 import torch
 import torch.distributed as dist
-import sys
+import yaml
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
@@ -16,9 +20,9 @@ if str(ROOT) not in sys.path:
 
 from yolov6.core.engine_R import Trainer
 from yolov6.utils.config import Config
-from yolov6.utils.events_R import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
-from yolov6.utils.general import increment_name, find_latest_checkpoint
+from yolov6.utils.events_R import LOGGER, save_yaml
+from yolov6.utils.general import find_latest_checkpoint, increment_name
 
 
 def get_args_parser(add_help=True):
@@ -82,6 +86,8 @@ def get_args_parser(add_help=True):
 
 def check_and_init(args):
     """check config files and device."""
+    # logging
+
     # check files
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
     if args.resume:

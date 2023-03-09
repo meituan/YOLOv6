@@ -65,23 +65,29 @@ solver = dict(
 )
 
 data_aug = dict(
-    hsv_h=0.0138,
-    hsv_s=0.664,
-    hsv_v=0.464,
     # degrees=0.373,
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
-    # flipud=0.00856,
-    # fliplr=0.5,
-    # mosaic=1.0,
-    # mixup=0.243,
-    degrees=0.0,
-    translate=0.0,
-    scale=0.0,
-    shear=0.0,
-    flipud=0.0,
-    fliplr=0.0,
-    mosaic=0.0,
-    mixup=0.0,
+    hsv_h=0.0138,
+    hsv_s=0.664,
+    hsv_v=0.464,
+    flipud=0.5,
+    fliplr=0.5,
+    rotate=0.5,
+    # NOTE mosaic 数值需要确定一下
+    mosaic=0.2,
+    mixup_mosaic=0.5,
+    mixup=0.5,
+)
+
+eval_params = dict(
+    conf_thres=0.03,
+    verbose=True,
+    do_coco_metric=False,
+    do_pr_metric=True,
+    plot_curve=True,
+    plot_confusion_matrix=True,
+    # NOTE VOC12 VOC07 COCO
+    ap_method="VOC12",
 )

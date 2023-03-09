@@ -23,8 +23,8 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type="giou",
-        use_dfl=False,  # set to True if you want to further train with distillation
-        reg_max=0,  # set to 16 if you want to further train with distillation
+        use_dfl=True,  # set to True if you want to further train with distillation
+        reg_max=16,  # set to 16 if you want to further train with distillation
         distill_weight={"class": 1.0, "dfl": 1.0, },
         # NOTE for angle regression
         # angle_fitting_methods='regression',

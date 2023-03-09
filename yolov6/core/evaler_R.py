@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os
-from tqdm import tqdm
-import numpy as np
 import json
-import torch
-import yaml
+import os
 from pathlib import Path
 
+import numpy as np
+import torch
+import yaml
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from rich.progress import track
+from tqdm import tqdm
 
 from yolov6.data.data_load import create_dataloader
-from yolov6.utils.events_R import LOGGER, NCOLS
-from yolov6.utils.nms_R import non_max_suppression_obb
-from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
-from yolov6.utils.torch_utils import time_sync, get_model_info
+from yolov6.utils.events_R import LOGGER, NCOLS
+from yolov6.utils.general import download_ckpt
+from yolov6.utils.nms_R import non_max_suppression_obb
+from yolov6.utils.torch_utils import get_model_info, time_sync
 
 """
 python tools/eval.py --task 'train'/'val'/'speed'
@@ -125,7 +126,10 @@ class Evaler:
         """
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
-        pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.", ncols=NCOLS)
+        pbar = track(dataloader, description=f"Inferencing model in {task} datasets.")
+        # task = progress.add_task("task", total=len(train_loader), epoch_name=f"Epoch {epoch + 1}/{epochs}")
+        # progress.start()
+        # progress.start_task(task)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
@@ -169,7 +173,7 @@ class Evaler:
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            # pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
@@ -452,7 +456,7 @@ class Evaler:
             path, shape = Path(paths[i]), shapes[i][0]
             self.scale_coords(imgs[i].shape[1:], pred[:, :4], shape, shapes[i][1])
             image_id = int(path.stem) if self.is_coco else path.stem
-            bboxes = self.box_convert(pred[:, 0:4])
+            bboxes = pred[:, 0:4].clone()
             bboxes[:, :2] -= bboxes[:, 2:] / 2
             cls = pred[:, 5]
             scores = pred[:, 4]
@@ -603,8 +607,9 @@ class Evaler:
         self.stride = stride
 
         def init_engine(engine):
+            from collections import OrderedDict, namedtuple
+
             import tensorrt as trt
-            from collections import namedtuple, OrderedDict
 
             Binding = namedtuple("Binding", ("name", "dtype", "shape", "data", "ptr"))
             logger = trt.Logger(trt.Logger.ERROR)

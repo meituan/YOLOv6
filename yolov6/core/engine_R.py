@@ -1,37 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-from ast import Pass
+import math
 import os
-import time
-from copy import deepcopy
 import os.path as osp
-
-from tqdm import tqdm
+import time
+from ast import Pass
+from copy import deepcopy
 
 import cv2
 import numpy as np
-import math
 import torch
+from rich.progress import (BarColumn, Progress, SpinnerColumn, TextColumn,
+                           TimeElapsedColumn, TimeRemainingColumn)
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
-from yolov6.models.yolo_R import build_model
-
-from yolov6.models.losses.loss_R import ComputeLoss as ComputeLoss
+from yolov6.models.losses.loss_distill import \
+    ComputeLoss as ComputeLoss_distill
+from yolov6.models.losses.loss_distill_ns import \
+    ComputeLoss as ComputeLoss_distill_ns
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
-from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
-from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
-
-from yolov6.utils.events_R import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg
+from yolov6.models.losses.loss_R import ComputeLoss as ComputeLoss
+from yolov6.models.yolo_R import build_model
+from yolov6.solver.build import build_lr_scheduler, build_optimizer
+from yolov6.utils.checkpoint import (load_state_dict, save_checkpoint,
+                                     strip_optimizer)
 from yolov6.utils.ema import ModelEMA, de_parallel
-from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
-from yolov6.solver.build import build_optimizer, build_lr_scheduler
-from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
-from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
+from yolov6.utils.events_R import (LOGGER, NCOLS, load_yaml, write_tbimg,
+                                   write_tblog)
 from yolov6.utils.general import download_ckpt
+from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
+from yolov6.utils.RepOptimizer import RepVGGOptimizer, extract_scales
 
 
 class Trainer:
@@ -98,9 +101,53 @@ class Trainer:
         # REVIEW loss_num and info
         self.loss_num = 4
         self.loss_info = ["Epoch", "iou_loss", "dfl_loss", "cls_loss", "ang_loss"]
+
+        self.progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]{task.fields[epoch_name]}"),
+            "•",
+            TextColumn("[red]{task.fields[iou_loss]}"),
+            "•",
+            TextColumn("[red]{task.fields[dfl_loss]}"),
+            "•",
+            TextColumn("[red]{task.fields[cls_loss]}"),
+            "•",
+            TextColumn("[red]{task.fields[ang_loss]}"),
+            BarColumn(bar_width=None, style="white", complete_style="blue", finished_style="green"),
+            TextColumn("[progress.percentage]{task.percentage:>3.1f}%"),
+            "•",
+            TimeElapsedColumn(),
+            "•",
+            TimeRemainingColumn(),
+            transient=True,
+            expand=True,
+        )
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ["cwd_loss"]
+
+            self.progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[bold blue]{task.fields[epoch_name]}"),
+                "•",
+                TextColumn("[red]{task.fields[iou_loss]}"),
+                "•",
+                TextColumn("[red]{task.fields[dfl_loss]}"),
+                "•",
+                TextColumn("[red]{task.fields[cls_loss]}"),
+                "•",
+                TextColumn("[red]{task.fields[ang_loss]}"),
+                "•",
+                TextColumn("[red]{task.fields[cwd_loss]}"),
+                BarColumn(bar_width=None, style="white", complete_style="blue", finished_style="green"),
+                TextColumn("[progress.percentage]{task.percentage:>3.1f}%"),
+                "•",
+                TimeElapsedColumn(),
+                "•",
+                TimeRemainingColumn(),
+                transient=True,
+                expand=True,
+            )
 
     # Training Process
     def train(self):
@@ -121,8 +168,15 @@ class Trainer:
         try:
             self.prepare_for_steps()
             for self.step, self.batch_data in self.pbar:
+                if self.main_process:
+                    self.progress.advance(self.task)
                 self.train_in_steps(epoch_num, self.step)
                 self.print_details()
+            if self.main_process:
+                self.progress.remove_task(self.task)
+                self.progress.stop()
+            LOGGER.info(("\n" + "%10s" * (self.loss_num + 1)) % (*self.loss_info,))
+            LOGGER.info(("\n" + "%10g" * (self.loss_num + 1)) % (self.epoch, *self.mean_loss,))
         except Exception as _:
             LOGGER.error("ERROR in training steps.")
             raise
@@ -229,7 +283,7 @@ class Trainer:
                 task="train",
                 angle_max=self.cfg.model.head.angle_max,
                 angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
-                ap_method="VOC12"
+                ap_method="VOC12",
             )
         else:
 
@@ -343,20 +397,61 @@ class Trainer:
         self.mean_loss = torch.zeros(self.loss_num, device=self.device)
         self.optimizer.zero_grad()
 
-        LOGGER.info(("\n" + "%10s" * (self.loss_num + 1)) % (*self.loss_info,))
+        # TODO
+        # LOGGER.info(("\n" + "%10s" * (self.loss_num + 1)) % (*self.loss_info,))
+
         self.pbar = enumerate(self.train_loader)
         if self.main_process:
-            self.pbar = tqdm(
-                self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
-            )
+            # self.pbar = tqdm(
+            #     self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}"
+            # )
+            if not self.args.distill:
+                self.task = self.progress.add_task(
+                    "LOGGER", total=len(self.train_loader),
+                    epoch_name=f"Epoch {self.epoch}/{self.max_epoch - 1}",
+                    iou_loss=f"iou{self.mean_loss[0]:7.4g}",
+                    dfl_loss=f"dfl{self.mean_loss[1]:7.4g}",
+                    cls_loss=f"cls{self.mean_loss[2]:7.4g}",
+                    ang_loss=f"angle{self.mean_loss[3]:7.4g}",
+                )
+            else:
+                self.task = self.progress.add_task(
+                    "LOGGER", total=len(self.train_loader),
+                    epoch_name=f"Epoch {self.epoch}/{self.max_epoch - 1}",
+                    iou_loss=f"iou{self.mean_loss[0]:7.4g}",
+                    dfl_loss=f"dfl{self.mean_loss[1]:7.4g}",
+                    cls_loss=f"cls{self.mean_loss[2]:7.4g}",
+                    ang_loss=f"angle{self.mean_loss[3]:7.4g}",
+                    cwd_loss=f"cwd{self.mean_loss[4]:7.4g}",
+                )
+            self.progress.start()
+            self.progress.start_task(self.task)
 
     # Print loss after each steps
     def print_details(self):
         if self.main_process:
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
-            self.pbar.set_description(
-                ("%10s" + "%10.4g" * self.loss_num) % (f"{self.epoch}/{self.max_epoch - 1}", *(self.mean_loss))
-            )
+            # TODO
+            # self.pbar.set_description(
+            #     ("%10s" + "%10.4g" * self.loss_num) % (f"{self.epoch}/{self.max_epoch - 1}", *(self.mean_loss))
+            # )
+            if not self.args.distill:
+                self.progress.update(
+                    self.task,
+                    iou_loss=f"iou{self.mean_loss[0]:7.4g}",
+                    dfl_loss=f"dfl{self.mean_loss[1]:7.4g}",
+                    cls_loss=f"cls{self.mean_loss[2]:7.4g}",
+                    ang_loss=f"angle{self.mean_loss[3]:7.4g}",
+                )
+            else:
+                self.progress.update(
+                    self.task,
+                    iou_loss=f"iou{self.mean_loss[0]:7.4g}",
+                    dfl_loss=f"dfl{self.mean_loss[1]:7.4g}",
+                    cls_loss=f"cls{self.mean_loss[2]:7.4g}",
+                    ang_loss=f"angle{self.mean_loss[3]:7.4g}",
+                    cwd_loss=f"cwd{self.mean_loss[4]:7.4g}",
+                )
 
     def strip_model(self):
         if self.main_process:
@@ -580,7 +675,13 @@ class Trainer:
                             mosaic, contours=[poly], contourIdx=-1, color=color, thickness=2, lineType=cv2.LINE_AA
                         )
                         cv2.putText(
-                            mosaic, label, (int(box[0] - 5), int(box[1] - 5)), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, thickness=2
+                            mosaic,
+                            label,
+                            (int(box[0] - 5), int(box[1] - 5)),
+                            cv2.FONT_HERSHEY_COMPLEX,
+                            0.5,
+                            color,
+                            thickness=2,
                         )
         self.vis_train_batch = mosaic.copy()
 
@@ -606,7 +707,12 @@ class Trainer:
                 poly = cv2.boxPoints(rect)
                 poly = np.int0(poly)
                 cv2.drawContours(
-                    ori_img, contours=[poly], contourIdx=-1, color=tuple([int(x) for x in self.color[cls_id]]), thickness=2, lineType=cv2.LINE_AA
+                    ori_img,
+                    contours=[poly],
+                    contourIdx=-1,
+                    color=tuple([int(x) for x in self.color[cls_id]]),
+                    thickness=2,
+                    lineType=cv2.LINE_AA,
                 )
                 cv2.putText(
                     ori_img,
@@ -648,7 +754,8 @@ class Trainer:
     # QAT
     def quant_setup(self, model, cfg, device):
         if self.args.quant:
-            from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
+            from tools.qat.qat_utils import (qat_init_model_manu,
+                                             skip_sensitive_layers)
 
             qat_init_model_manu(model, cfg, self.args)
             # workaround
