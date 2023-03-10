@@ -18,10 +18,10 @@
 ## WIDERFACE 模型指标
 | Model                                                        | Size | Easy | Medium | Hard | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
 | :----------------------------------------------------------- | ---- | :--- | ------ | ---- | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6n_face.pt) | 640  | 95.0 | 92.4   | 80.4 | 797                                     | 1313                                     | 4.63                 | 11.35               |
-| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
-| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6n_face.pt) | 640  | 95.0 | 92.4   | 80.4 | 797                                     | 1313                                     | 4.63                 | 11.35               |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
+| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
 
 #### 表格备注
 
@@ -62,7 +62,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 ```
 - fuse_ab: 使用联合锚点训练模式
 - conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件
-- data: 数据集配置文件，以 WIDERFACE 数据集为例，您可以在 [WIDERFACE](http://shuoyang1213.me/WIDERFACE/) 下载数据, 在这里下载[YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.3.0/widerface_yololabels.zip) 
+- data: 数据集配置文件，以 WIDERFACE 数据集为例，您可以在 [WIDERFACE](http://shuoyang1213.me/WIDERFACE/) 下载数据, 在这里下载[YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.3.1/widerface_yololabels.zip) 
 - 确保您的数据集按照下面这种格式来组织；
 ```
 ├── widerface
@@ -80,7 +80,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 <details open>
 <summary>推理</summary>
 
-首先，从[release 页面](https://github.com/meituan/YOLOv6/releases/tag/0.3.0) 下载一个训练好的模型权重文件，或选择您自己训练的模型；
+首先，从[release 页面](https://github.com/meituan/YOLOv6/releases/tag/0.3.1) 下载一个训练好的模型权重文件，或选择您自己训练的模型；
 
 然后，通过 `tools/infer.py` 文件进行推理。
 

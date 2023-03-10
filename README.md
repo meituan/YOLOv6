@@ -19,10 +19,10 @@ New Feature
 ## Performance on WIDERFACE
 | Model                                                        | Size | Easy | Medium | Hard | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
 | :----------------------------------------------------------- | ---- | :--- | ------ | ---- | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6n_face.pt) | 640  | 95.0 | 92.4   | 80.4 | 797                                     | 1313                                     | 4.63                 | 11.35               |
-| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
-| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6n_face.pt) | 640  | 95.0 | 92.4   | 80.4 | 797                                     | 1313                                     | 4.63                 | 11.35               |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
+| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
 
 #### Table Notes
 
@@ -63,7 +63,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 ```
 - fuse_ab: Anchor Aided Training Mode
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on WIDER FACE or your custom dataset.
-- data: prepare dataset and specify dataset paths in data.yaml ( [WIDERFACE](http://shuoyang1213.me/WIDERFACE/), [YOLO format widerface labels](https://github.com/meituan/YOLOv6/releases/download/0.3.0/widerface_yololabels.zip) )
+- data: prepare dataset and specify dataset paths in data.yaml ( [WIDERFACE](http://shuoyang1213.me/WIDERFACE/), [YOLO format widerface labels](https://github.com/meituan/YOLOv6/releases/download/0.3.1/widerface_yololabels.zip) )
 - make sure your dataset structure as follows:
 ```
 ├── widerface
@@ -81,7 +81,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 <details open>
 <summary>Inference</summary>
 
-First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.3.0) or use your trained model to do inference.
+First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.3.1) or use your trained model to do inference.
 
 Second, run inference with `tools/infer.py`
 
