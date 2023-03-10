@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
-from yolov6.models.losses.loss_distill import \
+from yolov6.models.losses.loss_distill_R import \
     ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import \
     ComputeLoss as ComputeLoss_distill_ns
@@ -366,6 +366,7 @@ class Trainer:
                 fpn_strides=self.cfg.model.head.strides,
             )
         if self.args.distill:
+            # NOTE n/s 所使用的蒸馏函数不一样，原因在HEAD部分
             if self.cfg.model.type in ["YOLOv6n", "YOLOv6s"]:
                 Loss_distill_func = ComputeLoss_distill_ns
             else:
@@ -378,9 +379,12 @@ class Trainer:
                 warmup_epoch=self.cfg.model.head.atss_warmup_epoch,
                 use_dfl=self.cfg.model.head.use_dfl,
                 reg_max=self.cfg.model.head.reg_max,
+                angle_max = self.cfg.model.head.angle_max,
+                angle_fitting_methods= self.cfg.model.head.angle_fitting_methods,
                 iou_type=self.cfg.model.head.iou_type,
                 distill_weight=self.cfg.model.head.distill_weight,
                 distill_feat=self.args.distill_feat,
+                loss_weight=self.cfg.loss.loss_weight
             )
 
     def prepare_for_steps(self):
@@ -567,6 +571,7 @@ class Trainer:
         for module in model.modules():
             if isinstance(module, torch.nn.BatchNorm2d):
                 module.track_running_stats = False
+        # NOTE BatchNorm 不更新
         return model
 
     @staticmethod
