@@ -127,6 +127,7 @@ class Detect(nn.Module):
                 if self.angle_fitting_methods == 'regression':
                     angle_output = angle_output ** 2
 
+                # NOTE [BS, C, H, W]
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
@@ -182,7 +183,12 @@ class Detect(nn.Module):
                     angle_output = torch.argmax(angle_output, dim=1, keepdim=True)
                 elif self.angle_fitting_methods == 'MGAR':
                     # TODO MGAR
-                    pass
+                    angle_output_class = torch.sigmoid(angle_output[:, :self.angle_max, :, :])
+                    angle_output_class = torch.argmax(angle_output_class, dim=1, keepdim=True) * (180 / self.angle_max)
+                    # regression Square
+                    angle_output_regression = angle_output[:, -1:, :, :] ** 2
+                    angle_output = angle_output_class + angle_output_regression
+
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
                 reg_dist_list.append(reg_output.reshape([b, 4, l]))
                 angle_fitting_list.append(angle_output.reshape([b, 1, l]))
@@ -223,6 +229,7 @@ def build_effidehead_layer(
         angle_max += 1
     if angle_fitting_methods == "MGAR":
         assert 180 % angle_max == 0
+        angle_max += 1
         # NOTE 最后一个维度用来做regression
         # REVIEW 先不考虑
 

@@ -2,15 +2,17 @@
 # -*- coding:utf-8 -*-
 
 import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
+
 from yolov6.assigners.anchor_generator import generate_anchors
-from yolov6.utils.general import dist2bbox, bbox2dist, xywh2xyxy, box_iou
-from yolov6.utils.figure_iou import IOUloss
 from yolov6.assigners.atss_assigner_R import ATSSAssigner
 from yolov6.assigners.tal_assigner_R import TaskAlignedAssigner
+from yolov6.utils.figure_iou import IOUloss
+from yolov6.utils.general import bbox2dist, box_iou, dist2bbox, xywh2xyxy
 
 
 class ComputeLoss:
@@ -39,8 +41,9 @@ class ComputeLoss:
         self.ori_img_size = ori_img_size
 
         self.warmup_epoch = warmup_epoch
-        self.warmup_assigner = ATSSAssigner(9, num_classes=self.num_classes, angle_max=angle_max, \
-            angle_fitting_methods=angle_fitting_methods)  # NOTE ATSS
+        self.warmup_assigner = ATSSAssigner(
+            9, num_classes=self.num_classes, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods
+        )  # NOTE ATSS
         self.formal_assigner = TaskAlignedAssigner(
             topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0
         )  # NOTE TAL
@@ -93,7 +96,13 @@ class ComputeLoss:
             # TODO
             if epoch_num < self.warmup_epoch:
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.warmup_assigner(
-                    anchors, n_anchors_list, gt_labels, gt_bboxes, gt_angles, mask_gt, pred_bboxes.detach() * stride_tensor
+                    anchors,
+                    n_anchors_list,
+                    gt_labels,
+                    gt_bboxes,
+                    gt_angles,
+                    mask_gt,
+                    pred_bboxes.detach() * stride_tensor,
                 )
             else:
                 # TODO
@@ -127,7 +136,13 @@ class ComputeLoss:
                 _stride_tensor = stride_tensor.cpu().float()
 
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.warmup_assigner(
-                    _anchors, _n_anchors_list, _gt_labels, _gt_bboxes, _gt_angles, _mask_gt, _pred_bboxes * _stride_tensor
+                    _anchors,
+                    _n_anchors_list,
+                    _gt_labels,
+                    _gt_bboxes,
+                    _gt_angles,
+                    _mask_gt,
+                    _pred_bboxes * _stride_tensor,
                 )
 
             else:
@@ -142,7 +157,14 @@ class ComputeLoss:
                 _stride_tensor = stride_tensor.cpu().float()
 
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.formal_assigner(
-                    _pred_scores, _pred_bboxes * _stride_tensor, _pred_angles, _anchor_points, _gt_labels, _gt_bboxes, _gt_angles, _mask_gt
+                    _pred_scores,
+                    _pred_bboxes * _stride_tensor,
+                    _pred_angles,
+                    _anchor_points,
+                    _gt_labels,
+                    _gt_bboxes,
+                    _gt_angles,
+                    _mask_gt,
                 )
 
             target_labels = target_labels.cuda()
@@ -176,12 +198,22 @@ class ComputeLoss:
         # angle loss
         loss_angle = self.angle_loss(pred_angles, target_angles, target_scores, target_scores_sum, fg_mask)
 
-        loss = (
-            self.loss_weight["class"] * loss_cls
-            + self.loss_weight["iou"] * loss_iou
-            + self.loss_weight["dfl"] * loss_dfl
-            + self.loss_weight["angle"] * loss_angle
-        )
+        if isinstance(loss_angle, torch.Tensor):
+            loss = (
+                self.loss_weight["class"] * loss_cls
+                + self.loss_weight["iou"] * loss_iou
+                + self.loss_weight["dfl"] * loss_dfl
+                + self.loss_weight["angle"] * loss_angle
+            )
+        else:
+            loss = (
+                self.loss_weight["class"] * loss_cls
+                + self.loss_weight["iou"] * loss_iou
+                + self.loss_weight["dfl"] * loss_dfl
+                + self.loss_weight["MGAR_cls"] * loss_angle[0]
+                + self.loss_weight["MGAR_reg"] * loss_angle[1]
+            )
+            loss_angle = loss_angle[0] + loss_angle[1]
 
         return (
             loss,
@@ -233,7 +265,9 @@ class VarifocalLoss(nn.Module):
 def gaussian_label(target_angles: torch.Tensor, angle_max: int, u=0, sig=6.0):
     # NOTE target_angles [nums_label, 1]
     # NOTE gaussian angles [nums_label, angle_max]
-    smooth_label = torch.zeros_like(target_angles).repeat(1, angle_max).to(device=target_angles.device).type_as(target_angles)
+    smooth_label = (
+        torch.zeros_like(target_angles).repeat(1, angle_max).to(device=target_angles.device).type_as(target_angles)
+    )
     target_angles_long = target_angles.long()
 
     base_radius_range = torch.arange(-angle_max // 2, angle_max // 2, device=target_angles.device)
@@ -251,7 +285,7 @@ class AngleLoss(nn.Module):
         super(AngleLoss, self).__init__()
         self.angle_max = angle_max
         self.angle_fitting_methods = angle_fitting_methods
-        if self.angle_fitting_methods == 'dfl':
+        if self.angle_fitting_methods == "dfl" or self.angle_fitting_methods == "MGAR":
             self.angle_max += 1
         self.bce = nn.BCEWithLogitsLoss(reduction="none")
 
@@ -267,26 +301,57 @@ class AngleLoss(nn.Module):
             # NOTE 需不需要乘这个
             angle_weight = torch.masked_select(target_scores.sum(-1), fg_mask).unsqueeze(-1)
 
-            if self.angle_fitting_methods == 'regression':
-                loss_angle = F.smooth_l1_loss(pred_angle_pos, target_angle_pos, reduction='none') * angle_weight
+            if self.angle_fitting_methods == "regression":
+                loss_angle = F.smooth_l1_loss(pred_angle_pos, target_angle_pos, reduction="none") * angle_weight
 
-            elif self.angle_fitting_methods == 'csl':
+                if target_scores_sum == 0:
+                    loss_angle = loss_angle.sum()
+                else:
+                    loss_angle = loss_angle.sum() / target_scores_sum
+                return loss_angle
+
+            elif self.angle_fitting_methods == "csl":
                 csl_gaussian_target_angle_pos = gaussian_label(target_angle_pos, self.angle_max)
                 loss_angle = self.bce(pred_angle_pos, csl_gaussian_target_angle_pos) * angle_weight
 
-            # dfl loss
-            elif self.angle_fitting_methods == 'dfl':
-                target_angle_pos = target_angle_pos / ( 180.0 / (self.angle_max - 1))
+                if target_scores_sum == 0:
+                    loss_angle = loss_angle.sum()
+                else:
+                    loss_angle = loss_angle.sum() / target_scores_sum
+                return loss_angle
+
+            elif self.angle_fitting_methods == "dfl":
+                target_angle_pos = target_angle_pos / (180.0 / (self.angle_max - 1))
                 loss_angle = self._df_loss(pred_angle_pos, target_angle_pos) * angle_weight
 
-            if target_scores_sum == 0:
-                loss_angle = loss_angle.sum()
-            else:
-                loss_angle = loss_angle.sum() / target_scores_sum
+                if target_scores_sum == 0:
+                    loss_angle = loss_angle.sum()
+                else:
+                    loss_angle = loss_angle.sum() / target_scores_sum
+                return loss_angle
 
+            elif self.angle_fitting_methods == "MGAR":
+                # target_labels = torch.full_like(target_angle_pos, self.angle_max)
+                class_id = target_angle_pos.clone() // (180 / (self.angle_max - 1))
+                regression_value = target_angle_pos.clone() - class_id * (180 / (self.angle_max - 1))
+                class_id = class_id.squeeze()
+                one_hot_label = F.one_hot(class_id.long(), self.angle_max - 1)
+                loss_angle_regression = (
+                    F.smooth_l1_loss(pred_angle_pos[..., -1:] ** 2, regression_value, reduction="none") * angle_weight
+                )
+                loss_angle_class = (
+                    self.bce(pred_angle_pos[:, :(self.angle_max - 1)], one_hot_label.float()) * angle_weight
+                )
+
+                if target_scores_sum == 0:
+                    loss_angle_class = loss_angle_class.sum()
+                    loss_angle_regression = loss_angle_regression.sum()
+                else:
+                    loss_angle_class = loss_angle_class.sum() / target_scores_sum
+                    loss_angle_regression = loss_angle_regression.sum() / target_scores_sum
+                return (loss_angle_class, loss_angle_regression)
         else:
             loss_angle = pred_angles.sum() * 0.0
-
 
         return loss_angle
 
@@ -308,6 +373,8 @@ class AngleLoss(nn.Module):
             * weight_right
         )
         return (loss_left + loss_right).mean(-1, keepdim=True)
+
+
 class BboxLoss(nn.Module):
     def __init__(self, num_classes, reg_max, use_dfl=False, iou_type="giou"):
         super(BboxLoss, self).__init__()

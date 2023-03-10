@@ -53,11 +53,11 @@ loss = dict(
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
-    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, 'cwd': 0.2},
+    # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, 'cwd': 0.2},
     # NOTE for angle dfl
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.25, 'cwd': 10},
     # NOTE for angle MGAR
-    # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
+    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, "MGAR_cls": 0.05, "MGAR_reg": 0.05, 'cwd': 0.2, },
 )
 solver = dict(
     optim="AdamW",
