@@ -16,7 +16,7 @@ class Detect(nn.Module):
         super().__init__()
         assert head_layers is not None
         self.nc = num_classes  # number of classes
-        self.no = num_classes + 5  # number of outputs per anchor
+        self.no = num_classes + 5 + 10 # number of outputs per anchor
         self.nl = num_layers  # number of detection layers
         self.grid = [torch.zeros(1)] * num_layers
         self.prior_prob = 1e-2
@@ -92,6 +92,7 @@ class Detect(nn.Module):
         else:
             cls_score_list = []
             reg_dist_list = []
+            reg_ldmk_list = []
             anchor_points, stride_tensor = generate_anchors(
                 x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
@@ -105,31 +106,42 @@ class Detect(nn.Module):
                 cls_output = self.cls_preds[i](cls_feat)
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output = self.reg_preds[i](reg_feat)
+                reg_output_box = reg_output[:, :-10, :, :]
+                reg_output_ldmk = reg_output[:, -10:, :, :]
 
                 if self.use_dfl:
-                    reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
-                    reg_output = self.proj_conv(F.softmax(reg_output, dim=1))
+                    reg_output_box = reg_output_box.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
+                    reg_output_box = self.proj_conv(F.softmax(reg_output_box, dim=1))
 
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
-                reg_dist_list.append(reg_output.reshape([b, 4, l]))
+                reg_dist_list.append(reg_output_box.reshape([b, 4, l]))
+                reg_ldmk_list.append(reg_output_ldmk.reshape([b, 10, l]))
 
             cls_score_list = torch.cat(cls_score_list, axis=-1).permute(0, 2, 1)
             reg_dist_list = torch.cat(reg_dist_list, axis=-1).permute(0, 2, 1)
-
+            reg_ldmk_list = torch.cat(reg_ldmk_list, axis=-1).permute(0, 2, 1)
 
             pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor
+            
+            ldmk1 = (reg_ldmk_list[..., 0:2] + anchor_points) * stride_tensor
+            ldmk2 = (reg_ldmk_list[..., 2:4] + anchor_points) * stride_tensor
+            ldmk3 = (reg_ldmk_list[..., 4:6] + anchor_points) * stride_tensor
+            ldmk4 = (reg_ldmk_list[..., 6:8] + anchor_points) * stride_tensor
+            ldmk5 = (reg_ldmk_list[..., 8:10] + anchor_points) * stride_tensor
+
             return torch.cat(
                 [
                     pred_bboxes,
+                    ldmk1, ldmk2, ldmk3, ldmk4, ldmk5, 
                     torch.ones((b, pred_bboxes.shape[1], 1), device=pred_bboxes.device, dtype=pred_bboxes.dtype),
                     cls_score_list
                 ],
                 axis=-1)
 
 
-def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
+def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
 
     chx = [6, 8, 10] if num_layers == 3 else [8, 9, 10, 11]
 
@@ -164,7 +176,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
         # reg_pred0
         nn.Conv2d(
             in_channels=channels_list[chx[0]],
-            out_channels=4 * (reg_max + num_anchors),
+            out_channels=4 * (reg_max + num_anchors) + 10,
             kernel_size=1
         ),
         # stem1
@@ -197,7 +209,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
         # reg_pred1
         nn.Conv2d(
             in_channels=channels_list[chx[1]],
-            out_channels=4 * (reg_max + num_anchors),
+            out_channels=4 * (reg_max + num_anchors) + 10,
             kernel_size=1
         ),
         # stem2
@@ -230,7 +242,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
         # reg_pred2
         nn.Conv2d(
             in_channels=channels_list[chx[2]],
-            out_channels=4 * (reg_max + num_anchors),
+            out_channels=4 * (reg_max + num_anchors) + 10,
             kernel_size=1
         )
     )
@@ -275,7 +287,160 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             # reg_pred3
             nn.Conv2d(
                 in_channels=channels_list[chx[3]],
-                out_channels=4 * (reg_max + num_anchors),
+                out_channels=4 * (reg_max + num_anchors) + 10,
+                kernel_size=1
+            )
+        )
+
+    return head_layers
+
+def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
+    
+    chx = [6, 8, 10] if num_layers == 3 else [8, 9, 10, 11]
+
+    head_layers = nn.Sequential(
+        # stem0
+        Conv(
+            in_channels=channels_list[chx[0]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=1,
+            stride=1
+        ),
+        # cls_conv0
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # reg_conv0
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # cls_pred0
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=num_classes * num_anchors,
+            kernel_size=1
+        ),
+        # reg_pred0
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=4 * (reg_max + num_anchors) + 10,
+            kernel_size=1
+        ),
+        # stem1
+        Conv(
+            in_channels=channels_list[chx[1]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=1,
+            stride=1
+        ),
+        # cls_conv1
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # reg_conv1
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # cls_pred1
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=num_classes * num_anchors,
+            kernel_size=1
+        ),
+        # reg_pred1
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=4 * (reg_max + num_anchors) + 10,
+            kernel_size=1
+        ),
+        # stem2
+        Conv(
+            in_channels=channels_list[chx[2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=1,
+            stride=1
+        ),
+        # cls_conv2
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # reg_conv2
+        Conv(
+            in_channels=channels_list[chx[-2]],
+            out_channels=channels_list[chx[-2]],
+            kernel_size=3,
+            stride=1
+        ),
+        # cls_pred2
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=num_classes * num_anchors,
+            kernel_size=1
+        ),
+        # reg_pred2
+        nn.Conv2d(
+            in_channels=channels_list[chx[-2]],
+            out_channels=4 * (reg_max + num_anchors) + 10,
+            kernel_size=1
+        )
+    )
+
+    if num_layers == 4:
+        head_layers.add_module('stem3',
+            # stem3
+            Conv(
+                in_channels=channels_list[chx[3]],
+                out_channels=channels_list[chx[-2]],
+                kernel_size=1,
+                stride=1
+            )
+        )
+        head_layers.add_module('cls_conv3',
+            # cls_conv3
+            Conv(
+                in_channels=channels_list[chx[-2]],
+                out_channels=channels_list[chx[-2]],
+                kernel_size=3,
+                stride=1
+            )
+        )
+        head_layers.add_module('reg_conv3',
+            # reg_conv3
+            Conv(
+                in_channels=channels_list[chx[-2]],
+                out_channels=channels_list[chx[-2]],
+                kernel_size=3,
+                stride=1
+            )
+        )
+        head_layers.add_module('cls_pred3',
+            # cls_pred3
+            nn.Conv2d(
+                in_channels=channels_list[chx[-2]],
+                out_channels=num_classes * num_anchors,
+                kernel_size=1
+            )
+         )
+        head_layers.add_module('reg_pred3',
+            # reg_pred3
+            nn.Conv2d(
+                in_channels=channels_list[chx[-2]],
+                out_channels=4 * (reg_max + num_anchors) + 10,
                 kernel_size=1
             )
         )

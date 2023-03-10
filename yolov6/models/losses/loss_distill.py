@@ -10,7 +10,7 @@ from yolov6.utils.general import dist2bbox, bbox2dist, xywh2xyxy
 from yolov6.utils.figure_iou import IOUloss
 from yolov6.assigners.atss_assigner import ATSSAssigner
 from yolov6.assigners.tal_assigner import TaskAlignedAssigner
-
+from yolov6.utils.RepulsionLoss import repulsion_loss
 
 class ComputeLoss:
     '''Loss computation func.'''
@@ -28,7 +28,9 @@ class ComputeLoss:
                      'class': 1.0,
                      'iou': 2.5,
                      'dfl': 0.5,
-                     'cwd': 10.0},
+                     'cwd': 10.0,
+                     'repgt': 0.5,
+                     'repbox': 5.0},
                  distill_feat = False,
                  distill_weight={
                      'class': 1.0,
@@ -197,15 +199,23 @@ class ComputeLoss:
         d_loss_cw *= distill_weightdecay
         loss_cls_all = loss_cls + d_loss_cls * self.distill_weight['class']
         loss_dfl_all = loss_dfl + d_loss_dfl * self.distill_weight['dfl']
+        
+        # repulsion loss
+        loss_repGT, loss_repBox = repulsion_loss(
+            pred_bboxes, target_bboxes, fg_mask, sigma_repgt=0.9, sigma_repbox=0, pnms=0, gtnms=0)
+
         loss = self.loss_weight['class'] * loss_cls_all + \
                self.loss_weight['iou'] * loss_iou + \
                self.loss_weight['dfl'] * loss_dfl_all + \
+               self.loss_weight['repgt'] * loss_repGT + self.loss_weight['repbox'] * loss_repBox + \
                self.loss_weight['cwd'] * d_loss_cw
 
         return loss, \
             torch.cat(((self.loss_weight['iou'] * loss_iou).unsqueeze(0),
                          (self.loss_weight['dfl'] * loss_dfl_all).unsqueeze(0),
                          (self.loss_weight['class'] * loss_cls_all).unsqueeze(0),
+                         (self.loss_weight['repgt'] * loss_repGT).unsqueeze(0),
+                         (self.loss_weight['repbox'] * loss_repBox).unsqueeze(0),
                          (self.loss_weight['cwd'] * d_loss_cw).unsqueeze(0))).detach()
 
     def distill_loss_cls(self, logits_student, logits_teacher, num_classes, temperature=20):
@@ -218,6 +228,7 @@ class ComputeLoss:
         d_loss_cls = F.kl_div(log_pred_student, pred_teacher, reduction="sum")
         d_loss_cls *= temperature**2
         return d_loss_cls
+    
     def distill_loss_cw(self, s_feats, t_feats,  temperature=1):
         N,C,H,W = s_feats[0].shape
         # print(N,C,H,W)

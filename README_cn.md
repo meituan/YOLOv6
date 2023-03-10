@@ -4,203 +4,99 @@
 
 简体中文 | [English](README.md)
 
-## YOLOv6
+## YOLOv6-Face
 
-官方论文: 
-- [YOLOv6 v3.0: A Full-Scale Reloading](https://arxiv.org/abs/2301.05586) 🔥
-- [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
-
-<p align="center">
-  <img src="assets/speed_comparision_v3.png" align="middle" width = "1000" />
-</p>
+基于 [YOLOv6 v3.0 分支](https://github.com/meituan/YOLOv6/tree/main) 代码实现人脸检测任务。
 
 
-## 更新日志
-- [2023.03.02] 更新 [基础版模型](configs/base/READM_cn.md) 到 3.0 版本
-- [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级 ⭐️ [模型指标](#模型指标)
-    - 添加 BiC 模块 和 SimCSPSPPF 模块以增强检测网络颈部的表征能力。
-    - 提出一个锚点辅助训练 (AAT) 策略。
-    - 为 YOLOv6 小模型引入一个新的自蒸馏训练策略。
-    - 扩展 YOLOv6 并在 COCO 上取得了实时目标检测 SOTA 的精度和速度。
-- [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程
-- [2022.09.06] 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)
-- [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能  
-- [2022.06.23] 发布 N/T/S v1.0 版本模型
+新特性
+- 人脸关键点定位
+- Repulsion 损失函数
+- 相同通道数解耦头
 
-## 模型指标
-| 模型                                                       | 输入尺寸 | mAP<sup>val<br/>0.5:0.95              | 速度<sup>T4<br/>trt fp16 b1 <br/>(fps) | 速度<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
-| :----------------------------------------------------------- | ---- | :------------------------------------ | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6n.pt) | 640  | 37.5                     | 779                                     | 1187                                     | 4.7                  | 11.4                |
-| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6s.pt) | 640  | 45.0                     | 339                                     | 484                                      | 18.5                 | 45.3                |
-| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6m.pt) | 640  | 50.0                     | 175                                     | 226                                      | 34.9                 | 85.8                |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6l.pt) | 640  | 52.8                     | 98                                      | 116                                      | 59.6                 | 150.7               |
-|                              |                               |                                |                    |                        |
-| [**YOLOv6-N6**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6n6.pt) | 1280 | 44.9                     | 228                                     | 281                                      | 10.4                 | 49.8                |
-| [**YOLOv6-S6**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6s6.pt) | 1280 | 50.3                     | 98                                      | 108                                      | 41.4                 | 198.0               |
-| [**YOLOv6-M6**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6m6.pt) | 1280 | 55.2                     | 47                                      | 55                                       | 79.6                 | 379.5               |
-| [**YOLOv6-L6**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6l6.pt) | 1280 | 57.2                     | 26                                      | 29                                       | 140.4                | 673.4               |
 
-<details>
-<summary>表格笔记</summary>
+## WIDERFACE 模型指标
+| Model                                                        | Size | Easy | Medium | Hard | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
+| :----------------------------------------------------------- | ---- | :--- | ------ | ---- | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6n_face.pt) | 640  | 95.0 | 92.4   | 80.4 | 797                                     | 1313                                     | 4.63                 | 11.35               |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
+| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.0/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
 
-- 除了 YOLOv6-N6/S6 模型是训练了300轮的结果，其余模型均为自蒸馏训练之后的结果；  
-- mAP 和速度指标是在 [COCO val2017](https://cocodataset.org/#download)  数据集上评估的，P5模型输入分辨率为 640×640，P6模型输入分辨率为 1280×1280；
-- 速度是在 T4 上测试的，TensorRT 版本为 7.2；
-- 复现 YOLOv6 的速度指标，请查看 [速度测试](./docs/Test_speed.md) 教程；
-- YOLOv6 的参数和计算量是在推理模式下计算的；
-</details>
+#### 表格备注
 
-<details>
-<summary>旧版模型</summary>
-
-| 模型                                                       | 输入尺寸 | mAP<sup>val<br/>0.5:0.95              | 速度<sup>T4<br/>trt fp16 b1 <br/>(fps) | 速度<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
-| :----------------------------------------------------------- | ---- | :------------------------------------ | --------------------------------------- | ---------------------------------------- | -------------------- | ------------------- |
-| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6n.pt) | 640  | 35.9<sup>300e</sup><br/>36.3<sup>400e | 802                                     | 1234                                     | 4.3                  | 11.1                |
-| [**YOLOv6-T**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6t.pt) | 640  | 40.3<sup>300e</sup><br/>41.1<sup>400e | 449                                     | 659                                      | 15.0                 | 36.7                |
-| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6s.pt) | 640  | 43.5<sup>300e</sup><br/>43.8<sup>400e | 358                                     | 495                                      | 17.2                 | 44.2                |
-| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6m.pt) | 640  | 49.5                                  | 179                                     | 233                                      | 34.3                 | 82.2                |
-| [**YOLOv6-L-ReLU**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l_relu.pt) | 640  | 51.7                                  | 113                                     | 149                                      | 58.5                 | 144.0               |
-| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.2.0/yolov6l.pt) | 640  | 52.5                                  | 98                                      | 121                                      | 58.5                 | 144.0               |
-- 速度是在 T4 上测试的，TensorRT 版本为 7.2；
-
-### 量化模型
-
-| 模型                 | 输入尺寸 | 精度 | mAP<sup>val<br/>0.5:0.95 | 速度<sup>T4<br/>trt b1 <br/>(fps) | 速度<sup>T4<br/>trt b32 <br/>(fps) |
-| :-------------------- | ---- | --------- | :----------------------- | ---------------------------------- | ----------------------------------- |
-| **YOLOv6-N RepOpt** | 640  | INT8      | 34.8                     | 1114                               | 1828                                |
-| **YOLOv6-N**        | 640  | FP16      | 35.9                     | 802                                | 1234                                |
-| **YOLOv6-T RepOpt** | 640  | INT8      | 39.8                     | 741                                | 1167                                |
-| **YOLOv6-T**        | 640  | FP16      | 40.3                     | 449                                | 659                                 |
-| **YOLOv6-S RepOpt** | 640  | INT8      | 43.3                     | 619                                | 924                                 |
-| **YOLOv6-S**        | 640  | FP16      | 43.5                     | 377                                | 541                                 |
-
-- 速度是在 T4 上测试的，TensorRT 版本为 8.4；
-- 精度是在训练 300 epoch 的模型上测试的；
-
-</details>
+- 以上模型均在COCO预训练模型上微调300轮之后的结果.
+- mAP 和速度指标是在 [WIDER FACE](http://shuoyang1213.me/WIDERFACE/) 数据集上评估的，模型输入分辨率为 640×640.
+- 速度是在 T4 上测试的，TensorRT 版本为 8.2.
+- 复现 YOLOv6 的速度指标，请查看[速度测试](./docs/Test_speed.md) 教程.
+- YOLOv6 的参数和计算量是在推理模式下计算的.
 
 
 ## 快速开始
 
-<details>
+<details open>
 <summary> 安装</summary>
 
 
 ```shell
 git clone https://github.com/meituan/YOLOv6
 cd YOLOv6
+git checkout yolov6-face
 pip install -r requirements.txt
 ```
 </details>
 
-<details>
-<summary> 在 COCO 数据集上复现我们的结果</summary>
-
-请参考教程 [训练 COCO 数据集](./docs/Train_coco_data.md).
-
-</details>
-
 <details open>
-<summary> 在自定义数据集上微调模型 </summary>
+<summary> 训练 </summary>
 
 单卡
 
 ```shell
-# P5 models
-python tools/train.py --batch 32 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0
-# P6 models
-python tools/train.py --batch 32 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0
+python tools/train.py --batch 8 --conf configs/yolov6s_finetune.py --data data/WIDER_FACE.yaml --fuse_ab --device 0
 ```
 
-多卡 （我们推荐使用 DDP 模式）
+多卡 (推荐使用 DDP 模式)
 
 ```shell
-# P5 models
-python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 256 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0,1,2,3,4,5,6,7
-# P6 models
-python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128 --conf configs/yolov6s6_finetune.py --data data/dataset.yaml --img 1280 --device 0,1,2,3,4,5,6,7
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 --conf configs/yolov6s_finetune.py --data data/WIDER_FACE.yaml --fuse_ab --device 0,1,2,3,4,5,6,7
 ```
-- fuse_ab: 增加anchor-based预测分支并使用联合锚点训练模式 (P6模型暂不支持此功能)
-- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件；
-- data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
+- fuse_ab: 使用联合锚点训练模式
+- conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件
+- data: 数据集配置文件，以 WIDERFACE 数据集为例，您可以在 [WIDERFACE](http://shuoyang1213.me/WIDERFACE/) 下载数据, 在这里下载[YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.3.0/widerface_yololabels.zip) 
 - 确保您的数据集按照下面这种格式来组织；
 ```
-├── coco
-│   ├── annotations
-│   │   ├── instances_train2017.json
-│   │   └── instances_val2017.json
+├── widerface
 │   ├── images
-│   │   ├── train2017
-│   │   └── val2017
+│   │   ├── train
+│   │   └── val
 │   ├── labels
-│   │   ├── train2017
-│   │   ├── val2017
+│   │   ├── train
+│   │   ├── val
+
 ```
-
-</details>
-
-<details>
-<summary>恢复训练</summary>
-
-
-如果您的训练进程中断了，您可以这样恢复先前的训练进程。
-```
-# 单卡训练
-python tools/train.py --resume
-
-# 多卡训练
-python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
-```
-上面的命令将自动在 YOLOv6 目录中找到最新保存的模型，然后恢复训练。
-
-您也可以通过 `--resume` 参数指定要恢复的模型路径
-```
-# 记得把 /path/to/your/checkpoint/path  替换为您要恢复训练的模型权重路径
---resume /path/to/your/checkpoint/path
-```
-这将从您提供的模型路径恢复训练。
-
 </details>
 
 
-<details>
-<summary> 评估</summary>
-在 COCO val2017 数据集上复现我们的结果（输入分辨率 640x640 或 1280x1280）
-
-```shell
-# P5 models
-python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val --reproduce_640_eval
-# P6 models
-python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s6.pt --task val --reproduce_640_eval --img 1280
-```
-- verbose: 如果要打印每一类的精度信息，请设置为 True；
-- do_coco_metric: 设置 True / False 来打开或关闭 pycocotools 的评估；
-- do_pr_metric: 设置 True / False 来显示或不显示精度和召回的指标；
-- config-file: 指定一个包含所有评估参数的配置文件，例如 [yolov6n_with_eval_params.py](configs/experiment/yolov6n_with_eval_params.py)
-</details>
-
-
-<details>
+<details open>
 <summary>推理</summary>
 
-首先，从 [release页面](https://github.com/meituan/YOLOv6/releases/tag/0.3.0)  下载一个训练好的模型权重文件，或选择您自己训练的模型；
+首先，从[release 页面](https://github.com/meituan/YOLOv6/releases/tag/0.3.0) 下载一个训练好的模型权重文件，或选择您自己训练的模型；
 
-然后，通过 `tools/infer.py`文件进行推理。
+然后，通过 `tools/infer.py` 文件进行推理。
 
 ```shell
-# P5 models
-python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
-# P6 models
-python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --source img.jpg / imgdir / video.mp4
+python tools/infer.py --weights yolov6s_face.pt --source ../widerface/images/val/ --yaml data/WIDER_FACE.yaml --conf 0.02 --not-save-img --save-txt-widerface --name widerface_yolov6s
 ```
-如果您想使用本地摄像头或者网络摄像头，您可以运行:
+
+</details>
+
+<details open>
+<summary> WIDERFACE 评估 </summary>
+
 ```shell
-# P5 models
-python tools/infer.py --weights yolov6s.pt --webcam --webcam-addr 0
-# P6 models
-python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-addr 0
+cd widerface_evaluate
+python evaluation.py --pred ../runs/inference/widerface_yolov6s/labels/
 ```
-`webcam-addr` 可以是本地摄像头的 ID，或者是 RTSP 地址。
 </details>
 
 <details>
@@ -212,7 +108,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-ad
 *  [TensorRT](./deploy/TensorRT)
 </details>
 
-<details open>
+<details>
 <summary> 教程 </summary>
 
 *  [用户手册（中文版）](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 

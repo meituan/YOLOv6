@@ -68,7 +68,7 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     block = get_block(config.training_mode)
     BACKBONE = eval(config.model.backbone.type)
     NECK = eval(config.model.neck.type)
-
+    
     if 'CSP' in config.model.backbone.type:
         backbone = BACKBONE(
             in_channels=channels,
@@ -103,22 +103,25 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
         )
 
     if distill_ns:
-        from yolov6.models.heads.effidehead_distill_ns import Detect, build_effidehead_layer
+        from yolov6.models.heads.effidehead_distill_ns import Detect, DeHead, EffiDeHead
         if num_layers != 3:
             LOGGER.error('ERROR in: Distill mode not fit on n/s models with P6 head.\n')
             exit()
-        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max)
+        HEAD = eval(config.model.head.type)
+        head_layers = HEAD(channels_list, 1, num_classes, reg_max=reg_max)
         head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
 
     elif fuse_ab:
-        from yolov6.models.heads.effidehead_fuseab import Detect, build_effidehead_layer
+        from yolov6.models.heads.effidehead_fuseab import Detect, DeHead, EffiDeHead
         anchors_init = config.model.head.anchors_init
-        head_layers = build_effidehead_layer(channels_list, 3, num_classes, reg_max=reg_max, num_layers=num_layers)
+        HEAD = eval(config.model.head.type)
+        head_layers = HEAD(channels_list, 3, num_classes, reg_max=reg_max, num_layers=num_layers)
         head = Detect(num_classes, anchors_init, num_layers, head_layers=head_layers, use_dfl=use_dfl)
 
     else:
-        from yolov6.models.effidehead import Detect, build_effidehead_layer
-        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers)
+        from yolov6.models.effidehead import Detect, DeHead, EffiDeHead
+        HEAD = eval(config.model.head.type)
+        head_layers = HEAD(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers)
         head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
 
     return backbone, neck, head

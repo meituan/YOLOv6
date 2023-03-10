@@ -9,7 +9,7 @@ from yolov6.assigners.anchor_generator import generate_anchors
 from yolov6.utils.general import dist2bbox, bbox2dist, xywh2xyxy, box_iou
 from yolov6.utils.figure_iou import IOUloss
 from yolov6.assigners.tal_assigner import TaskAlignedAssigner
-
+from yolov6.utils.RepulsionLoss import repulsion_loss
 
 class ComputeLoss:
     '''Loss computation func.'''
@@ -26,7 +26,10 @@ class ComputeLoss:
                  loss_weight={
                      'class': 1.0,
                      'iou': 2.5,
-                     'dfl': 0.5}
+                     'dfl': 0.5,
+                     'repgt': 0.5,
+                     'repbox': 5.0,
+                     'landmark': 0.002}
                  ):
 
         self.fpn_strides = fpn_strides
@@ -63,9 +66,9 @@ class ComputeLoss:
         batch_size = pred_scores.shape[0]
 
         # targets
-        targets =self.preprocess(targets, batch_size, gt_bboxes_scale)
+        targets, gt_ldmks = self.preprocess(targets, batch_size, gt_bboxes_scale)
         gt_labels = targets[:, :, :1]
-        gt_bboxes = targets[:, :, 1:] #xyxy
+        gt_bboxes = targets[:, :, 1:5] #xyxy
         mask_gt = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
 
         # pboxes
@@ -74,13 +77,14 @@ class ComputeLoss:
         pred_bboxes = xywh2xyxy(pred_distri)
 
         try:
-            target_labels, target_bboxes, target_scores, fg_mask = \
+            target_labels, target_bboxes, target_ldmks, target_scores, fg_mask = \
                 self.formal_assigner(
                     pred_scores.detach(),
                     pred_bboxes.detach() * stride_tensor,
                     anchor_points,
                     gt_labels,
                     gt_bboxes,
+                    gt_ldmks,
                     mask_gt)
 
         except RuntimeError:
@@ -97,22 +101,26 @@ class ComputeLoss:
             _anchor_points = anchor_points.cpu().float()
             _gt_labels = gt_labels.cpu().float()
             _gt_bboxes = gt_bboxes.cpu().float()
+            _gt_ldmks = gt_ldmks.cpu().float()
             _mask_gt = mask_gt.cpu().float()
             _stride_tensor = stride_tensor.cpu().float()
 
-            target_labels, target_bboxes, target_scores, fg_mask = \
+            target_labels, target_bboxes, target_ldmks, target_scores, fg_mask = \
                 self.formal_assigner(
                     _pred_scores,
                     _pred_bboxes * _stride_tensor,
                     _anchor_points,
                     _gt_labels,
                     _gt_bboxes,
+                    _gt_ldmks,
                     _mask_gt)
 
             target_labels = target_labels.cuda()
             target_bboxes = target_bboxes.cuda()
+            target_ldmks = target_ldmks.cuda()
             target_scores = target_scores.cuda()
             fg_mask = fg_mask.cuda()
+                         
         #Dynamic release GPU memory
         if step_num % 10 == 0:
             torch.cuda.empty_cache()
@@ -135,24 +143,37 @@ class ComputeLoss:
         loss_iou, loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, anchor_points_s, target_bboxes,
                                             target_scores, target_scores_sum, fg_mask)
 
+        # repulsion loss (disable in anchor-based branch)
+        loss_repGT, loss_repBox = pred_distri.sum() * 0. , pred_distri.sum() * 0.
+
+        # Landmarks Loss (disable in anchor-based branch)
+        loss_landmark = pred_distri.sum() * 0.
+
         loss = self.loss_weight['class'] * loss_cls + \
                self.loss_weight['iou'] * loss_iou + \
-               self.loss_weight['dfl'] * loss_dfl
+               self.loss_weight['dfl'] * loss_dfl + \
+               self.loss_weight['repgt'] * loss_repGT + self.loss_weight['repbox'] * loss_repBox + \
+               self.loss_weight['landmark'] * loss_landmark
 
         return loss, \
             torch.cat(((self.loss_weight['iou'] * loss_iou).unsqueeze(0),
                          (self.loss_weight['dfl'] * loss_dfl).unsqueeze(0),
-                         (self.loss_weight['class'] * loss_cls).unsqueeze(0))).detach()
+                         (self.loss_weight['class'] * loss_cls).unsqueeze(0),
+                         (self.loss_weight['repgt'] * loss_repGT).unsqueeze(0),
+                         (self.loss_weight['repbox'] * loss_repBox).unsqueeze(0),
+                         (self.loss_weight['landmark'] * loss_landmark).unsqueeze(0))).detach()
 
     def preprocess(self, targets, batch_size, scale_tensor):
-        targets_list = np.zeros((batch_size, 1, 5)).tolist()
+        targets_list = np.zeros((batch_size, 1, 15)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):
             targets_list[int(item[0])].append(item[1:])
         max_len = max((len(l) for l in targets_list))
-        targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0]]*(max_len - len(l)), targets_list)))[:,1:,:]).to(targets.device)
+        targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]]*(max_len - len(l)), targets_list)))[:,1:,:]).to(targets.device)
         batch_target = targets[:, :, 1:5].mul_(scale_tensor)
-        targets[..., 1:] = xywh2xyxy(batch_target)
-        return targets
+        targets[..., 1:5] = xywh2xyxy(batch_target)
+        # add landmarks
+        gt_ldmks = targets[:, :, 5:15].mul_(scale_tensor[0,0])
+        return targets, gt_ldmks
 
     def bbox_decode(self, anchor_points, pred_dist):
         if self.use_dfl:
@@ -239,3 +260,20 @@ class BboxLoss(nn.Module):
             pred_dist.view(-1, self.reg_max + 1), target_right.view(-1), reduction='none').view(
             target_left.shape) * weight_right
         return (loss_left + loss_right).mean(-1, keepdim=True)
+
+class WingLoss(nn.Module):
+    def __init__(self, w=10, e=2):
+        super(WingLoss, self).__init__()
+        # https://arxiv.org/pdf/1711.06753v4.pdf
+        self.w = w
+        self.e = e
+        self.C = self.w - self.w * np.log(1 + self.w / self.e)
+
+    def forward(self, x, t, sigma=1):
+        weight = torch.ones_like(t)
+        weight[torch.where(t==-1)] = 0
+        diff = weight * (x - t)
+        abs_diff = diff.abs()
+        flag = (abs_diff.data < self.w).float()
+        y = flag * self.w * torch.log(1 + abs_diff / self.e) + (1 - flag) * (abs_diff - self.C)
+        return y.sum()

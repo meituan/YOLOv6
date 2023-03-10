@@ -25,6 +25,7 @@ class TaskAlignedAssigner(nn.Module):
                 anc_points,
                 gt_labels,
                 gt_bboxes,
+                gt_ldmks,
                 mask_gt):
         """This code referenced to
            https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
@@ -35,6 +36,7 @@ class TaskAlignedAssigner(nn.Module):
             anc_points (Tensor): shape(num_total_anchors, 2)
             gt_labels (Tensor): shape(bs, n_max_boxes, 1)
             gt_bboxes (Tensor): shape(bs, n_max_boxes, 4)
+            gt_ldmks (Tensor): shape(bs, n_max_boxes, 10)
             mask_gt (Tensor): shape(bs, n_max_boxes, 1)
         Returns:
             target_labels (Tensor): shape(bs, num_total_anchors)
@@ -49,11 +51,12 @@ class TaskAlignedAssigner(nn.Module):
             device = gt_bboxes.device
             return torch.full_like(pd_scores[..., 0], self.bg_idx).to(device), \
                    torch.zeros_like(pd_bboxes).to(device), \
+                   torch.zeros(pd_bboxes.shape[0], pd_bboxes.shape[1], 10).to(device), \
                    torch.zeros_like(pd_scores).to(device), \
-                   torch.zeros_like(pd_scores[..., 0]).to(device)
+                   torch.zeros_like(pd_scores[..., 0]).bool().to(device)
 
         cycle, step, self.bs = (1, self.bs, self.bs) if self.n_max_boxes <= 100 else (self.bs, 1, 1)
-        target_labels_lst, target_bboxes_lst, target_scores_lst, fg_mask_lst = [], [], [], []
+        target_labels_lst, target_bboxes_lst, target_ldmks_lst, target_scores_lst, fg_mask_lst = [], [], [], [], []
         # loop batch dim in case of numerous object box
         for i in range(cycle):
             start, end = i*step, (i+1)*step
@@ -61,6 +64,7 @@ class TaskAlignedAssigner(nn.Module):
             pd_bboxes_ = pd_bboxes[start:end, ...]
             gt_labels_ = gt_labels[start:end, ...]
             gt_bboxes_ = gt_bboxes[start:end, ...]
+            gt_ldmks_  = gt_ldmks[start:end, ...]
             mask_gt_   = mask_gt[start:end, ...]
 
             mask_pos, align_metric, overlaps = self.get_pos_mask(
@@ -70,8 +74,8 @@ class TaskAlignedAssigner(nn.Module):
                 mask_pos, overlaps, self.n_max_boxes)
 
             # assigned target
-            target_labels, target_bboxes, target_scores = self.get_targets(
-                gt_labels_, gt_bboxes_, target_gt_idx, fg_mask)
+            target_labels, target_bboxes, target_ldmks, target_scores = self.get_targets(
+                gt_labels_, gt_bboxes_, gt_ldmks_, target_gt_idx, fg_mask)
 
             # normalize
             align_metric *= mask_pos
@@ -83,16 +87,18 @@ class TaskAlignedAssigner(nn.Module):
             # append
             target_labels_lst.append(target_labels)
             target_bboxes_lst.append(target_bboxes)
+            target_ldmks_lst.append(target_ldmks)
             target_scores_lst.append(target_scores)
             fg_mask_lst.append(fg_mask)
 
         # concat
         target_labels = torch.cat(target_labels_lst, 0)
         target_bboxes = torch.cat(target_bboxes_lst, 0)
+        target_ldmks = torch.cat(target_ldmks_lst, 0)
         target_scores = torch.cat(target_scores_lst, 0)
         fg_mask = torch.cat(fg_mask_lst, 0)
 
-        return target_labels, target_bboxes, target_scores, fg_mask.bool()
+        return target_labels, target_bboxes, target_ldmks, target_scores, fg_mask.bool()
 
     def get_pos_mask(self,
                      pd_scores,
@@ -152,6 +158,7 @@ class TaskAlignedAssigner(nn.Module):
     def get_targets(self,
                     gt_labels,
                     gt_bboxes,
+                    gt_ldmks,
                     target_gt_idx,
                     fg_mask):
 
@@ -162,6 +169,7 @@ class TaskAlignedAssigner(nn.Module):
 
         # assigned target boxes
         target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx]
+        target_ldmks = gt_ldmks.reshape([-1, 10])[target_gt_idx]
 
         # assigned target scores
         target_labels[target_labels<0] = 0
@@ -170,4 +178,4 @@ class TaskAlignedAssigner(nn.Module):
         target_scores = torch.where(fg_scores_mask > 0, target_scores,
                                         torch.full_like(target_scores, 0))
 
-        return target_labels, target_bboxes, target_scores
+        return target_labels, target_bboxes, target_ldmks, target_scores

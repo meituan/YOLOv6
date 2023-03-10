@@ -1,23 +1,25 @@
-# YOLOv6s model
+# YOLOv6s-face model
 model = dict(
     type='YOLOv6s',
-    pretrained='weights/yolov6s.pt',
-    depth_multiple=0.33,
+    pretrained='weights/yolov6s_coco.pt',
+    depth_multiple=0.70,  
     width_multiple=0.50,
     backbone=dict(
-        type='EfficientRep',
+        type='CSPBepBackbone',
         num_repeats=[1, 6, 12, 18, 6],
         out_channels=[64, 128, 256, 512, 1024],
+        csp_e=float(1)/2,
         fuse_P2=True,
         cspsppf=True,
         ),
     neck=dict(
-        type='RepBiFPANNeck',
+        type='CSPRepBiFPANNeck',
         num_repeats=[12, 12, 12, 12],
         out_channels=[256, 128, 128, 256, 256, 512],
+        csp_e=float(1)/2,
         ),
     head=dict(
-        type='EffiDeHead',
+        type='DeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
         begin_indices=24,
@@ -29,8 +31,8 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type='giou',
-        use_dfl=False, # set to True if you want to further train with distillation 
-        reg_max=0, # set to 16 if you want to further train with distillation
+        use_dfl=False,
+        reg_max=0,
         distill_weight={
             'class': 1.0,
             'dfl': 1.0,

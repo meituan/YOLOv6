@@ -17,7 +17,7 @@ from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets import LoadData
-from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.nms import non_max_suppression_face
 from yolov6.utils.torch_utils import get_model_info
 
 class Inferer:
@@ -65,7 +65,7 @@ class Inferer:
 
         LOGGER.info("Switch model to deploy modality.")
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True):
+    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True, save_txt_widerface=False):
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
@@ -77,7 +77,7 @@ class Inferer:
                 # expand for batch dim
             t1 = time.time()
             pred_results = self.model(img)
-            det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
+            det = non_max_suppression_face(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
             t2 = time.time()
 
             if self.webcam:
@@ -87,8 +87,9 @@ class Inferer:
                 # Create output files in nested dirs that mirrors the structure of the images' dirs
                 rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
                 save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
-                txt_path = osp.join(save_dir, rel_path, 'labels', osp.splitext(osp.basename(img_path))[0])
+                txt_path = osp.join(save_dir, 'labels', rel_path, osp.splitext(osp.basename(img_path))[0])
                 os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
+                os.makedirs(osp.join(save_dir, 'labels', rel_path), exist_ok=True)
 
             gn = torch.tensor(img_src.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             img_ori = img_src.copy()
@@ -98,11 +99,30 @@ class Inferer:
             self.font_check()
 
             if len(det):
-                det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
-                for *xyxy, conf, cls in reversed(det):
+                det[:, :4], det[:, -10:] = self.rescale(img.shape[2:], det[:, :4], det[:, -10:], img_src.shape)
+            if save_txt_widerface:
+                with open(txt_path + '.txt', 'w') as f:
+                    file_name = os.path.basename(img_path)[:-4] + "\n"
+                    bboxs_num = str(len(det)) + "\n"
+                    f.write(file_name)
+                    f.write(bboxs_num)
+                    for ix, detection in enumerate(det):
+                        xyxy, conf, cls, lmdks = detection[:4], detection[4], detection[5], detection[6:]
+                        #xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / 1.0).view(-1).tolist()  # xywh
+                        xywh = (self.box_convert((xyxy).clone().detach().view(1, 4)) / 1.0).view(-1).tolist()  # xywh
+                        x1 = int(xywh[0] - 0.5 * xywh[2])
+                        y1 = int(xywh[1] - 0.5 * xywh[3])
+                        x2 = int(xywh[0] + 0.5 * xywh[2])
+                        y2 = int(xywh[1] + 0.5 * xywh[3])
+                        line = (x1, y1, x2-x1, y2-y1, min(conf,1))
+                        f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+            if len(det):
+                for detection in reversed(det):
+                    xyxy, conf, cls, lmdks = detection[:4], detection[4], detection[5], detection[6:]
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf)
+                        line = (cls, xywh, lmdks, conf)
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -110,7 +130,7 @@ class Inferer:
                         class_num = int(cls)  # integer class
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
-                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
+                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, lmdks, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
 
@@ -169,7 +189,7 @@ class Inferer:
         return image, img_src
 
     @staticmethod
-    def rescale(ori_shape, boxes, target_shape):
+    def rescale(ori_shape, boxes, lmdks, target_shape):
         '''Rescale the output to the original image shape'''
         ratio = min(ori_shape[0] / target_shape[0], ori_shape[1] / target_shape[1])
         padding = (ori_shape[1] - target_shape[1] * ratio) / 2, (ori_shape[0] - target_shape[0] * ratio) / 2
@@ -183,7 +203,24 @@ class Inferer:
         boxes[:, 2].clamp_(0, target_shape[1])  # x2
         boxes[:, 3].clamp_(0, target_shape[0])  # y2
 
-        return boxes
+        #lmdks 
+        lmdks[:, [0, 2, 4, 6, 8]] -= padding[0]
+        lmdks[:, [1, 3, 5, 7, 9]] -= padding[1]
+        lmdks[:, :10] /= ratio
+        
+        lmdks[:, 0].clamp_(0, target_shape[1])
+        lmdks[:, 1].clamp_(0, target_shape[0])
+        lmdks[:, 2].clamp_(0, target_shape[1])
+        lmdks[:, 3].clamp_(0, target_shape[0])
+        lmdks[:, 4].clamp_(0, target_shape[1])
+        lmdks[:, 5].clamp_(0, target_shape[0])
+        lmdks[:, 6].clamp_(0, target_shape[1])
+        lmdks[:, 7].clamp_(0, target_shape[0])
+        lmdks[:, 8].clamp_(0, target_shape[1])
+        lmdks[:, 9].clamp_(0, target_shape[0])
+        
+        return boxes.round(), lmdks.round()
+
 
     def check_img_size(self, img_size, s=32, floor=0):
         """Make sure image size is a multiple of stride s in each dimension, and return a new shape list of image."""
@@ -235,10 +272,12 @@ class Inferer:
         return text_size
 
     @staticmethod
-    def plot_box_and_label(image, lw, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
+    def plot_box_and_label(image, lw, box, landmarks, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
+        for i in range(5):
+            cv2.circle(image, (int(landmarks[2*i]), int(landmarks[2*i+1])), 3, (0,0,255), -1)
         if label:
             tf = max(lw - 1, 1)  # font thickness
             w, h = cv2.getTextSize(label, 0, fontScale=lw / 3, thickness=tf)[0]  # text width, height

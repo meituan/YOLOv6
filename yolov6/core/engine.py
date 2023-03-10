@@ -94,8 +94,8 @@ class Trainer:
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
 
-        self.loss_num = 3
-        self.loss_info = ['Epoch', 'iou_loss', 'dfl_loss', 'cls_loss']
+        self.loss_num = 6
+        self.loss_info = ['Epoch', 'iou_loss', 'dfl_loss', 'cls_loss', 'rgt_loss', 'rbox_loss', 'lk_loss']
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ['cwd_loss']

@@ -1,7 +1,7 @@
-# YOLOv6l model
+# YOLOv6l-face model
 model = dict(
     type='YOLOv6l',
-    pretrained='weights/yolov6l.pt',
+    pretrained='weights/yolov6l_coco.pt',
     depth_multiple=1.0,  
     width_multiple=1.0,
     backbone=dict(
@@ -18,7 +18,7 @@ model = dict(
         csp_e=float(1)/2,
         ),
     head=dict(
-        type='EffiDeHead',
+        type='DeHead',
         in_channels=[128, 256, 512],
         num_layers=3,
         begin_indices=24,
@@ -33,7 +33,7 @@ model = dict(
         use_dfl=True,
         reg_max=16, #if use_dfl is False, please set reg_max to 0
         distill_weight={
-            'class': 2.0,
+            'class': 1.0,
             'dfl': 1.0,
         },
     )

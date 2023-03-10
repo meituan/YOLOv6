@@ -22,12 +22,12 @@ from yolov6.utils.general import increment_name, find_latest_checkpoint
 
 
 def get_args_parser(add_help=True):
-    parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
-    parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='path of dataset')
-    parser.add_argument('--conf-file', default='./configs/yolov6n.py', type=str, help='experiments description file')
-    parser.add_argument('--img-size', default=640, type=int, help='train, val image size (pixels)')
-    parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
-    parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
+    parser = argparse.ArgumentParser(description='YOLOv6-face PyTorch Training', add_help=add_help)
+    parser.add_argument('--data-path', default='./data/WIDER_FACE.yaml', type=str, help='path of dataset')
+    parser.add_argument('--conf-file', default='./configs/yolov6s_finetune.py', type=str, help='experiments description file')
+    parser.add_argument('--img-size', default=800, type=int, help='train, val image size (pixels)')
+    parser.add_argument('--batch-size', default=8, type=int, help='total batch size for all GPUs')
+    parser.add_argument('--epochs', default=300, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--eval-interval', default=20, type=int, help='evaluate at every interval epochs')
@@ -52,7 +52,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--teacher_model_path', type=str, default=None, help='teacher model path')
     parser.add_argument('--temperature', type=int, default=20, help='distill temperature')
     parser.add_argument('--fuse_ab', action='store_true', help='fuse ab branch in training process or not')
-    parser.add_argument('--bs_per_gpu', default=32, type=int, help='batch size per GPU for auto-rescale learning rate, set to 16 for P6 models')
+    parser.add_argument('--bs_per_gpu', default=8, type=int, help='batch size per GPU for auto-rescale learning rate, set to 16 for P6 models')
     return parser
 
 
