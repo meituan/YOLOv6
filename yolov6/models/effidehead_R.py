@@ -1,9 +1,11 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
-from yolov6.layers.common import *
+
 from yolov6.assigners.anchor_generator import generate_anchors
+from yolov6.layers.common import *
 from yolov6.utils.general import dist2bbox
 
 
@@ -99,8 +101,8 @@ class Detect(nn.Module):
         )
         if self.angle_fitting_methods == "dfl":
             # TODO, 拟合值可以改变
-            self.proj_angle = nn.Parameter(torch.linspace(0, self.angle_max, self.angle_max + 1), requires_grad=False)
-            self.proj_angle_conv.weight = (180.0 / self.angle_max) * nn.Parameter(
+            self.proj_angle = (180.0 / self.angle_max) * nn.Parameter(torch.linspace(0, self.angle_max, self.angle_max + 1), requires_grad=False)
+            self.proj_angle_conv.weight = nn.parameter.Parameter(
                 self.proj_angle.view([1, self.angle_max + 1, 1, 1]).clone().detach(), requires_grad=False
             )
 
@@ -218,7 +220,6 @@ def build_effidehead_layer(
     if angle_fitting_methods == "csl":
         assert angle_max == 180
     if angle_fitting_methods == "dfl":
-        assert angle_max == 90
         angle_max += 1
     if angle_fitting_methods == "MGAR":
         assert 180 % angle_max == 0

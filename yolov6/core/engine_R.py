@@ -57,6 +57,7 @@ class Trainer:
         # NOTE data loader
         self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
+        # NOTE YOLOv6n 和 YOLOV6s 都是默认蒸馏配置
         self.distill_ns = True if self.args.distill and self.cfg.model.type in ["YOLOv6n", "YOLOv6s"] else False
         # NOTE change model
         model = self.get_model(args, cfg, self.num_classes, device)
@@ -368,7 +369,7 @@ class Trainer:
         if self.args.distill:
             # NOTE n/s 所使用的蒸馏函数不一样，原因在HEAD部分
             if self.cfg.model.type in ["YOLOv6n", "YOLOv6s"]:
-                Loss_distill_func = ComputeLoss_distill_ns
+                Loss_distill_func = ComputeLoss_distill
             else:
                 Loss_distill_func = ComputeLoss_distill
 
@@ -379,8 +380,8 @@ class Trainer:
                 warmup_epoch=self.cfg.model.head.atss_warmup_epoch,
                 use_dfl=self.cfg.model.head.use_dfl,
                 reg_max=self.cfg.model.head.reg_max,
-                angle_max = self.cfg.model.head.angle_max,
-                angle_fitting_methods= self.cfg.model.head.angle_fitting_methods,
+                angle_max=self.cfg.model.head.angle_max,
+                angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
                 iou_type=self.cfg.model.head.iou_type,
                 distill_weight=self.cfg.model.head.distill_weight,
                 distill_feat=self.args.distill_feat,
@@ -544,7 +545,7 @@ class Trainer:
         return images, targets
 
     def get_model(self, args, cfg, nc, device):
-        model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
+        model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=False)
         weights = cfg.model.pretrained
         # NOTE load weights
         # TODO 预训练
@@ -560,6 +561,8 @@ class Trainer:
 
     def get_teacher_model(self, args, cfg, nc, device):
         teacher_fuse_ab = False if cfg.model.head.num_layers != 3 else True
+        # NOTE default fuse ab turn off
+        teacher_fuse_ab = False
         model = build_model(cfg, nc, device, fuse_ab=teacher_fuse_ab)
         weights = args.teacher_model_path
         if weights:  # finetune if pretrained model is set

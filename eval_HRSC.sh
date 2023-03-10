@@ -1,6 +1,6 @@
 CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--data "./data/HRSC2016.yaml" \
-	--weights "./runs/HRSC2016/exp6/weights/best_stop_aug_ckpt.pt" \
+	--weights "./runs/HRSC2016/yolov6n_dfl_csl/weights/best_ckpt.pt" \
 	--batch-size 32 \
 	--img-size 800 \
 	--conf-thres 0.03 \
@@ -16,8 +16,8 @@ CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--verbose \
 	--plot_confusion_matrix \
 	--letterbox_return_int \
-	--scale_exact \
-	# --force_no_pad
+	--scale_exact
+# --force_no_pad
 # --not_infer_on_rect
 # parser.add_argument('--reproduce_640_eval', default=False, action='store_true', help='whether to reproduce 640 infer result, overwrite some config')
 # parser.add_argument('--eval_config_file', type=str, default='./configs/experiment/eval_640_repro.py', help='config file for repro 640 infer result')

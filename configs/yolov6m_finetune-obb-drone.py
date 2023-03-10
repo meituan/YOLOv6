@@ -28,8 +28,8 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type="giou",
-        use_dfl=False,
-        reg_max=0,  # if use_dfl is False, please set reg_max to 0
+        use_dfl=True,
+        reg_max=16,  # if use_dfl is False, please set reg_max to 0
         distill_weight={"class": 0.8, "dfl": 1.0,},
         # NOTE for angle regression
         # angle_fitting_methods='regression',
@@ -50,7 +50,7 @@ loss = dict(
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle classification
-    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, "cwd":10},
+    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
 )
 solver = dict(
     optim="AdamW",
@@ -58,7 +58,8 @@ solver = dict(
     lr0=0.0032,
     lrf=0.12,
     momentum=0.843,
-    weight_decay=0.00036,
+    # weight_decay=0.00036,
+    weight_decay=0.05,
     warmup_epochs=2.0,
     warmup_momentum=0.5,
     warmup_bias_lr=0.05,
@@ -72,13 +73,13 @@ data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.5,
-    fliplr=0.5,
-    rotate=0.5,
+    flipud=0.25,
+    fliplr=0.25,
+    rotate=0.25,
     # NOTE mosaic 数值需要确定一下
-    mosaic=0.2,
+    mosaic=0.0,
     mixup_mosaic=0.5,
-    mixup=0.5,
+    mixup=0.2,
 )
 
 eval_params = dict(

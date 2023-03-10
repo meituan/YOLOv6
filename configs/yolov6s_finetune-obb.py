@@ -25,12 +25,12 @@ model = dict(
         iou_type="giou",
         use_dfl=True,  # set to True if you want to further train with distillation
         reg_max=16,  # set to 16 if you want to further train with distillation
-        distill_weight={"class": 1.0, "dfl": 1.0, },
+        distill_weight={"class": 1.0, "dfl": 1.0,},
         # NOTE for angle regression
         # angle_fitting_methods='regression',
         # angle_max=1,
         # NOTE for angle csl
-        angle_fitting_methods='csl',
+        angle_fitting_methods="csl",
         angle_max=180,
         # NOTE for angle dfl
         # angle_fitting_methods='dfl',
