@@ -16,3 +16,4 @@ onnx-simplifier>=0.3.6 # ONNX simplifier
 thop  # FLOPs computation
 # pytorch_quantization>=2.1.1
 rich
+mmcv-full

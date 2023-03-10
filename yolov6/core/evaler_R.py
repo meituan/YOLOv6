@@ -12,11 +12,11 @@ from pycocotools.cocoeval import COCOeval
 from rich.progress import track
 from tqdm import tqdm
 
-from yolov6.data.data_load import create_dataloader
+from yolov6.data.data_load_R import create_dataloader
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.events_R import LOGGER, NCOLS
 from yolov6.utils.general import download_ckpt
-from yolov6.utils.nms_R import non_max_suppression_obb
+from yolov6.utils.nms_R import non_max_suppression_obb, non_max_suppression_obb_cuda
 from yolov6.utils.torch_utils import get_model_info, time_sync
 
 """
@@ -80,6 +80,7 @@ class Evaler:
             self.stride = int(model.stride.max())
             if self.device.type != "cpu":
                 model(torch.zeros(1, 3, self.img_size, self.img_size).to(self.device).type_as(next(model.parameters())))
+
             # switch to deploy
             from yolov6.layers.common import RepVGGBlock
 
@@ -126,7 +127,8 @@ class Evaler:
         """
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
-        pbar = track(dataloader, description=f"Inferencing model in {task} datasets.")
+        pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.")
+        # pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.")
         # task = progress.add_task("task", total=len(train_loader), epoch_name=f"Epoch {epoch + 1}/{epochs}")
         # progress.start()
         # progress.start_task(task)
@@ -157,12 +159,13 @@ class Evaler:
             # Inference
             t2 = time_sync()
             # NOTE [BS, x, y, w, h, angle, conf, classes ] angle转化完, 绝对值
+            # import ipdb; ipdb.set_trace()
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
-
             # post-process
             t3 = time_sync()
-            outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            # outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            outputs = non_max_suppression_obb_cuda(outputs, self.conf_thres, self.iou_thres, multi_label=True)
 
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
@@ -494,6 +497,7 @@ class Evaler:
     @staticmethod
     def reload_device(device, model, task):
         # device = 'cpu' or '0' or '0,1,2,3'
+        # import ipdb; ipdb.set_trace()
         if task == "train":
             device = next(model.parameters()).device
         else:

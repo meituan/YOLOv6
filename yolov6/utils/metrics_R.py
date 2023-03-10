@@ -4,18 +4,19 @@
 
 from pathlib import Path
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import cv2
+
+from yolov6.utils.nms_R import obb_box_iou, obb_box_iou_cuda
 
 # import warnings
 from . import general
-from yolov6.utils.nms_R import xyxy2xywh
 
 
 def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names=(), ap_method="VOC12"):
-    """ Compute the average precision, given the recall and precision curves.
+    """Compute the average precision, given the recall and precision curves.
     Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
     # Arguments
         tp:  True positives (nparray, nx1 or nx10).
@@ -79,7 +80,7 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir=".", names
 
 
 def compute_ap(recall, precision, ap_method="VOC12"):
-    """ Compute the average precision, given the recall and precision curves
+    """Compute the average precision, given the recall and precision curves
     # Arguments
         recall:    The recall curve (list)
         precision: The precision curve (list)
@@ -168,8 +169,10 @@ def process_batch(detections, labels, iouv):
     """
     correct = np.zeros((detections.shape[0], iouv.shape[0])).astype(bool)
     # iou = general.box_iou(labels[:, 1:], detections[:, :4])
-    iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
-    iou = torch.from_numpy(iou)
+    # iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
+    # iou = torch.from_numpy(iou)
+    iou = obb_box_iou_cuda(labels[:, 1:], detections[:, :5])
+
     correct_class = labels[:, 0:1] == detections[:, 6]
     for i in range(len(iouv)):
         x = torch.where((iou >= iouv[i]) & correct_class)  # IoU > threshold and classes match
@@ -182,29 +185,6 @@ def process_batch(detections, labels, iouv):
                 matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
             correct[matches[:, 1].astype(int), i] = True
     return torch.tensor(correct, dtype=torch.bool, device=iouv.device)
-
-
-def obb_box_iou(boxes1, boxes2):
-    area1 = boxes1[:, 2] * boxes1[:, 3]
-    area2 = boxes2[:, 2] * boxes2[:, 3]
-    ious = []
-    for i, box1 in enumerate(boxes1):
-        temp_ious = []
-        r1 = ((box1[0], box1[1]), (box1[2], box1[3]), box1[4])
-        for j, box2 in enumerate(boxes2):
-            r2 = ((box2[0], box2[1]), (box2[2], box2[3]), box2[4])
-            int_pts = cv2.rotatedRectangleIntersection(r1, r2)[1]
-            if int_pts is not None:
-                order_pts = cv2.convexHull(int_pts, returnPoints=True)
-
-                int_area = cv2.contourArea(order_pts)
-
-                inter = int_area * 1.0 / (area1[i] + area2[j] - int_area)
-                temp_ious.append(inter)
-            else:
-                temp_ious.append(0.0)
-        ious.append(temp_ious)
-    return np.array(ious, dtype=np.float32)
 
 
 class ConfusionMatrix:
@@ -231,8 +211,9 @@ class ConfusionMatrix:
         # TODO FIXME
         # iou = general.box_iou(labels[:, 1:], detections[:, :4])
 
-        iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
-        iou = torch.from_numpy(iou)
+        # iou = obb_box_iou(labels[:, 1:].cpu().numpy(), detections[:, :5].cpu().numpy())
+        # iou = torch.from_numpy(iou)
+        iou = obb_box_iou_cuda(labels[:, 1:], detections[:, :5])
 
         x = torch.where(iou > self.iou_thres)
         if x[0].shape[0]:
@@ -280,6 +261,7 @@ class ConfusionMatrix:
             sn.set(font_scale=1.0 if nc < 50 else 0.8)  # for label size
             labels = (0 < nn < 99) and (nn == nc)  # apply names to ticklabels
             import warnings
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")  # suppress empty matrix RuntimeWarning: All-NaN slice encountered
                 sn.heatmap(

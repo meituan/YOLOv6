@@ -54,7 +54,10 @@ solver = dict(
     lr0=0.0032,
     lrf=0.12,
     momentum=0.843,
-    weight_decay=0.00036,
+    # weight_decay=0.00036,
+    # Adamw 0.05
+    # momentum=0.9,
+    weight_decay=0.05,
     warmup_epochs=2.0,
     warmup_momentum=0.5,
     warmup_bias_lr=0.05,

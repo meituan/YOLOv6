@@ -109,7 +109,7 @@ venv.bak/
 .vscode/*
 
 #user scripts
-*.sh
+# *.sh
 
 # model files
 *.onnx

@@ -16,9 +16,9 @@ import cv2
 import numpy as np
 import torch
 from PIL import ExifTags, Image, ImageOps
-# from tqdm import tqdm
 from rich.progress import track
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 from yolov6.utils.events_R import LOGGER
 
@@ -100,7 +100,7 @@ class TrainValDataset(Dataset):
                 img, labels = self.general_augment(img, labels)
         else:
             img, labels, shapes = self.get_general_obb(index)
-            if random.random() < self.hyp["mixup"] and self.augment:
+            if self.augment and random.random() < self.hyp["mixup"] :
                 shapes = None
                 img_other, labels_other, _ = self.get_general_obb(random.randint(0, len(self.img_paths) - 1))
                 img, labels = mixup(img, labels, img_other, labels_other)
@@ -194,7 +194,7 @@ class TrainValDataset(Dataset):
             nc, msgs = 0, []  # number corrupt, messages
             LOGGER.info(f"{self.task}: Checking formats of images with {NUM_THREADS} process(es): ")
             with Pool(NUM_THREADS) as pool:
-                pbar = track(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
+                pbar = tdqm(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
                 for img_path, shape_per_img, nc_per_img, msg in pbar:
                     if nc_per_img == 0:  # not corrupted
                         img_info[img_path] = {"shape": shape_per_img}
@@ -244,7 +244,7 @@ class TrainValDataset(Dataset):
                 pbar = pool.imap(
                     TrainValDataset.check_label_files, zip(img_paths, label_paths)
                 )  # NOTE 线程, check_label_files
-                pbar = track(pbar, total=len(label_paths)) if self.main_process else pbar
+                pbar = tqdm(pbar, total=len(label_paths)) if self.main_process else pbar
                 for (img_path, labels_per_file, nc_per_file, nm_per_file, nf_per_file, ne_per_file, msg,) in pbar:
                     if nc_per_file == 0:
                         img_info[img_path]["labels"] = labels_per_file
