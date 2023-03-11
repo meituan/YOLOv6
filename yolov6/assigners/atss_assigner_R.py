@@ -1,25 +1,26 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from yolov6.assigners.iou2d_calculator import iou2d_calculator
+
 from yolov6.assigners.assigner_utils import (
     dist_calculator,
+    iou_calculator,
     select_candidates_in_gts,
     select_highest_overlaps,
-    iou_calculator,
 )
+from yolov6.assigners.iou2d_calculator import iou2d_calculator
 
 
 class ATSSAssigner(nn.Module):
     """Adaptive Training Sample Selection Assigner"""
 
-    def __init__(self, topk=9, num_classes=80, angle_max=180, angle_fitting_methods='regression'):
+    def __init__(self, topk=9, num_classes=80, angle_max=180, angle_fitting_methods="regression"):
         super(ATSSAssigner, self).__init__()
         self.topk = topk
         self.num_classes = num_classes
         self.bg_idx = num_classes
         self.angle_max = angle_max
-        if angle_fitting_methods == 'dfl':
+        if angle_fitting_methods == "dfl":
             self.angle_max += 1
 
     @torch.no_grad()
