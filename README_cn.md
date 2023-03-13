@@ -12,8 +12,11 @@
 新特性
 - 人脸关键点定位
 - Repulsion 损失函数
-- 相同通道数解耦头
+- 相同通道解耦头
 
+<p align="center">
+  <img src="assets/test_result.jpg" align="middle" width = "800" />
+</p>
 
 ## WIDERFACE 模型指标
 | Model                                                        | Size | Easy | Medium | Hard | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Speed<sup>T4<br/>trt fp16 b32 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |

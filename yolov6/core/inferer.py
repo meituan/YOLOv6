@@ -130,7 +130,7 @@ class Inferer:
                         class_num = int(cls)  # integer class
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
-                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, lmdks, label, color=self.generate_colors(class_num, True))
+                        self.plot_box_and_label(img_ori, min(round(sum(img_ori.shape) / 2 * 0.003), 1), xyxy, lmdks, label, color=self.generate_colors(class_num, True))
 
                 img_src = np.asarray(img_ori)
 
@@ -276,8 +276,9 @@ class Inferer:
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
+        colors = [(255,0,0),(0,255,0),(0,0,255),(255,255,0),(0,255,255)]
         for i in range(5):
-            cv2.circle(image, (int(landmarks[2*i]), int(landmarks[2*i+1])), 3, (0,0,255), -1)
+            cv2.circle(image, (int(landmarks[2*i]), int(landmarks[2*i+1])), lw+1, colors[i], -1)
         if label:
             tf = max(lw - 1, 1)  # font thickness
             w, h = cv2.getTextSize(label, 0, fontScale=lw / 3, thickness=tf)[0]  # text width, height
