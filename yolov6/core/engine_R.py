@@ -10,14 +10,8 @@ from copy import deepcopy
 import cv2
 import numpy as np
 import torch
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
+from rich.progress import (BarColumn, Progress, SpinnerColumn, TextColumn,
+                           TimeElapsedColumn, TimeRemainingColumn)
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
@@ -25,15 +19,19 @@ from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
-from yolov6.models.losses.loss_distill_R import ComputeLoss as ComputeLoss_distill
+from yolov6.models.losses.loss_distill_ns_R import \
+    ComputeLoss as ComputeLoss_distill_ns
+from yolov6.models.losses.loss_distill_R import \
+    ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_R import ComputeLoss as ComputeLoss
-from yolov6.models.losses.loss_distill_ns_R import ComputeLoss as ComputeLoss_distill_ns
 from yolov6.models.yolo_R import build_model
 from yolov6.solver.build import build_lr_scheduler, build_optimizer
-from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
+from yolov6.utils.checkpoint import (load_state_dict, save_checkpoint,
+                                     strip_optimizer)
 from yolov6.utils.ema import ModelEMA, de_parallel
-from yolov6.utils.events_R import LOGGER, NCOLS, load_yaml, write_tbimg, write_tblog
+from yolov6.utils.events_R import (LOGGER, NCOLS, load_yaml, write_tbimg,
+                                   write_tblog)
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
 from yolov6.utils.RepOptimizer import RepVGGOptimizer, extract_scales
@@ -946,7 +944,8 @@ class Trainer:
     # QAT
     def quant_setup(self, model, cfg, device):
         if self.args.quant:
-            from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
+            from tools.qat.qat_utils import (qat_init_model_manu,
+                                             skip_sensitive_layers)
 
             qat_init_model_manu(model, cfg, self.args)
             # workaround
