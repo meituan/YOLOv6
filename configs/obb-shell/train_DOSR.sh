@@ -4,7 +4,7 @@ CUDA_VISIBLE_DEVICES=0 python tools/train_R.py \
 	--epochs 400 \
 	--img 1024 \
 	--eval-interval 20 \
-	--conf configs/yolov6s_finetune-obb.py \
+	--conf configs/obb/yolov6s_finetune-obb.py \
 	--data data/DOSR.yaml \
 	--output-dir './runs/DOSR' \
 	--name 'yolov6s_dfl_MGAR_AdamW'
