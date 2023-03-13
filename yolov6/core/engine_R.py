@@ -764,7 +764,7 @@ class Trainer:
         ddp_mode = device.type != "cpu" and args.rank != -1
         if ddp_mode:
             model = DDP(
-                model, device_ids=[args.local_rank], output_device=args.local_rank
+                model, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True
             )
 
         return model
