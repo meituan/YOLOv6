@@ -19,8 +19,6 @@ from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
-from yolov6.models.losses.loss_distill_ns_R import \
-    ComputeLoss as ComputeLoss_distill_ns
 from yolov6.models.losses.loss_distill_R import \
     ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
@@ -35,6 +33,9 @@ from yolov6.utils.events_R import (LOGGER, NCOLS, load_yaml, write_tbimg,
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
 from yolov6.utils.RepOptimizer import RepVGGOptimizer, extract_scales
+
+# from yolov6.models.losses.loss_distill_ns_R import \
+    # ComputeLoss as ComputeLoss_distill_ns
 
 
 class Trainer:
