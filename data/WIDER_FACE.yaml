@@ -1,0 +1,9 @@
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+train: ../widerface/images/train  # 12880 images
+val: ../widerface/images/val  # 3226 images
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+# Classes
+nc: 1  # number of classes
+names: ['face']  # class names
