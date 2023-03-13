@@ -30,34 +30,40 @@ model = dict(
         # angle_fitting_methods='regression',
         # angle_max=1,
         # NOTE for angle csl
-        angle_fitting_methods="csl",
-        angle_max=180,
+        # angle_fitting_methods="csl",
+        # angle_max=180,
         # NOTE for angle dfl
         # angle_fitting_methods='dfl',
         # angle_max=180,
         # NOTE for angle MGAR
-        # angle_fitting_methods='MGAR',
-        # angle_max=5,
+        angle_fitting_methods='MGAR',
+        angle_max=5,
     ),
 )
 
 loss = dict(
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
-    # NOTE for angle classification
-    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
+    # NOTE for angle csl
+    # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, 'cwd': 0.2},
+    # NOTE for angle dfl
+    # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.25, 'cwd': 10},
+    # NOTE for angle MGAR
+    # best
+    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, "MGAR_cls": 0.05, "MGAR_reg": 0.05, 'cwd': 0.2, },
 )
 
 solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
-    lr0=0.0032,
+    # lr0=0.0032,
+    lr0=0.0008,
     lrf=0.12,
     momentum=0.843,
-    # weight_decay=0.00036,
+    weight_decay=0.00036,
     # Adamw 0.05
     # momentum=0.9,
-    weight_decay=0.05,
+    # weight_decay=0.05,
     warmup_epochs=2.0,
     warmup_momentum=0.5,
     warmup_bias_lr=0.05,

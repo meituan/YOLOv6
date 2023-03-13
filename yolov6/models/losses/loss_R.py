@@ -182,6 +182,7 @@ class ComputeLoss:
         # cls loss
         target_labels = torch.where(fg_mask > 0, target_labels, torch.full_like(target_labels, self.num_classes))
         one_hot_label = F.one_hot(target_labels.long(), self.num_classes + 1)[..., :-1]
+        smooth_one_hot_label = one_hot_label * (0.9 - 0.1 / (self.angle_max - 2)) + (0.1 / (self.angle_max - 2))
         loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
 
         target_scores_sum = target_scores.sum()
@@ -336,11 +337,12 @@ class AngleLoss(nn.Module):
                 regression_value = target_angle_pos.clone() - class_id * (180 / (self.angle_max - 1))
                 class_id = class_id.squeeze()
                 one_hot_label = F.one_hot(class_id.long(), self.angle_max - 1)
+                smooth_one_hot_label = one_hot_label * (0.9 - 0.1 / (self.angle_max - 2)) + (0.1 / (self.angle_max - 2))
                 loss_angle_regression = (
                     F.smooth_l1_loss(pred_angle_pos[..., -1:] ** 2, regression_value, reduction="none") * angle_weight
                 )
                 loss_angle_class = (
-                    self.bce(pred_angle_pos[:, :(self.angle_max - 1)], one_hot_label.float()) * angle_weight
+                    self.bce(pred_angle_pos[:, :(self.angle_max - 1)], smooth_one_hot_label.float()) * angle_weight
                 )
 
                 if target_scores_sum == 0:

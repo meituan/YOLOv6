@@ -19,10 +19,10 @@ from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
-from yolov6.models.losses.loss_distill_R import \
-    ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import \
     ComputeLoss as ComputeLoss_distill_ns
+from yolov6.models.losses.loss_distill_R import \
+    ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_R import ComputeLoss as ComputeLoss
 from yolov6.models.yolo_R import build_model
@@ -604,6 +604,7 @@ class Trainer:
         return model
 
     def get_optimizer(self, args, cfg, model):
+        # NOTE batchsize gpu_cont 影响
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
         cfg.solver.lr0 *= args.batch_size / (self.world_size * args.bs_per_gpu)  # rescale lr0 related to batchsize
@@ -693,7 +694,7 @@ class Trainer:
                         )
         self.vis_train_batch = mosaic.copy()
 
-    def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=5):
+    def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=100):
         # plot validation predictions
         # TODO test
         self.vis_imgs_list = []

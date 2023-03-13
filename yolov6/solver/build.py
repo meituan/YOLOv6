@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os
 import math
+import os
 
 import torch
 import torch.nn as nn
@@ -26,7 +26,7 @@ def build_optimizer(cfg, model):
     elif cfg.solver.optim == 'Adam':
         optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
     elif cfg.solver.optim == 'AdamW':
-        optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
+        optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999), eps=1e-3)
 
     optimizer.add_param_group({'params': g_w, 'weight_decay': cfg.solver.weight_decay})
     optimizer.add_param_group({'params': g_b})
