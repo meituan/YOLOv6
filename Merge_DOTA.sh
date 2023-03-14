@@ -4,3 +4,6 @@ python ./yolov6/utils/TestJson2VocClassTxt.py \
 python ./data/scripts/DOTA_devkit/ResultMerge_multi_process.py \
 	--scrpath "" \
 	--dstpath ""
+# zip
+cd dir
+zip ../predictions.zip *
