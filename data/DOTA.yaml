@@ -1,7 +1,7 @@
 # HRSC2016 HBB
 train: /mnt/datasets/DOTAx/images/train
 val: /mnt/datasets/DOTAx/images/val
-test: /home/haohao/DIOR-R/images/test
+test: /home/haohao/DOTAx/test/JPEGImages
 
 # number of classes
 nc: 15
