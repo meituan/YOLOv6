@@ -4,10 +4,10 @@ Yolov5-obb检测结果Json 文件转Voc Class Txt
 --save_path 输出文件夹路径
 """
 
+# from tqdm import tqdm
+import argparse
 import json
 import os
-# from tqdm import tqdm
-# import argparse
 import shutil
 
 # For DOTA-v2.0
@@ -98,9 +98,21 @@ DOSR = [
 DOTA_CLASSES = dotav1_classnames
 # DOTA_CLASSES = DOSR
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="TestJson2VocClassTxt")
+    parser.add_argument("--json_path", type=str)
+    parser.add_argument("--save_path", type=str)
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
-    json_path = "/home/haohao/YOLOR-New/DOTA/run_test-D2022-06-21T12+16+06/epoch_117_predictions.json"
-    save_path = "/home/haohao/YOLOR-New/DOTA/run_test-D2022-06-21T12+16+06/predictions"
+    # json_path = "/home/haohao/YOLOR-New/DOTA/run_test-D2022-06-21T12+16+06/epoch_117_predictions.json"
+    # save_path = "/home/haohao/YOLOR-New/DOTA/run_test-D2022-06-21T12+16+06/predictions"
+    args = parse_args()
+    json_path = args.json_path
+    save_path = args.save_path
 
     ana_txt_save_path = save_path
 
