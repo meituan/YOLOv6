@@ -17,6 +17,9 @@ thop  # FLOPs computation
 # pytorch_quantization>=2.1.1
 
 # for obb
-rich
 mmcv-full
+rich
 shapely
+tensorboard
+torch-tb-profiler
+nvitop

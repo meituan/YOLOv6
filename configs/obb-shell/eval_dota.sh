@@ -1,8 +1,9 @@
-eval_name="exp_75"
+epoch=74
+eval_name="exp_$epoch"
 eval_path="runs/DOTA/test"
-weight_path="./runs/DOTA/yolov6l_dfl_MGAR_AdamW_small_lr/weights/75_ckpt.pt"
+weight_path="./runs/DOTA/yolov6l_dfl_MGAR_AdamW_small_lr/weights/${epoch}_ckpt.pt"
 
-CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
+CUDA_VISIBLE_DEVICES=1 python tools/eval_R.py \
 	--data "./data/DOTA.yaml" \
 	--weights $weight_path \
 	--batch-size 32 \
