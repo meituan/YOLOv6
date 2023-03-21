@@ -1,6 +1,6 @@
-eval_name="exp_78"
+eval_name="exp_75"
 eval_path="runs/DOTA/test"
-weight_path="./runs/DOTA/yolov6l_dfl_MGAR_AdamW_small_lr/weights/78_ckpt.pt"
+weight_path="./runs/DOTA/yolov6l_dfl_MGAR_AdamW_small_lr/weights/75_ckpt.pt"
 
 CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--data "./data/DOTA.yaml" \
@@ -34,7 +34,7 @@ python yolov6/utils/TestJson2VocClassTxt.py \
 # merge
 python data/scrpits/DOTA_devkit/ResultMerge_multi_process.py \
 	--scrpath "$eval_path/$eval_name/predictions" \
-	--dstpath "./runs/DOTA/test/exp8/predictions_merge"
+	--dstpath "$eval_path/$eval_name/predictions_merge"
 
 # zip
 cd "$eval_path/$eval_name/predictions_merge"

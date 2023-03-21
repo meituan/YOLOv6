@@ -1,13 +1,15 @@
-#
+eval_name="exp_78_1"
+eval_path="runs/DOTA/test"
+
 python yolov6/utils/TestJson2VocClassTxt.py \
-	--json_path "./runs/DOTA/test/exp_65/predictions.json" \
-	--save_path "./runs/DOTA/test/exp_65/predictions"
+	--json_path "$eval_path/$eval_name/predictions.json" \
+	--save_path "$eval_path/$eval_name/predictions"
 
 # merge
 python data/scrpits/DOTA_devkit/ResultMerge_multi_process.py \
-	--scrpath "./runs/DOTA/test/exp_65/predictions" \
-	--dstpath "./runs/DOTA/test/exp_65/predictions_merge"
+	--scrpath "$eval_path/$eval_name/predictions" \
+	--dstpath "$eval_path/$eval_name/predictions_merge"
 
 # zip
-cd ./runs/DOTA/test/exp_65/predictions_merge
+cd "$eval_path/$eval_name/predictions_merge"
 zip ../predictions.zip *
