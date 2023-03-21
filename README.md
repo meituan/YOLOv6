@@ -4,8 +4,6 @@
 
 English | [简体中文](README_cn.md)
 
- <br>
-
  <div>
     </a>
     <a href="https://colab.research.google.com/github/meituan/YOLOv6/blob/main/turtorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>

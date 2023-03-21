@@ -11,34 +11,39 @@ class TaskAlignedAssigner(nn.Module):
     def __init__(self, topk=13, num_classes=80, alpha=1.0, beta=6.0, eps=1e-9):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk
-        self.num_classes = num_classes
-        self.bg_idx = num_classes
         self.alpha = alpha
         self.beta = beta
         self.eps = eps
-
+        self.num_classes = num_classes
     @torch.no_grad()
     def forward(self, pd_scores, pd_bboxes, pd_angles, anc_points, gt_labels, gt_bboxes, gt_angles, mask_gt):
         """This code referenced to
            https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
 
         Args:
-            pd_scores (Tensor): shape(bs, num_total_anchors, num_classes)
-            pd_bboxes (Tensor): shape(bs, num_total_anchors, 4)
-            anc_points (Tensor): shape(num_total_anchors, 2)
-            gt_labels (Tensor): shape(bs, n_max_boxes, 1)
-            gt_bboxes (Tensor): shape(bs, n_max_boxes, 4)
-            mask_gt (Tensor): shape(bs, n_max_boxes, 1)
+            pred_scores (Tensor, float32): predicted class probability, shape(B, L, C)
+            pred_bboxes (Tensor, float32): predicted bounding boxes, shape(B, L, 5)
+            anchor_points (Tensor, float32): pre-defined anchors, shape(1, L, 2), "cxcy" format
+            num_anchors_list (List): num of anchors in each level, shape(L)
+            gt_labels (Tensor, int64|int32): Label of gt_bboxes, shape(B, n, 1)
+            gt_bboxes (Tensor, float32): Ground truth bboxes, shape(B, n, 5)
+            pad_gt_mask (Tensor, float32): 1 means bbox, 0 means no bbox, shape(B, n, 1)
+            bg_index (int): background index
+            gt_scores (Tensor|None, float32) Score of gt_bboxes, shape(B, n, 1)
         Returns:
-            target_labels (Tensor): shape(bs, num_total_anchors)
-            target_bboxes (Tensor): shape(bs, num_total_anchors, 4)
-            target_scores (Tensor): shape(bs, num_total_anchors, num_classes)
-            fg_mask (Tensor): shape(bs, num_total_anchors)
+            assigned_labels (Tensor): (B, L)
+            assigned_bboxes (Tensor): (B, L, 5)
+            assigned_scores (Tensor): (B, L, C)
+            fg_mask bool
         """
-        self.bs = pd_scores.size(0)
+        self.bs = pred_scores.shape[0]
         self.n_max_boxes = gt_bboxes.size(1)
-
-        if self.n_max_boxes == 0:
+        assert pred_scores.ndim == pred_bboxes.ndim
+        assert gt_labels.ndim == gt_bboxes.ndim and \
+               gt_bboxes.ndim == 3
+        batch_size, num_anchors, num_classes = pred_scores.shape
+        _, num_max_boxes, _ = gt_bboxes.shape
+        if num_max_boxes == 0:
             device = gt_bboxes.device
             return (
                 torch.full_like(pd_scores[..., 0], self.bg_idx).to(device),
@@ -104,7 +109,6 @@ class TaskAlignedAssigner(nn.Module):
         )
         # merge all mask to a final mask
         mask_pos = mask_topk * mask_in_gts * mask_gt
-
         return mask_pos, align_metric, overlaps
 
     def get_box_metrics(self, pd_scores, pd_bboxes, gt_labels, gt_bboxes):
@@ -114,11 +118,9 @@ class TaskAlignedAssigner(nn.Module):
         ind = torch.zeros([2, self.bs, self.n_max_boxes], dtype=torch.long)
         ind[0] = torch.arange(end=self.bs).view(-1, 1).repeat(1, self.n_max_boxes)
         ind[1] = gt_labels.squeeze(-1)
-        bbox_scores = pd_scores[ind[0], ind[1]]
-
-        overlaps = iou_calculator(gt_bboxes, pd_bboxes)
+        bbox_scores = pred_scores[ind[0], ind[1]]
+        overlaps = rotated_iou_similarity(gt_bboxes, pred_bboxes)
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
-
         return align_metric, overlaps
 
     def select_topk_candidates(self, metrics, largest=True, topk_mask=None):
@@ -140,7 +142,7 @@ class TaskAlignedAssigner(nn.Module):
         target_labels = gt_labels.long().flatten()[target_gt_idx]
 
         # assigned target boxes
-        target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx]
+        target_bboxes = gt_bboxes.reshape([-1, 5])[target_gt_idx]
 
         # assigned target scores
         target_labels[target_labels < 0] = 0

@@ -35,20 +35,28 @@ class Detect(nn.Module):
             num_classes + 7 if angle_fitting_methods == "MGAR" else num_classes + 6
         )  # number of outputs per anchor TODO change this
         self.nl = num_layers  # number of detection layers
+        if isinstance(anchors, (list, tuple)):
+            self.na = len(anchors[0]) // 2
+        else:
+            self.na = anchors
+        self.anchors = anchors
         self.grid = [torch.zeros(1)] * num_layers
         self.prior_prob = 1e-2
         self.inplace = inplace
         stride = [8, 16, 32] if num_layers == 3 else [8, 16, 32, 64]  # strides computed during build
         self.stride = torch.tensor(stride)
-        self.use_dfl = use_dfl
+        self.use_reg_dfl = use_reg_dfl
         self.reg_max = reg_max
         self.angle_max = angle_max
         self.angle_fitting_methods = angle_fitting_methods
         self.proj_conv = nn.Conv2d(self.reg_max + 1, 1, 1, bias=False)
         self.proj_angle_conv = nn.Conv2d(self.angle_max + 1, 1, 1, bias=False)
         self.grid_cell_offset = 0.5
-        self.grid_cell_size = 5.0
-
+        self.grid_cell_size = 5.0 
+        self.half_pi = torch.tensor(
+            [1.5707963267948966],dtype=torch.float32)
+        self.half_pi_bin = self.half_pi/self.angle_max
+        # Model Deployment
         # Init decouple head
         self.stems = nn.ModuleList()
         self.cls_convs = nn.ModuleList()
@@ -94,6 +102,16 @@ class Detect(nn.Module):
             w = conv.weight
             w.data.fill_(0.0)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
+        
+        for conv in self.ori_preds:
+            b = conv.bias.view(-1, )
+            # TODO initial_bias
+            import random
+            b.data.fill_(random.random())
+            conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
+            w = conv.weight
+            w.data.fill_(0.)
+            conv.weight = torch.nn.Parameter(w, requires_grad=True)
 
         self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False)
         self.proj_conv.weight = nn.Parameter(
@@ -108,7 +126,6 @@ class Detect(nn.Module):
 
     def forward(self, x):
         if self.training:
-            # NOTE for training
             cls_score_list = []
             reg_distri_list = []
             angle_fitting_list = []
@@ -142,7 +159,8 @@ class Detect(nn.Module):
             else:
                 return x, cls_score_list, reg_distri_list, angle_fitting_list
         else:
-            # NOTE for eval
+            anchor_points, stride_tensor  = generate_anchors_OBB(
+                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True)
             cls_score_list = []
             reg_dist_list = []
             angle_fitting_list = []
@@ -277,6 +295,8 @@ def build_effidehead_layer(
         # angle_pred2
         nn.Conv2d(in_channels=channels_list[chx[2]], out_channels=angle_max * num_anchors, kernel_size=1),
     )
+    
+    return head_layers
 
     if num_layers == 4:
         head_layers.add_module(
@@ -315,4 +335,24 @@ def build_effidehead_layer(
             nn.Conv2d(in_channels=channels_list[chx[3]], out_channels=angle_max * num_anchors, kernel_size=1),
         )
 
-    return head_layers
+def dist2bbox(distance, anchor_points, box_format='xyxy'):
+    '''Transform distance(ltrb) to box(xywh or xyxy).'''
+    lt, rb = torch.split(distance, 2, -1)
+    x1y1 = anchor_points - lt
+    x2y2 = anchor_points + rb
+    if box_format == 'xyxy':
+        bbox = torch.cat([x1y1, x2y2], -1)
+    elif box_format == 'xywh':
+        c_xy = (x1y1 + x2y2) / 2
+        wh = x2y2 - x1y1
+        bbox = torch.cat([c_xy, wh], -1)
+    return bbox
+
+
+def bbox2dist(anchor_points, bbox, reg_max):
+    '''Transform bbox(xyxy) to dist(ltrb).'''
+    x1y1, x2y2 = torch.split(bbox, 2, -1)
+    lt = anchor_points - x1y1
+    rb = x2y2 - anchor_points
+    dist = torch.cat([lt, rb], -1).clip(0, reg_max - 0.01)
+    return dist

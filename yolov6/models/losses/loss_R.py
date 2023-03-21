@@ -40,7 +40,6 @@ class ComputeLoss:
         self.grid_cell_offset = grid_cell_offset  # NOTE 0.5
         self.num_classes = num_classes
         self.ori_img_size = ori_img_size
-
         self.warmup_epoch = warmup_epoch
         self.warmup_assigner = ATSSAssigner(
             9, num_classes=self.num_classes, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods
@@ -95,7 +94,6 @@ class ComputeLoss:
         # NOTE 角度解码
         pred_angles_decode = self.angle_decode(pred_angles)
         try:
-            # TODO
             if epoch_num < self.warmup_epoch:
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.warmup_assigner(
                     anchors,
@@ -134,7 +132,7 @@ class ComputeLoss:
                 _gt_bboxes = gt_bboxes.cpu().float()
                 _gt_angles = gt_angles.cpu().float()
                 _mask_gt = mask_gt.cpu().float()
-                _pred_bboxes = pred_bboxes.detach().cpu().float()
+                _pred_reg_atss = pred_reg_atss.detach().cpu().float()
                 _stride_tensor = stride_tensor.cpu().float()
 
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.warmup_assigner(
@@ -258,9 +256,8 @@ class ComputeLoss:
         targets[..., 1:5] = xywh2xyxy(batch_target)
         # NOTE targets 绝对值坐标 [bs, max_len, 6]
         return targets
-
-    def bbox_decode(self, anchor_points, pred_dist):
-        if self.use_dfl:
+    def obb_decode(self, points, pred_dist, pred_angle, stride_tensor, mode="xyxy"):
+        if self.use_reg_dfl:
             batch_size, n_anchors, _ = pred_dist.shape
             pred_dist = F.softmax(pred_dist.view(batch_size, n_anchors, 4, self.reg_max + 1), dim=-1).matmul(
                 self.proj.to(pred_dist.device)
@@ -406,6 +403,7 @@ class BboxLoss(nn.Module):
     def forward(self, pred_dist, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask):
 
         # select positive samples mask
+        # ipdb.set_trace()
         num_pos = fg_mask.sum()
         if num_pos > 0:
             # iou loss
@@ -429,7 +427,7 @@ class BboxLoss(nn.Module):
                 if target_scores_sum == 0:
                     loss_dfl = loss_dfl.sum()
                 else:
-                    loss_dfl = loss_dfl.sum() / target_scores_sum
+                    loss_reg_dfl = loss_reg_dfl.sum() / assigned_scores_sum
             else:
                 loss_dfl = pred_dist.sum() * 0.0
 
@@ -437,9 +435,21 @@ class BboxLoss(nn.Module):
             loss_iou = pred_dist.sum() * 0.0
             loss_dfl = pred_dist.sum() * 0.0
 
-        return loss_iou, loss_dfl
+        return loss_iou, loss_reg_dfl, loss_angle_dfl
+    def _df_loss_angle(self, pred_angle_dist, target):
+        target_left = target.to(torch.long)
+        target_right = target_left + 1
+        weight_left = target_right.to(torch.float) - target
+        weight_right = 1 - weight_left
+        loss_left = F.cross_entropy(
+            pred_angle_dist.view(-1, self.angle_max + 1), target_left.view(-1), reduction='none').view(
+            target_left.shape) * weight_left
+        loss_right = F.cross_entropy(
+            pred_angle_dist.view(-1, self.angle_max + 1), target_right.view(-1), reduction='none').view(
+            target_left.shape) * weight_right
+        return (loss_left + loss_right).mean(-1, keepdim=True)
 
-    def _df_loss(self, pred_dist, target):
+    def _df_loss_reg(self, pred_reg_dist, target):
         target_left = target.to(torch.long)
         target_right = target_left + 1
         weight_left = target_right.to(torch.float) - target
