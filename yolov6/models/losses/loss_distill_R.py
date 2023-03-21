@@ -59,20 +59,31 @@ class ComputeLoss:
 
         self.iou_type = iou_type
         self.varifocal_loss = VarifocalLoss().cuda()
-        
+
         self.loss_weight = loss_weight
         self.distill_feat = distill_feat
         self.distill_weight = distill_weight
 
     def __call__(
-        self, outputs, t_outputs, s_featmaps, t_featmaps, targets, epoch_num, max_epoch, temperature, step_num,
-    distill_off=False):
+        self,
+        outputs,
+        t_outputs,
+        s_featmaps,
+        t_featmaps,
+        targets,
+        epoch_num,
+        max_epoch,
+        temperature,
+        step_num,
+        distill_off=False,
+    ):
         # NOTE pred_distri 相对值 [bs, 8400, 4]
         # NOTE pred_angles [bs, 8400, angle_max]
-        self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type, distill_off=distill_off).cuda()
-        self.angle_loss = AngleLoss(self.angle_max, self.angle_fitting_methods, distill_off = distill_off).cuda()
-        
-        
+        self.bbox_loss = BboxLoss(
+            self.num_classes, self.reg_max, self.use_dfl, self.iou_type, distill_off=distill_off
+        ).cuda()
+        self.angle_loss = AngleLoss(self.angle_max, self.angle_fitting_methods, distill_off=distill_off).cuda()
+
         feats, pred_scores, pred_distri, pred_angles = outputs
         # NOTE 教师网络的四个参数也要进行处理
 
@@ -198,7 +209,7 @@ class ComputeLoss:
         # avoid devide zero error, devide by zero will cause loss to be inf or nan.
         if target_scores_sum > 0:
             loss_cls /= target_scores_sum
-        # NOTE 
+        # NOTE
         # bbox loss
         loss_iou, loss_dfl, d_loss_dfl = self.bbox_loss(
             pred_distri,
@@ -223,13 +234,14 @@ class ComputeLoss:
         d_loss_cls = self.distill_loss_cls(logits_student, logits_teacher, distill_num_classes, temperature, fg_mask)
         if target_scores_sum > 0:
             d_loss_cls /= target_scores_sum
-        if(distill_off):
+        if distill_off:
             d_loss_cls = d_loss_cls * 0.0
         if self.distill_feat:
             d_loss_cw = self.distill_loss_cw(s_featmaps, t_featmaps)
         else:
             d_loss_cw = torch.tensor(0.0).to(feats[0].device)
         import math
+
         # print(loss_cls,"loss_cls")
         # print(loss_dfl,"loss_dfl")
         # print(loss_angle, "loss_angle")
@@ -241,9 +253,9 @@ class ComputeLoss:
         d_loss_cls *= distill_weightdecay
         d_loss_cw *= distill_weightdecay
         d_loss_angle *= distill_weightdecay
-        loss_cls_all = loss_cls + d_loss_cls * self.distill_weight["class"]*0.20
-        loss_dfl_all = loss_dfl + d_loss_dfl * self.distill_weight["dfl"]*0.20
-        loss_angle_all = loss_angle + d_loss_angle * self.distill_weight["angle"]*0.20
+        loss_cls_all = loss_cls + d_loss_cls * self.distill_weight["class"] * 0.20
+        loss_dfl_all = loss_dfl + d_loss_dfl * self.distill_weight["dfl"] * 0.20
+        loss_angle_all = loss_angle + d_loss_angle * self.distill_weight["angle"] * 0.20
         loss = (
             self.loss_weight["class"] * loss_cls_all
             + self.loss_weight["iou"] * loss_iou
@@ -269,7 +281,7 @@ class ComputeLoss:
         # NOTE 只对正样本做KL Divergance 负样本不进行处理
         cls_mask = fg_mask.unsqueeze(-1).repeat([1, 1, num_classes])
         s_logits_pred = torch.masked_select(logits_student, cls_mask).reshape(-1, num_classes)
-        t_logits_pred = torch.masked_select(logits_teacher, cls_mask).reshape(-1,num_classes)
+        t_logits_pred = torch.masked_select(logits_teacher, cls_mask).reshape(-1, num_classes)
         # logits_student = logits_student.view(-1, num_classes)
         # logits_teacher = logits_teacher.view(-1, num_classes)
         # pred_student = F.softmax(logits_student / temperature, dim=1)
@@ -280,7 +292,7 @@ class ComputeLoss:
         # d_loss_cls = F.kl_div(log_pred_student, pred_teacher, reduction="sum")
         # print(log_pred_student.shape)
         d_loss_cls = F.kl_div(log_pred_student, t_logits_pred, reduction="sum")
-        
+
         d_loss_cls *= temperature**2
         return d_loss_cls
 
@@ -332,7 +344,7 @@ class ComputeLoss:
             targets_list[int(item[0])].append(item[1:])
         max_len = max((len(l) for l in targets_list))
         targets = torch.from_numpy(
-            np.array(list(map(lambda l: l + [[-1, 0, 0, 0, 0, 0 ]] * (max_len - len(l)), targets_list)))[:, 1:, :]
+            np.array(list(map(lambda l: l + [[-1, 0, 0, 0, 0, 0]] * (max_len - len(l)), targets_list)))[:, 1:, :]
         ).to(targets.device)
         batch_target = targets[:, :, 1:5].mul_(scale_tensor)
         targets[..., 1:5] = xywh2xyxy(batch_target)
@@ -424,7 +436,7 @@ class BboxLoss(nn.Module):
         if not self.distill_off:
             return loss_iou, loss_dfl, d_loss_dfl
         else:
-            d_loss_dfl = d_loss_dfl*0.0
+            d_loss_dfl = d_loss_dfl * 0.0
             return loss_iou, loss_dfl, d_loss_dfl
 
     def _df_loss(self, pred_dist, target):
@@ -478,7 +490,7 @@ def gaussian_label(target_angles: torch.Tensor, angle_max: int, u=0, sig=6.0):
 
 
 class AngleLoss(nn.Module):
-    def __init__(self, angle_max, angle_fitting_methods,distill_off=False):
+    def __init__(self, angle_max, angle_fitting_methods, distill_off=False):
         super(AngleLoss, self).__init__()
         self.angle_max = angle_max
         self.angle_fitting_methods = angle_fitting_methods
@@ -496,6 +508,7 @@ class AngleLoss(nn.Module):
         d_loss_angle = F.kl_div(log_pred_student, pred_teacher, reduction="none").sum(1).mean()
         d_loss_angle *= temperature**2
         return d_loss_angle
+
     def _df_loss(self, pred_dist, target):
         target_left = target.to(torch.long)
         target_right = target_left + 1
@@ -514,6 +527,7 @@ class AngleLoss(nn.Module):
             * weight_right
         )
         return (loss_left + loss_right).mean(-1, keepdim=True)
+
     def forward(
         self, pred_angles, t_pred_angles, target_angles, target_scores, target_scores_sum, fg_mask, temperature=20
     ):
