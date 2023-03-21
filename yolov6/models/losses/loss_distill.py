@@ -185,6 +185,7 @@ class ComputeLoss:
         logits_student = pred_scores
         logits_teacher = t_pred_scores
         distill_num_classes = self.num_classes
+        #NOTE distill_loss_cls   
         d_loss_cls = self.distill_loss_cls(logits_student, logits_teacher, distill_num_classes, temperature)
         if self.distill_feat:
             d_loss_cw = self.distill_loss_cw(s_featmaps, t_featmaps)

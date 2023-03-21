@@ -1,0 +1,34 @@
+# HRSC2016 HBB
+train: /home/haohao/DIOR-R/images/train
+val: /home/haohao/DIOR-R/images/test
+test: /home/haohao/DIOR-R/images/test
+
+# number of classes
+nc: 20
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+
+# class names
+names:
+  [
+    "airplane",
+    "airport",
+    "baseballfield",
+    "basketballcourt",
+    "bridge",
+    "chimney",
+    "dam",
+    "Expressway-Service-area",
+    "Expressway-toll-station",
+    "golffield",
+    "groundtrackfield",
+    "harbor",
+    "overpass",
+    "ship",
+    "stadium",
+    "storagetank",
+    "tenniscourt",
+    "trainstation",
+    "vehicle",
+    "windmill",
+  ]

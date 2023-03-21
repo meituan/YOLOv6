@@ -10,6 +10,7 @@ from yolov6.utils.torch_utils import fuse_model
 
 def load_state_dict(weights, model, map_location=None):
     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
+    # TODO model 不匹配时候的weights重新加载会不会有bug, 有bug的话需要修改
     ckpt = torch.load(weights, map_location=map_location)
     state_dict = ckpt['model'].float().state_dict()
     model_state_dict = model.state_dict()

@@ -1,36 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import argparse
-from logging import Logger
 import os
-import yaml
 import os.path as osp
+import sys
+import warnings
+from logging import Logger
 from pathlib import Path
+
 import torch
 import torch.distributed as dist
-import sys
+from tqdm import tqdm
+import yaml
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from yolov6.core.engine import Trainer
+from yolov6.core.engine_R import Trainer
 from yolov6.utils.config import Config
-from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
-from yolov6.utils.general import increment_name, find_latest_checkpoint
+from yolov6.utils.events_R import LOGGER, save_yaml
+from yolov6.utils.general import find_latest_checkpoint, increment_name
 
 
 def get_args_parser(add_help=True):
     # NOTE 方便调试
     parser = argparse.ArgumentParser(description="YOLOv6 PyTorch Training", add_help=add_help)
     parser.add_argument("--data-path", default="./data/HRSC2016.yaml", type=str, help="path of dataset")
-    parser.add_argument("--conf-file", default="./configs/yolov6n.py", type=str, help="experiments description file")
+    parser.add_argument("--conf-file", default="./configs/yolov6s_finetune-obb.py", type=str, help="experiments description file")
     parser.add_argument("--img-size", default=800, type=int, help="train, val image size (pixels)")
     parser.add_argument("--batch-size", default=1, type=int, help="total batch size for all GPUs")
     parser.add_argument("--epochs", default=400, type=int, help="number of total epochs to run")
     parser.add_argument("--workers", default=8, type=int, help="number of data loading workers (default: 8)")
-    parser.add_argument("--device", default="0", type=str, help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    parser.add_argument("--device", default="1", type=str, help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
     parser.add_argument("--eval-interval", default=20, type=int, help="evaluate at every interval epochs")
     parser.add_argument("--eval-final-only", action="store_true", help="only evaluate at the final epoch")
     parser.add_argument(
@@ -54,7 +59,7 @@ def get_args_parser(add_help=True):
     )
     parser.add_argument(
         "--stop_aug_last_n_epoch",
-        default=15,
+        default=25,
         type=int,
         help="stop strong aug at last n epoch, neg value not stop, default 15",
     )
@@ -66,6 +71,8 @@ def get_args_parser(add_help=True):
     )
     parser.add_argument("--distill", action="store_true", help="distill or not")
     parser.add_argument("--distill_feat", action="store_true", help="distill featmap or not")
+    parser.add_argument("--distill_ns", action="store_true", help="distill n/s")
+    parser.add_argument("--distill_ns_off", action="store_true", help="decouple head n/s")
     parser.add_argument("--quant", action="store_true", help="quant or not")
     parser.add_argument("--calib", action="store_true", help="run ptq")
     parser.add_argument("--teacher_model_path", type=str, default=None, help="teacher model path")
@@ -82,6 +89,8 @@ def get_args_parser(add_help=True):
 
 def check_and_init(args):
     """check config files and device."""
+    # logging
+
     # check files
     master_process = args.rank == 0 if args.world_size > 1 else args.rank == -1
     if args.resume:

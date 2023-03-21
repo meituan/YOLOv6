@@ -8,7 +8,7 @@ from yolov6.layers.common import *
 from yolov6.utils.torch_utils import initialize_weights
 from yolov6.models.efficientrep import *
 from yolov6.models.reppan import *
-from yolov6.utils.events import LOGGER
+from yolov6.utils.events_R import LOGGER
 
 
 class Model(nn.Module):
@@ -57,12 +57,16 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     width_mul = config.model.width_multiple
     num_repeat_backbone = config.model.backbone.num_repeats
     channels_list_backbone = config.model.backbone.out_channels
+    # REVIEW - fuse_P2 ?
     fuse_P2 = config.model.backbone.get('fuse_P2')
     cspsppf = config.model.backbone.get('cspsppf')
     num_repeat_neck = config.model.neck.num_repeats
     channels_list_neck = config.model.neck.out_channels
     use_dfl = config.model.head.use_dfl
     reg_max = config.model.head.reg_max
+    # NOTE: fitting methods: ["regression", "csl", 'dfl', 'MGAR']
+    angle_fitting_methods = config.model.head.angle_fitting_methods
+    angle_max = config.model.head.angle_max
     num_repeat = [(max(round(i * depth_mul), 1) if i > 1 else i) for i in (num_repeat_backbone + num_repeat_neck)]
     channels_list = [make_divisible(i * width_mul, 8) for i in (channels_list_backbone + channels_list_neck)]
 
@@ -104,13 +108,13 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
         )
 
     if distill_ns:
-        from yolov6.models.heads.effidehead_distill_ns import Detect, build_effidehead_layer
+        from yolov6.models.heads.effidehead_distill_ns_R import Detect, build_effidehead_layer
         if num_layers != 3:
             LOGGER.error('ERROR in: Distill mode not fit on n/s models with P6 head.\n')
             exit()
-        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max)
-        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
-
+        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, angle_fitting_methods=angle_fitting_methods, angle_max=angle_max)
+        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods)
+        LOGGER.info('ns model intialized')
     elif fuse_ab:
         from yolov6.models.heads.effidehead_fuseab import Detect, build_effidehead_layer
         anchors_init = config.model.head.anchors_init
@@ -118,9 +122,11 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
         head = Detect(num_classes, anchors_init, num_layers, head_layers=head_layers, use_dfl=use_dfl)
 
     else:
-        from yolov6.models.effidehead import Detect, build_effidehead_layer
-        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers)
-        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
+        # NOTE change this to R
+        from yolov6.models.effidehead_R import Detect, build_effidehead_layer
+        # NOTE 预留一个 angle fitting methods
+        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers, angle_fitting_methods=angle_fitting_methods, angle_max=angle_max)
+        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods)
 
     return backbone, neck, head
 

@@ -1,0 +1,15 @@
+CUDA_VISIBLE_DEVICES=0 python tools/train_R.py \
+	--device 0 \
+	--batch 32 \
+	--epochs 120 \
+	--img 800 \
+	--eval-interval 10 \
+	--conf configs/obb/yolov6s_finetune-obb-ns-drone.py \
+	--data data/drone_vehicle.yaml \
+	--output-dir './runs/drone_vehicle' \
+	--name 'yolov6s_dfl_csl_decouple_SGD' \
+	--distill \
+	--distill_ns \
+    --distill_ns_off \
+	--temperature 20 \
+	--teacher_model_path './runs/drone_vehicle/yolov6m_dfl_csl_AdamW_small_lr/weights/best_ckpt.pt' 

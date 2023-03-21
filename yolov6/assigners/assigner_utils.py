@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn.functional as F
 
 def dist_calculator(gt_bboxes, anchor_bboxes):
@@ -21,6 +22,77 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
     distances = (gt_points[:, None, :] - ac_points[None, :, :]).pow(2).sum(-1).sqrt()
 
     return distances, ac_points
+def rbox2poly(obboxes):
+    """
+    Trans rbox format to poly format.
+    Args:
+        rboxes (array/tensor): (num_gts, [cx cy l s theta]) theta∈[0, 180)
+    Returns:
+        polys (array/tensor): (num_gts, [x1 y1 x2 y2 x3 y3 x4 y4])
+    """
+    if isinstance(obboxes, torch.Tensor):
+        center, longSide, shortSide, theta = obboxes[:, :2], obboxes[:, 2:3], obboxes[:, 3:4], obboxes[:, 4:5]
+        Cos, Sin = torch.cos(theta * torch.pi / 180.0), torch.sin(theta * torch.pi / 180.0)
+
+        vector1 = torch.cat((longSide / 2.0 * Cos, longSide / 2.0 * Sin), dim=-1)
+        vector2 = torch.cat((shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos), dim=-1)
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
+    else:
+        center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
+        Cos, Sin = np.cos(theta), np.sin(theta)
+
+        vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
+        vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
+
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)
+def select_candidates_in_gts_R(xy_center, gt_bboxes, gt_angle, eps=1e-9):
+    """select the gt point in anchor's center in obb
+
+    Args:
+        anc_points (Tensor): shape(num_total_anchors, 2)
+        gt_bboxes (tensor): shape(bs, n_max_boxes, 4)
+        gt_angle (tensor): shape(bs, n_max_boxes, 1)
+
+    Returns:
+        (Tensor): shape(bs, n_max_boxes, num_total_anchors)
+    """
+    gt_obbs = torch.concat([gt_bboxes, gt_angle], dim=-1)
+    bs, n_max_boxes, _ = gt_bboxes.size()
+    _gt_obbs = gt_obbs.reshape([bs,-1,5])
+    _gt_poly = rbox2poly(_gt_obbs).reshape([bs,-1,4,2])
+    points = xy_center.unsqueeze(0).unsqueeze(0)
+    a,b,c,d = torch.split(_gt_poly,[1,1,1,1], dim=2)
+    ab = b - a
+    ad = d - a
+    # [B, N, L, 2]
+    ap = points - a
+    # [B, N, L]
+    norm_ab = torch.sum(ab * ab, axis=-1)
+    # [B, N, L]
+    norm_ad = torch.sum(ad * ad, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ab = torch.sum(ap * ab, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ad = torch.sum(ap * ad, axis=-1)
+    # [B, N, L] <A, B> = |A|*|B|*cos(theta)
+    is_in_box = (
+        (ap_dot_ab >= 0)
+        & (ap_dot_ab <= norm_ab)
+        & (ap_dot_ad >= 0)
+        & (ap_dot_ad <= norm_ad)
+    )
+    return is_in_box
+
 
 def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     """select the positive anchors's center in gt

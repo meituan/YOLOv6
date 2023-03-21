@@ -1,0 +1,12 @@
+# HRSC2016 HBB
+train: /home/haohao/drone_vehicle/images/train
+val: /home/haohao/drone_vehicle/images/test
+test: /home/haohao/drone_vehicle/images/test
+
+# number of classes
+nc: 5
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+
+# class names
+names: ["car", "feright car", "truck", "bus", "van"]

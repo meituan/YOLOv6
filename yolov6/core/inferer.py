@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os
-import cv2
-import time
 import math
-import torch
-import numpy as np
+import os
 import os.path as osp
-
-from tqdm import tqdm
-from pathlib import Path
-from PIL import ImageFont
+import time
 from collections import deque
+from pathlib import Path
 
-from yolov6.utils.events import LOGGER, load_yaml
-from yolov6.layers.common import DetectBackend
+import cv2
+import numpy as np
+import torch
+from PIL import ImageFont
+from tqdm import tqdm
+
 from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets import LoadData
+from yolov6.layers.common import DetectBackend
+from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
+
 
 class Inferer:
     def __init__(self, source, webcam, webcam_addr, weights, device, yaml, img_size, half):
