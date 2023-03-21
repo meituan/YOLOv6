@@ -168,6 +168,8 @@ class TrainValDataset(Dataset):
 
     def get_imgs_labels(self, img_dir):
 
+        # TODO check labels
+
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         # '/home/haohao/HRSC2016_new/images/.train.json'
         valid_img_record = osp.join(osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json")
@@ -194,7 +196,7 @@ class TrainValDataset(Dataset):
             nc, msgs = 0, []  # number corrupt, messages
             LOGGER.info(f"{self.task}: Checking formats of images with {NUM_THREADS} process(es): ")
             with Pool(NUM_THREADS) as pool:
-                pbar = tdqm(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
+                pbar = tqdm(pool.imap(TrainValDataset.check_image, img_paths), total=len(img_paths),)
                 for img_path, shape_per_img, nc_per_img, msg in pbar:
                     if nc_per_img == 0:  # not corrupted
                         img_info[img_path] = {"shape": shape_per_img}
@@ -444,8 +446,10 @@ class TrainValDataset(Dataset):
                 if len(labels):
                     assert all(len(l) == 6 for l in labels), f"{lb_path}: wrong label format."
                     assert (labels >= 0).all(), f"{lb_path}: Label values error: all values in label file must > 0"
+                    # NOTE 这个warning可以忽略, 有些长宽是对角线
+                    # TODO 如果归一化标签有溢出怎么办?
                     assert (
-                        labels[:, 1:5] <= 1
+                        labels[:, 1:5] <= 1.2
                     ).all(), f"{lb_path}: Label values error: all coordinates must be normalized"
 
                     _, indices = np.unique(labels, axis=0, return_index=True)

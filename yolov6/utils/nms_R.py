@@ -13,10 +13,10 @@ import torchvision
 from mmcv.ops import box_iou_rotated, nms_rotated
 
 # Settings
-torch.set_printoptions(linewidth=320, precision=5, profile='long')
-np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+torch.set_printoptions(linewidth=320, precision=5, profile="long")
+np.set_printoptions(linewidth=320, formatter={"float_kind": "{:11.5g}".format})  # format short g, %precision=5
 cv2.setNumThreads(0)  # prevent OpenCV from multithreading (incompatible with PyTorch DataLoader)
-os.environ['NUMEXPR_MAX_THREADS'] = str(min(os.cpu_count(), 8))  # NumExpr max threads
+os.environ["NUMEXPR_MAX_THREADS"] = str(min(os.cpu_count(), 8))  # NumExpr max threads
 
 
 def obb_box_iou(boxes1, boxes2):
@@ -51,7 +51,7 @@ def obb_box_iou_cuda(boxes1, boxes2):
 
 
 def xywh2xyxy(x):
-    '''Convert boxes with shape [n, 4] from [x, y, w, h] to [x1, y1, x2, y2] where x1y1 is top-left, x2y2=bottom-right.'''
+    """Convert boxes with shape [n, 4] from [x, y, w, h] to [x1, y1, x2, y2] where x1y1 is top-left, x2y2=bottom-right."""
     y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
     y[:, 0] = x[:, 0] - x[:, 2] / 2  # top left x
     y[:, 1] = x[:, 1] - x[:, 3] / 2  # top left y
@@ -70,7 +70,9 @@ def xyxy2xywh(x):
     return y
 
 
-def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300):
+def non_max_suppression(
+    prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300
+):
     """Runs Non-Maximum Suppression (NMS) on inference results.
     This code is borrowed from: https://github.com/ultralytics/yolov5/blob/47233e1698b89fc437a4fb9463c815e9171be955/utils/general.py#L775
     Args:
@@ -87,10 +89,12 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     """
 
     num_classes = prediction.shape[2] - 5  # number of classes
-    pred_candidates = torch.logical_and(prediction[..., 4] > conf_thres, torch.max(prediction[..., 5:], axis=-1)[0] > conf_thres)  # candidates
+    pred_candidates = torch.logical_and(
+        prediction[..., 4] > conf_thres, torch.max(prediction[..., 5:], axis=-1)[0] > conf_thres
+    )  # candidates
     # Check the parameters.
-    assert 0 <= conf_thres <= 1, f'conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided.'
-    assert 0 <= iou_thres <= 1, f'iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided.'
+    assert 0 <= conf_thres <= 1, f"conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided."
+    assert 0 <= iou_thres <= 1, f"iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided."
 
     # Function settings.
     max_wh = 4096  # maximum box width and height
@@ -141,13 +145,15 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
         output[img_idx] = x[keep_box_idx]
         if (time.time() - tik) > time_limit:
-            print(f'WARNING: NMS cost time exceed the limited {time_limit}s.')
+            print(f"WARNING: NMS cost time exceed the limited {time_limit}s.")
             break  # time limit exceeded
 
     return output
 
 
-def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300):
+def non_max_suppression_obb(
+    prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300
+):
     """Runs Non-Maximum Suppression (NMS) on inference results.
     This code is borrowed from: https://github.com/ultralytics/yolov5/blob/47233e1698b89fc437a4fb9463c815e9171be955/utils/general.py#L775
     Args:
@@ -166,10 +172,12 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
     # NOTE [N, x, y, w, h, angle, conf, classes]
     # NOTE [N, 0, 1, 2, 3, 4,      5,      6:]
     num_classes = prediction.shape[2] - 6  # number of classes
-    pred_candidates = torch.logical_and(prediction[..., 5] > conf_thres, torch.max(prediction[..., 6:], axis=-1)[0] > conf_thres)  # candidates
+    pred_candidates = torch.logical_and(
+        prediction[..., 5] > conf_thres, torch.max(prediction[..., 6:], axis=-1)[0] > conf_thres
+    )  # candidates
     # Check the parameters.
-    assert 0 <= conf_thres <= 1, f'conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided.'
-    assert 0 <= iou_thres <= 1, f'iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided.'
+    assert 0 <= conf_thres <= 1, f"conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided."
+    assert 0 <= iou_thres <= 1, f"iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided."
 
     # Function settings.
     max_wh = 4096  # maximum box width and height
@@ -196,7 +204,9 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
         # Detections matrix's shape is  (n,6), each row represents (xyxy, conf, cls)
         if multi_label:
             box_idx, class_idx = (x[:, 6:] > conf_thres).nonzero(as_tuple=False).T
-            x = torch.cat((box[box_idx], angle[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1)
+            x = torch.cat(
+                (box[box_idx], angle[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1
+            )
         else:  # Only keep the class with highest scores.
             conf, class_idx = x[:, 6:].max(1, keepdim=True)
             x = torch.cat((box, angle, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
@@ -244,13 +254,15 @@ def non_max_suppression_obb(prediction, conf_thres=0.25, iou_thres=0.45, classes
         output[img_idx] = x[keep_box_idx]
 
         if (time.time() - tik) > time_limit:
-            print(f'WARNING: NMS cost time exceed the limited {time_limit}s.')
+            print(f"WARNING: NMS cost time exceed the limited {time_limit}s.")
             break  # time limit exceeded
 
     return output
 
 
-def non_max_suppression_obb_cuda(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300):
+def non_max_suppression_obb_cuda(
+    prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300
+):
     """Runs Non-Maximum Suppression (NMS) on inference results.
     This code is borrowed from: https://github.com/ultralytics/yolov5/blob/47233e1698b89fc437a4fb9463c815e9171be955/utils/general.py#L775
     Args:
@@ -269,10 +281,12 @@ def non_max_suppression_obb_cuda(prediction, conf_thres=0.25, iou_thres=0.45, cl
     # NOTE [N, x, y, w, h, angle, conf, classes]
     # NOTE [N, 0, 1, 2, 3, 4,      5,      6:]
     num_classes = prediction.shape[2] - 6  # number of classes
-    pred_candidates = torch.logical_and(prediction[..., 5] > conf_thres, torch.max(prediction[..., 6:], axis=-1)[0] > conf_thres)  # candidates
+    pred_candidates = torch.logical_and(
+        prediction[..., 5] > conf_thres, torch.max(prediction[..., 6:], axis=-1)[0] > conf_thres
+    )  # candidates
     # Check the parameters.
-    assert 0 <= conf_thres <= 1, f'conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided.'
-    assert 0 <= iou_thres <= 1, f'iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided.'
+    assert 0 <= conf_thres <= 1, f"conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided."
+    assert 0 <= iou_thres <= 1, f"iou_thres must be in 0.0 to 1.0, however {iou_thres} is provided."
 
     # Function settings.
     max_wh = 4096  # maximum box width and height
@@ -299,7 +313,9 @@ def non_max_suppression_obb_cuda(prediction, conf_thres=0.25, iou_thres=0.45, cl
         # Detections matrix's shape is  (n,6), each row represents (xyxy, conf, cls)
         if multi_label:
             box_idx, class_idx = (x[:, 6:] > conf_thres).nonzero(as_tuple=False).T
-            x = torch.cat((box[box_idx], angle[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1)
+            x = torch.cat(
+                (box[box_idx], angle[box_idx], x[box_idx, class_idx + 6, None], class_idx[:, None].float()), 1
+            )
         else:  # Only keep the class with highest scores.
             conf, class_idx = x[:, 6:].max(1, keepdim=True)
             x = torch.cat((box, angle, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
@@ -335,7 +351,43 @@ def non_max_suppression_obb_cuda(prediction, conf_thres=0.25, iou_thres=0.45, cl
         output[img_idx] = x[keep_box_idx]
 
         if (time.time() - tik) > time_limit:
-            print(f'WARNING: NMS cost time exceed the limited {time_limit}s.')
+            print(f"WARNING: NMS cost time exceed the limited {time_limit}s.")
             break  # time limit exceeded
 
     return output
+
+
+def rbox2poly(obboxes):
+    """
+    Trans rbox format to poly format.
+    Args:
+        rboxes (array/tensor): (num_gts, [cx cy longSide shortSide theta]) theta∈[0, 180)
+    Returns:
+        polys (array/tensor): (num_gts, [x1 y1 x2 y2 x3 y3 x4 y4])
+    """
+
+    if isinstance(obboxes, torch.Tensor):
+        center, longSide, shortSide, theta = obboxes[:, :2], obboxes[:, 2:3], obboxes[:, 3:4], obboxes[:, 4:5]
+        Cos, Sin = torch.cos(theta * torch.pi / 180.0), torch.sin(theta * torch.pi / 180.0)
+
+        vector1 = torch.cat((longSide / 2.0 * Cos, longSide / 2.0 * Sin), dim=-1)
+        vector2 = torch.cat((shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos), dim=-1)
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
+    else:
+        center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
+        Cos, Sin = np.cos(theta), np.sin(theta)
+
+        vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
+        vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
+
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)

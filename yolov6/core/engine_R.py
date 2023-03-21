@@ -38,6 +38,9 @@ from yolov6.utils.general import download_ckpt
 from yolov6.utils.nms_R import xywh2xyxy, xyxy2xywh
 from yolov6.utils.RepOptimizer import RepVGGOptimizer, extract_scales
 
+# from yolov6.models.losses.loss_distill_ns_R import \
+    # ComputeLoss as ComputeLoss_distill_ns
+
 
 class Trainer:
     def __init__(self, args, cfg, device):
@@ -60,6 +63,9 @@ class Trainer:
         self.train_loader, self.val_loader = self.get_data_loader(
             args, cfg, self.data_dict
         )
+        self.train_loader, self.val_loader = self.get_data_loader(
+            args, cfg, self.data_dict
+        )
         # get model and optimizer
         # NOTE YOLOv6n 和 YOLOV6s 都是默认蒸馏配置
         self.distill_ns = True if self.args.distill and args.distill_ns else False
@@ -69,6 +75,9 @@ class Trainer:
             if self.args.fuse_ab:
                 LOGGER.error("ERROR in: Distill models should turn off the fuse_ab.\n")
                 exit()
+            self.teacher_model = self.get_teacher_model(
+                args, cfg, self.num_classes, device
+            )
             self.teacher_model = self.get_teacher_model(
                 args, cfg, self.num_classes, device
             )
@@ -90,6 +99,9 @@ class Trainer:
             resume_state_dict = (
                 self.ckpt["model"].float().state_dict()
             )  # checkpoint state_dict as FP32
+            resume_state_dict = (
+                self.ckpt["model"].float().state_dict()
+            )  # checkpoint state_dict as FP32
             model.load_state_dict(resume_state_dict, strict=True)  # load
             self.start_epoch = self.ckpt["epoch"] + 1
             self.optimizer.load_state_dict(self.ckpt["optimizer"])
@@ -106,6 +118,9 @@ class Trainer:
         self.vis_imgs_list = []
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
+        self.color = [
+            tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)
+        ]
         self.color = [
             tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)
         ]
@@ -200,6 +215,12 @@ class Trainer:
                     complete_style="blue",
                     finished_style="green",
                 ),
+                BarColumn(
+                    bar_width=None,
+                    style="white",
+                    complete_style="blue",
+                    finished_style="green",
+                ),
                 TextColumn("[progress.percentage]{task.percentage:>3.1f}%"),
                 "•",
                 TimeElapsedColumn(),
@@ -243,6 +264,13 @@ class Trainer:
                     *self.mean_loss,
                 )
             )
+            LOGGER.info(
+                ("\n" + "%10g" * (self.loss_num + 1))
+                % (
+                    self.epoch,
+                    *self.mean_loss,
+                )
+            )
         except Exception as _:
             LOGGER.error("ERROR in training steps.")
             raise
@@ -261,6 +289,12 @@ class Trainer:
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
             # TODO
             self.plot_train_batch(images, targets)
+            write_tbimg(
+                self.tblogger,
+                self.vis_train_batch,
+                self.step + self.max_stepnum * self.epoch,
+                type="train",
+            )
             write_tbimg(
                 self.tblogger,
                 self.vis_train_batch,
@@ -300,7 +334,7 @@ class Trainer:
                         temperature,
                         step_num,
                         distill_ns_off=False
-                    ) 
+                    )
             elif self.args.distill and not self.distill_ns:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
@@ -344,6 +378,9 @@ class Trainer:
                 total_loss, loss_items = self.compute_loss(
                     preds, targets, epoch_num, step_num
                 )  # YOLOv6_af
+                total_loss, loss_items = self.compute_loss(
+                    preds, targets, epoch_num, step_num
+                )  # YOLOv6_af
             if self.rank != -1:
                 total_loss *= self.world_size
         # backward
@@ -358,12 +395,20 @@ class Trainer:
             if remaining_epochs > self.args.heavy_eval_range
             else 3
         )
+        eval_interval = (
+            self.args.eval_interval
+            if remaining_epochs > self.args.heavy_eval_range
+            else 3
+        )
         is_val_epoch = (
             (not self.args.eval_final_only or (remaining_epochs == 1))
             and (self.epoch % eval_interval == 0)
             and (self.epoch != 0)
         )
         if self.main_process:
+            self.ema.update_attr(
+                self.model, include=["nc", "names", "stride"]
+            )  # update attributes for ema model
             self.ema.update_attr(
                 self.model, include=["nc", "names", "stride"]
             )  # update attributes for ema model
@@ -387,7 +432,16 @@ class Trainer:
                 save_ckpt_dir,
                 model_name="last_ckpt",
             )
+            save_checkpoint(
+                ckpt,
+                (is_val_epoch) and (self.ap == self.best_ap),
+                save_ckpt_dir,
+                model_name="last_ckpt",
+            )
             if self.epoch >= self.max_epoch - self.args.save_ckpt_on_last_n_epoch:
+                save_checkpoint(
+                    ckpt, False, save_ckpt_dir, model_name=f"{self.epoch}_ckpt"
+                )
                 save_checkpoint(
                     ckpt, False, save_ckpt_dir, model_name=f"{self.epoch}_ckpt"
                 )
@@ -401,6 +455,12 @@ class Trainer:
                     save_checkpoint(
                         ckpt, False, save_ckpt_dir, model_name="best_stop_aug_ckpt"
                     )
+                    self.best_stop_strong_aug_ap = max(
+                        self.ap, self.best_stop_strong_aug_ap
+                    )
+                    save_checkpoint(
+                        ckpt, False, save_ckpt_dir, model_name="best_stop_aug_ckpt"
+                    )
 
             del ckpt
             # log for learning rate
@@ -408,6 +468,9 @@ class Trainer:
             self.evaluate_results = list(self.evaluate_results) + lr
 
             # log for tensorboard
+            write_tblog(
+                self.tblogger, self.epoch, self.evaluate_results, self.mean_loss
+            )
             write_tblog(
                 self.tblogger, self.epoch, self.evaluate_results, self.mean_loss
             )
@@ -439,7 +502,17 @@ class Trainer:
                             if cfg_dict[value_str][0] is not None
                             else default_value
                         )
+                        return (
+                            cfg_dict[value_str][0]
+                            if cfg_dict[value_str][0] is not None
+                            else default_value
+                        )
                     else:
+                        return (
+                            cfg_dict[value_str]
+                            if cfg_dict[value_str] is not None
+                            else default_value
+                        )
                         return (
                             cfg_dict[value_str]
                             if cfg_dict[value_str] is not None
@@ -451,8 +524,16 @@ class Trainer:
             eval_img_size = get_cfg_value(
                 self.cfg.eval_params, "img_size", self.img_size
             )
+            eval_img_size = get_cfg_value(
+                self.cfg.eval_params, "img_size", self.img_size
+            )
             results, vis_outputs, vis_paths = eval.run(
                 self.data_dict,
+                batch_size=get_cfg_value(
+                    self.cfg.eval_params,
+                    "batch_size",
+                    self.batch_size // self.world_size * 2,
+                ),
                 batch_size=get_cfg_value(
                     self.cfg.eval_params,
                     "batch_size",
@@ -470,7 +551,16 @@ class Trainer:
                 letterbox_return_int=get_cfg_value(
                     self.cfg.eval_params, "letterbox_return_int", False
                 ),
+                test_load_size=get_cfg_value(
+                    self.cfg.eval_params, "test_load_size", eval_img_size
+                ),
+                letterbox_return_int=get_cfg_value(
+                    self.cfg.eval_params, "letterbox_return_int", False
+                ),
                 force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad", False),
+                not_infer_on_rect=get_cfg_value(
+                    self.cfg.eval_params, "not_infer_on_rect", False
+                ),
                 not_infer_on_rect=get_cfg_value(
                     self.cfg.eval_params, "not_infer_on_rect", False
                 ),
@@ -479,8 +569,14 @@ class Trainer:
                 do_coco_metric=get_cfg_value(
                     self.cfg.eval_params, "do_coco_metric", False
                 ),
+                do_coco_metric=get_cfg_value(
+                    self.cfg.eval_params, "do_coco_metric", False
+                ),
                 do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", True),
                 plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
+                plot_confusion_matrix=get_cfg_value(
+                    self.cfg.eval_params, "plot_confusion_matrix", False
+                ),
                 plot_confusion_matrix=get_cfg_value(
                     self.cfg.eval_params, "plot_confusion_matrix", False
                 ),
@@ -492,6 +588,9 @@ class Trainer:
         LOGGER.info(
             f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}"
         )
+        LOGGER.info(
+            f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}"
+        )
         self.evaluate_results = results[:2]
         # plot validation predictions
         self.plot_val_pred(vis_outputs, vis_paths)
@@ -500,6 +599,9 @@ class Trainer:
         LOGGER.info("Training start...")
         self.start_time = time.time()
         self.warmup_stepnum = (
+            max(round(self.cfg.solver.warmup_epochs * self.max_stepnum), 1000)
+            if self.args.quant is False
+            else 0
             max(round(self.cfg.solver.warmup_epochs * self.max_stepnum), 1000)
             if self.args.quant is False
             else 0
@@ -537,6 +639,7 @@ class Trainer:
                 iou_type=self.cfg.model.head.iou_type,
                 fpn_strides=self.cfg.model.head.strides,
             )
+        # NOTE
         if self.args.distill:
             # NOTE n/s 所使用的蒸馏函数不一样，原因在HEAD部分
             if self.distill_ns:
@@ -571,6 +674,9 @@ class Trainer:
             self.train_loader, self.val_loader = self.get_data_loader(
                 self.args, self.cfg, self.data_dict
             )
+            self.train_loader, self.val_loader = self.get_data_loader(
+                self.args, self.cfg, self.data_dict
+            )
         self.model.train()
         if self.rank != -1:
             self.train_loader.sampler.set_epoch(self.epoch)
@@ -587,6 +693,8 @@ class Trainer:
             # )
             if not self.args.distill:
                 self.task = self.progress.add_task(
+                    "LOGGER",
+                    total=len(self.train_loader),
                     "LOGGER",
                     total=len(self.train_loader),
                     epoch_name=f"Epoch {self.epoch}/{self.max_epoch - 1}",
@@ -611,19 +719,24 @@ class Trainer:
                 self.task = self.progress.add_task(
                     "LOGGER",
                     total=len(self.train_loader),
+                    "LOGGER",
+                    total=len(self.train_loader),
                     epoch_name=f"Epoch {self.epoch}/{self.max_epoch - 1}",
                     iou_loss=f"iou{self.mean_loss[0]:7.4g}",
                     dfl_loss=f"dfl{self.mean_loss[1]:7.4g}",
                     cls_loss=f"cls{self.mean_loss[2]:7.4g}",
                     ang_loss=f"angle{self.mean_loss[3]:7.4g}",
                     cwd_loss=f"cwd{self.mean_loss[4]:7.4g}",
-                )  
+                )
             self.progress.start()
             self.progress.start_task(self.task)
 
     # Print loss after each steps
     def print_details(self):
         if self.main_process:
+            self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (
+                self.step + 1
+            )
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (
                 self.step + 1
             )
@@ -664,7 +777,13 @@ class Trainer:
             LOGGER.info(
                 f"\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours."
             )
+            LOGGER.info(
+                f"\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours."
+            )
             save_ckpt_dir = osp.join(self.save_dir, "weights")
+            strip_optimizer(
+                save_ckpt_dir, self.epoch
+            )  # strip optimizers for saved pt model
             strip_optimizer(
                 save_ckpt_dir, self.epoch
             )  # strip optimizers for saved pt model
@@ -684,15 +803,27 @@ class Trainer:
                     curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]
                 ).round(),
             )
+            self.accumulate = max(
+                1,
+                np.interp(
+                    curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]
+                ).round(),
+            )
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
                 param["lr"] = np.interp(
                     curr_step,
                     [0, self.warmup_stepnum],
                     [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
+                    curr_step,
+                    [0, self.warmup_stepnum],
+                    [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
                 )
                 if "momentum" in param:
                     param["momentum"] = np.interp(
+                        curr_step,
+                        [0, self.warmup_stepnum],
+                        [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
                         curr_step,
                         [0, self.warmup_stepnum],
                         [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
@@ -712,6 +843,9 @@ class Trainer:
         # check data
         nc = int(data_dict["nc"])
         class_names = data_dict["names"]
+        assert (
+            len(class_names) == nc
+        ), f"the length of class names does not match the number of classes defined"
         assert (
             len(class_names) == nc
         ), f"the length of class names does not match the number of classes defined"
@@ -830,6 +964,9 @@ class Trainer:
         cfg.solver.lr0 *= args.batch_size / (
             self.world_size * args.bs_per_gpu
         )  # rescale lr0 related to batchsize
+        cfg.solver.lr0 *= args.batch_size / (
+            self.world_size * args.bs_per_gpu
+        )  # rescale lr0 related to batchsize
         optimizer = build_optimizer(cfg, model)
         return optimizer
 
@@ -850,6 +987,7 @@ class Trainer:
         bs, _, h, w = images.shape  # batch size, _, height, width
         bs = min(bs, max_subplots)  # limit plot images
         ns = np.ceil(bs**0.5)  # number of subplots (square)
+        ns = np.ceil(bs**0.5)  # number of subplots (square)
         paths = self.batch_data[2]  # image paths
         # Build Image
         mosaic = np.full((int(ns * h), int(ns * w), 3), 255, dtype=np.uint8)  # init
@@ -867,6 +1005,9 @@ class Trainer:
             mosaic = cv2.resize(mosaic, tuple(int(x * ns) for x in (w, h)))
         for i in range(bs):
             x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
+            cv2.rectangle(
+                mosaic, (x, y), (x + w, y + h), (255, 255, 255), thickness=2
+            )  # borders
             cv2.rectangle(
                 mosaic, (x, y), (x + w, y + h), (255, 255, 255), thickness=2
             )  # borders
@@ -897,9 +1038,15 @@ class Trainer:
                 for j, (box, angle) in enumerate(
                     zip(boxes.T.tolist(), angles.tolist())
                 ):
+                for j, (box, angle) in enumerate(
+                    zip(boxes.T.tolist(), angles.tolist())
+                ):
                     box = [int(k) for k in box]
                     cls = classes[j]
                     color = tuple([int(x) for x in self.color[cls]])
+                    cls = (
+                        self.data_dict["names"][cls] if self.data_dict["names"] else cls
+                    )
                     cls = (
                         self.data_dict["names"][cls] if self.data_dict["names"] else cls
                     )
@@ -909,6 +1056,12 @@ class Trainer:
                         poly = cv2.boxPoints(rect)
                         poly = np.int0(poly)
                         cv2.drawContours(
+                            mosaic,
+                            contours=[poly],
+                            contourIdx=-1,
+                            color=color,
+                            thickness=2,
+                            lineType=cv2.LINE_AA,
                             mosaic,
                             contours=[poly],
                             contourIdx=-1,
