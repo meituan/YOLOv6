@@ -295,13 +295,6 @@ class Trainer:
                 self.step + self.max_stepnum * self.epoch,
                 type="train",
             )
-            write_tbimg(
-                self.tblogger,
-                self.vis_train_batch,
-                self.step + self.max_stepnum * self.epoch,
-                type="train",
-            )
-
         # forward
         with amp.autocast(enabled=self.device != "cpu"):
             preds, s_featmaps = self.model(images)
@@ -449,12 +442,6 @@ class Trainer:
             # default save best ap ckpt in stop strong aug epochs
             if self.epoch >= self.max_epoch - self.args.stop_aug_last_n_epoch:
                 if self.best_stop_strong_aug_ap < self.ap:
-                    self.best_stop_strong_aug_ap = max(
-                        self.ap, self.best_stop_strong_aug_ap
-                    )
-                    save_checkpoint(
-                        ckpt, False, save_ckpt_dir, model_name="best_stop_aug_ckpt"
-                    )
                     self.best_stop_strong_aug_ap = max(
                         self.ap, self.best_stop_strong_aug_ap
                     )
