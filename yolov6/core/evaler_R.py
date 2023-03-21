@@ -50,7 +50,8 @@ class Evaler:
         angle_fitting_methods="regression",
         ap_method="VOC12",
     ):
-        assert do_pr_metric or do_coco_metric, "ERROR: at least set one val metric"
+        # NOTE both not for DOTA online testing
+        # assert do_pr_metric or do_coco_metric, "ERROR: at least set one val metric"
         self.data = data
         self.batch_size = batch_size
         self.img_size = img_size
@@ -166,6 +167,7 @@ class Evaler:
             # post-process
             t3 = time_sync()
             # outputs = non_max_suppression_obb(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            # NOTE [N, x, y, w, h, angle, conf, classes]
             outputs = non_max_suppression_obb_cuda(outputs, self.conf_thres, self.iou_thres, multi_label=True)
 
             self.speed_result[3] += time_sync() - t3  # post-process time
@@ -297,8 +299,10 @@ class Evaler:
         LOGGER.info(f"\nEvaluating speed.")
         self.eval_speed(task)
 
+        # NOTE just for pr metric like yolov5
         if not self.do_coco_metric and self.do_pr_metric:
             return self.pr_metric_result
+
         LOGGER.info(f"\nEvaluating mAP by pycocotools.")
         if task != "speed" and len(pred_results):
             if "anno_path" in self.data:
@@ -314,12 +318,13 @@ class Evaler:
             with open(pred_json, "w") as f:
                 json.dump(pred_results, f)
 
-            # NOTE for DOTA
-            if not self.do_coco_metric and self.do_pr_metric:
+            # NOTE for DOTA eval
+            if not self.do_coco_metric and not self.do_pr_metric:
                 # just write json
                 LOGGER.info('\nSaved Json')
                 return (0.0, 0.0)
 
+            # NOTE for coco eval
             anno = COCO(anno_json)
             pred = anno.loadRes(pred_json)
             cocoEval = COCOeval(anno, pred, "bbox")
@@ -459,6 +464,7 @@ class Evaler:
         return coords
 
     def convert_to_coco_format(self, outputs, imgs, paths, shapes, ids):
+        # NOTE [N, x, y, w, h, angle, conf, classes]
         pred_results = []
         for i, pred in enumerate(outputs):
             if len(pred) == 0:
@@ -467,14 +473,21 @@ class Evaler:
             self.scale_coords(imgs[i].shape[1:], pred[:, :4], shape, shapes[i][1])
             image_id = int(path.stem) if self.is_coco else path.stem
             # TODO, add flag
-            poly = rbox2poly(pred[:, 0:4].clone())
-            cls = pred[:, 5].clone()
-            scores = pred[:, 4].clone()
+            poly = rbox2poly(pred[:, :5].clone())
+
+            pred_polys = torch.cat((poly, pred[:, 5:].clone()), dim=1)
             # NOTE for DOTA
-            for ind in range(pred.shape[0]):
-                category_id = ids[int(cls[ind])]
-                poly = [round(x, 1) for x in poly[ind].tolist()]
-                score = round(scores[ind].item(), 5)
+            # torch cuda => numpy
+            # for ind in range(pred.shape[0]):
+            #     category_id = ids[int(cls[ind])]
+            #     poly = [round(x, 1) for x in poly[ind].tolist()]
+            #     score = round(scores[ind].item(), 5)
+            #     pred_data = {"image_id": image_id, "category_id": category_id, "poly": poly, "score": score, "file_name": path.stem}
+            #     pred_results.append(pred_data)
+            for p in pred_polys.tolist():
+                category_id = int(p[-1])
+                poly = [round(x, 1) for x in p[:8]]
+                score = round(p[-2], 5)
                 pred_data = {"image_id": image_id, "category_id": category_id, "poly": poly, "score": score, "file_name": path.stem}
                 pred_results.append(pred_data)
         return pred_results

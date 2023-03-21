@@ -168,6 +168,8 @@ class TrainValDataset(Dataset):
 
     def get_imgs_labels(self, img_dir):
 
+        # TODO check labels
+
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         # '/home/haohao/HRSC2016_new/images/.train.json'
         valid_img_record = osp.join(osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json")
