@@ -10,7 +10,8 @@ import torch.nn.functional as F
 
 from yolov6.assigners.anchor_generator import generate_anchors
 from yolov6.assigners.atss_assigner_R import ATSSAssigner
-from yolov6.assigners.tal_assigner_R import TaskAlignedAssigner
+#NOTE 更换了一版新的loss
+from yolov6.assigners.tal_assigner_obb import TaskAlignedAssigner
 from yolov6.utils.figure_iou import IOUloss
 from yolov6.utils.general import bbox2dist, box_iou, dist2bbox, xywh2xyxy
 
@@ -91,7 +92,8 @@ class ComputeLoss:
         # pboxes
         anchor_points_s = anchor_points / stride_tensor
         pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
-
+        # NOTE 角度解码
+        pred_angles_decode = self.angle_decode(pred_angles)
         try:
             # TODO
             if epoch_num < self.warmup_epoch:
@@ -109,7 +111,7 @@ class ComputeLoss:
                 target_labels, target_bboxes, target_angles, target_scores, fg_mask = self.formal_assigner(
                     pred_scores.detach(),
                     pred_bboxes.detach() * stride_tensor,
-                    pred_angles.detach(),
+                    pred_angles_decode.detach(),
                     anchor_points,
                     gt_labels,
                     gt_bboxes,
@@ -148,7 +150,7 @@ class ComputeLoss:
             else:
                 _pred_scores = pred_scores.detach().cpu().float()
                 _pred_bboxes = pred_bboxes.detach().cpu().float()
-                _pred_angles = pred_angles.detach().cpu().float()
+                _pred_angles = pred_angles_decode.detach().cpu().float()
                 _anchor_points = anchor_points.cpu().float()
                 _gt_labels = gt_labels.cpu().float()
                 _gt_bboxes = gt_bboxes.cpu().float()
@@ -227,7 +229,22 @@ class ComputeLoss:
                 )
             ).detach(),
         )
-
+    def angle_decode(self, pred_angle_ori):
+        pred_angles = pred_angle_ori.clone()
+        batch_size, n_anchors, _ = pred_angles.shape
+        if self.angle_fitting_methods == "regression":
+            pred_angles_decode = pred_angles**2
+        elif self.angle_fitting_methods == "csl":
+            pred_angles_decode = torch.sigmoid(pred_angle_ori)
+            pred_angles_decode = torch.argmax(pred_angles_decode, dim=-1, keepdim=True) * (180 / self.angle_max)
+        elif self.angle_fitting_methods == "dfl":
+            pred_angles_decode =  F.softmax(pred_angles.view(batch_size, n_anchors, 1, self.angle_max), dim=-1)
+            pred_angles_decode =  self.proj_angle(pred_angles_decode).to(pred_angles.device)
+        else:
+            pred_angles_decode = None
+            
+        return pred_angles_decode
+        
     def preprocess(self, targets, batch_size, scale_tensor):
         targets_list = np.zeros((batch_size, 1, 6)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):
