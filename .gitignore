@@ -115,3 +115,4 @@ venv.bak/
 *.onnx
 *.pt
 *.engine
+*.so
