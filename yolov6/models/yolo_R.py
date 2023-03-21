@@ -108,13 +108,13 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
         )
 
     if distill_ns:
-        from yolov6.models.heads.effidehead_distill_ns import Detect, build_effidehead_layer
+        from yolov6.models.heads.effidehead_distill_ns_R import Detect, build_effidehead_layer
         if num_layers != 3:
             LOGGER.error('ERROR in: Distill mode not fit on n/s models with P6 head.\n')
             exit()
-        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max)
-        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
-
+        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, angle_fitting_methods=angle_fitting_methods, angle_max=angle_max)
+        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods)
+        LOGGER.info('ns model intialized')
     elif fuse_ab:
         from yolov6.models.heads.effidehead_fuseab import Detect, build_effidehead_layer
         anchors_init = config.model.head.anchors_init

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import torch
 import torch.distributed as dist
+from tqdm import tqdm
 import yaml
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -58,7 +59,7 @@ def get_args_parser(add_help=True):
     )
     parser.add_argument(
         "--stop_aug_last_n_epoch",
-        default=15,
+        default=25,
         type=int,
         help="stop strong aug at last n epoch, neg value not stop, default 15",
     )
@@ -70,6 +71,8 @@ def get_args_parser(add_help=True):
     )
     parser.add_argument("--distill", action="store_true", help="distill or not")
     parser.add_argument("--distill_feat", action="store_true", help="distill featmap or not")
+    parser.add_argument("--distill_ns", action="store_true", help="distill n/s")
+    parser.add_argument("--distill_ns_off", action="store_true", help="decouple head n/s")
     parser.add_argument("--quant", action="store_true", help="quant or not")
     parser.add_argument("--calib", action="store_true", help="run ptq")
     parser.add_argument("--teacher_model_path", type=str, default=None, help="teacher model path")

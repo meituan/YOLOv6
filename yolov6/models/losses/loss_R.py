@@ -241,8 +241,9 @@ class ComputeLoss:
             pred_angles_decode =  F.softmax(pred_angles.view(batch_size, n_anchors, 1, self.angle_max), dim=-1)
             pred_angles_decode =  self.proj_angle(pred_angles_decode).to(pred_angles.device)
         else:
-            pred_angles_decode = None
-            
+            pred_angles_MGAR_cls = torch.sigmoid(pred_angles[:,:,:self.angle_max])
+            pred_angles_MGAR_reg = pred_angles[:,:,-1:]**2
+            pred_angles_decode = pred_angles_MGAR_cls+pred_angles_MGAR_reg
         return pred_angles_decode
         
     def preprocess(self, targets, batch_size, scale_tensor):
