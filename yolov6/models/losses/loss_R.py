@@ -10,9 +10,10 @@ from yolov6.assigners.anchor_generator import generate_anchors
 from yolov6.assigners.atss_assigner_R import ATSSAssigner
 
 # NOTE 更换了一版新的loss
-from yolov6.assigners.tal_assigner_obb import TaskAlignedAssigner
+from yolov6.assigners.tal_assigner_R import TaskAlignedAssigner
 from yolov6.utils.figure_iou import IOUloss
 from yolov6.utils.general import bbox2dist, box_iou, dist2bbox, xywh2xyxy
+
 
 class ComputeLoss:
     """Loss computation func."""
@@ -241,7 +242,7 @@ class ComputeLoss:
             pred_angles_decode = F.softmax(pred_angles.view(batch_size, n_anchors, 1, self.angle_max), dim=-1)
             pred_angles_decode = self.proj_angle(pred_angles_decode).to(pred_angles.device)
         elif self.angle_fitting_methods == "MGAR":
-            pred_angles_MGAR_cls = torch.sigmoid(pred_angles[:, :, :self.angle_max])
+            pred_angles_MGAR_cls = torch.sigmoid(pred_angles[:, :, : self.angle_max])
             pred_angles_MGAR_cls = torch.argmax(pred_angles_MGAR_cls, dim=-1, keepdim=True) * (180 / self.angle_max)
             pred_angles_MGAR_reg = pred_angles[:, :, -1:] ** 2
             pred_angles_decode = pred_angles_MGAR_cls + pred_angles_MGAR_reg

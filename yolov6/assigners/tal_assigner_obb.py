@@ -120,11 +120,8 @@ class TaskAlignedAssigner(nn.Module):
         bbox_scores = pd_scores[ind[0], ind[1]]
         gt_obbs = torch.concat([gt_bboxes, gt_angles], dim=-1)
         pd_obbs = torch.concat([pd_bboxes, pd_angels], dim=-1)
-        # print(gt_obbs.shape)
-        # print(pd_obbs.shape)
+        # TODO 维度对不上
         overlaps = obb_box_iou_cuda(gt_obbs, pd_obbs)
-        print(overlaps.shape)
-        # print(bbox_scores.shape)
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
 
         return align_metric, overlaps

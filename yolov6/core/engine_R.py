@@ -19,8 +19,9 @@ from rich.progress import (
 )
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
+from torch.utils.tensorboard.writer import SummaryWriter
+
+# from tqdm import tqdm
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
@@ -226,14 +227,14 @@ class Trainer:
             if self.main_process:
                 self.progress.remove_task(self.task)
                 self.progress.stop()
-            LOGGER.info(("\n" + "%10s" * (self.loss_num + 1)) % (*self.loss_info,))
-            LOGGER.info(
-                ("\n" + "%10g" * (self.loss_num + 1))
-                % (
-                    self.epoch,
-                    *self.mean_loss,
+                LOGGER.info(("\n" + "%10s" * (self.loss_num + 1)) % (*self.loss_info,))
+                LOGGER.info(
+                    ("\n" + "%10g" * (self.loss_num + 1))
+                    % (
+                        self.epoch,
+                        *self.mean_loss,
+                    )
                 )
-            )
         except Exception as _:
             LOGGER.error("ERROR in training steps.")
             raise
@@ -393,7 +394,7 @@ class Trainer:
         if not hasattr(self.cfg, "eval_params"):
             results, vis_outputs, vis_paths = eval.run(
                 self.data_dict,
-                batch_size=self.batch_size // self.world_size * 2,
+                batch_size=self.batch_size // self.world_size * 1, # NOTE change to 1
                 img_size=self.img_size,
                 model=self.ema.ema if self.args.calib is False else self.model,
                 conf_thres=0.03,
@@ -754,7 +755,7 @@ class Trainer:
         # If DDP mode
         ddp_mode = device.type != "cpu" and args.rank != -1
         if ddp_mode:
-            model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
+            model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True)
 
         return model
 
