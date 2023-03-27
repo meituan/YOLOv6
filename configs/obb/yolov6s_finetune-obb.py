@@ -42,6 +42,7 @@ model = dict(
 )
 
 loss = dict(
+    loss_mode="obb",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
@@ -74,16 +75,18 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.5,
-    fliplr=0.5,
-    rotate=0.5,
+    flipud=1.0,
+    fliplr=1.0,
+    rotate=1.0,
+    rect_classes=None,
     # NOTE mosaic 数值需要确定一下
-    mosaic=0.2,
-    mixup_mosaic=0.5,
-    mixup=0.5,
+    mosaic=1.0,
+    mixup_mosaic=0.0,
+    mixup=0.0,
 )
 
 eval_params = dict(

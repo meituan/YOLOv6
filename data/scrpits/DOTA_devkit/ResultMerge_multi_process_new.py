@@ -22,7 +22,7 @@ import argparse
 
 ## the thresh for nms when merge image
 # NOTE 这个阈值的影响
-nms_thresh = 0.65
+nms_thresh = 0.1
 
 
 def py_cpu_nms_poly(dets, thresh):
@@ -205,13 +205,13 @@ def mergesingle(dstpath, nms, fullname):
             x_y_2 = re.findall(r"\d+", x_y[0])
             x, y = int(x_y_2[0]), int(x_y_2[1])
 
-            pattern2 = re.compile(r"__([\d+\.]+)__\d+___")
+            # pattern2 = re.compile(r"__([\d+\.]+)__\d+___")
 
-            rate = re.findall(pattern2, subname)[0]
+            # rate = re.findall(pattern2, subname)[0]
 
             confidence = splitline[1]
             poly = list(map(float, splitline[2:]))
-            origpoly = poly2origpoly(poly, x, y, rate)
+            origpoly = poly2origpoly(poly, x, y, 1)
             det = origpoly
             det.append(confidence)
             det = list(map(float, det))

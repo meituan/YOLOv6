@@ -24,7 +24,7 @@ from yolov6.utils.events_R import LOGGER
 
 from .data_augment_R import (RFlipHorizontal, RFlipVertical, RRotate,
                              augment_hsv, letterbox, mixup,
-                             mosaic_augmentation_obb, random_affine)
+                             mosaic_augmentation_obb, random_affine, PolyRandomRotate, plot_single_obb_img_test)
 
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
@@ -65,6 +65,7 @@ class TrainValDataset(Dataset):
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)  # TODO, check this
+        self.augment = augment
 
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -77,6 +78,8 @@ class TrainValDataset(Dataset):
         t2 = time.time()
         if self.main_process:
             LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
+
+        self.RandomRotate = PolyRandomRotate(rotate_ratio=1.0, rect_classes=self.hyp["rect_classes"])
 
     def __len__(self):
         """Get the length of dataset"""
@@ -91,13 +94,14 @@ class TrainValDataset(Dataset):
         if self.augment and random.random() < self.hyp["mosaic"]:
             img, labels = self.get_mosaic_obb(index)  # NOTE get_mosaic_obb 现在不可使用,还有问题
             shapes = None
+            # test_img = plot_single_obb_img_test(img.copy(), labels.copy())
             # MixUp augmentation
             if random.random() < self.hyp["mixup_mosaic"]:
                 img_other, labels_other = self.get_mosaic_obb(random.randint(0, len(self.img_paths) - 1))
                 img, labels = mixup(img, labels, img_other, labels_other)
 
-            if self.augment:
-                img, labels = self.general_augment(img, labels)
+            # if self.augment:
+            #     img, labels = self.general_augment(img, labels)
         else:
             img, labels, shapes = self.get_general_obb(index)
             if self.augment and random.random() < self.hyp["mixup"] :
@@ -358,9 +362,11 @@ class TrainValDataset(Dataset):
         nl = len(labels)
 
         # HSV color-space
-        augment_hsv(
-            img, hgain=self.hyp["hsv_h"], sgain=self.hyp["hsv_s"], vgain=self.hyp["hsv_v"],
-        )
+
+        if random.random() < self.hyp["hsv"]:
+            augment_hsv(
+                img, hgain=self.hyp["hsv_h"], sgain=self.hyp["hsv_s"], vgain=self.hyp["hsv_v"],
+            )
 
         if random.random() < self.hyp["flipud"]:
             img, labels = RFlipVertical(img, labels)
@@ -369,7 +375,8 @@ class TrainValDataset(Dataset):
             img, labels = RFlipHorizontal(img, labels)
 
         if random.random() < self.hyp["rotate"]:
-            img, labels = RRotate(img, labels)
+            # img, labels = RRotate(img, labels)
+            img, labels = self.RandomRotate(img, labels)
 
         return img, labels
 

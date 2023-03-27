@@ -26,7 +26,7 @@ def build_optimizer(cfg, model):
     elif cfg.solver.optim == 'Adam':
         optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
     elif cfg.solver.optim == 'AdamW':
-        optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999), eps=1e-3)
+        optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, eps=1e-3, weight_decay=0.05)
 
     optimizer.add_param_group({'params': g_w, 'weight_decay': cfg.solver.weight_decay})
     optimizer.add_param_group({'params': g_b})
@@ -37,6 +37,7 @@ def build_optimizer(cfg, model):
 
 def build_lr_scheduler(cfg, optimizer, epochs):
     """Build learning rate scheduler from cfg file."""
+    # NOTE 怎么计算的?
     if cfg.solver.lr_scheduler == 'Cosine':
         lf = lambda x: ((1 - math.cos(x * math.pi / epochs)) / 2) * (cfg.solver.lrf - 1) + 1
     elif cfg.solver.lr_scheduler == 'Constant':

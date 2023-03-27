@@ -12,6 +12,440 @@ import torch
 from mmcv.ops import box_iou_rotated
 
 
+def minAreaRect2longSideFormat(rectangle_inf):
+    width = rectangle_inf[1][0]
+    height = rectangle_inf[1][1]
+    theta = rectangle_inf[-1]
+    longSide = max(width, height)
+    shortSide = min(width, height)
+    if theta == 90:
+        if longSide == width:
+            pass
+        else:
+            theta = 0
+        # * 正方形
+        if np.around(longSide, 2) == np.around(shortSide, 2):
+            theta = 0
+    else:
+        # * 正四边形 minAreaRect 会直接判定为左侧补角，符合要求 做长度截断判断即可
+        if np.around(longSide, 2) == np.around(shortSide, 2):
+            pass
+        else:
+            if longSide == width:
+                pass
+            else:
+                theta += 90
+
+    if 179 < theta < 180:
+        # theta = 179
+        theta = 179
+    if theta < 0 or theta >= 180:
+        raise ValueError("theta < 0 or theta >= 180")
+
+    return (rectangle_inf[0], (longSide, shortSide), theta)
+
+
+def longSideFormat2minAreaRect(longSide_inf):
+    longSide = longSide_inf[1][0]
+    shortSide = longSide_inf[1][1]
+    theta = longSide_inf[-1]
+    width = longSide
+    height = shortSide
+    if theta == 0:
+        width = shortSide
+        height = longSide
+        theta = 90
+    # ! 有概率非全部 不影响绘图
+    # elif theta == 90:
+    #     width = longSide
+    #     height = shortSide
+    #     theta = 0
+    else:
+        # * 正四边形
+        if np.around(longSide, 2) == np.around(shortSide, 2):
+            width = longSide
+            height = shortSide
+            pass
+        if theta > 90:
+            width = shortSide
+            height = longSide
+            theta -= 90
+        else:
+            pass
+
+    if theta >= 180:
+        raise ValueError("theta >= 180")
+
+    return (longSide_inf[0], (width, height), theta)
+
+
+def plot_single_obb_img_test(img, labels):
+    # plot validation predictions
+    # TODO test
+
+    Color = [tuple(np.random.choice(range(256), size=3)) for _ in range(20)]
+
+    for vis_bbox in labels.tolist():
+        cls_id = int(vis_bbox[0])
+        cx = int(vis_bbox[1])
+        cy = int(vis_bbox[2])
+        w = int(vis_bbox[3])
+        h = int(vis_bbox[4])
+        angle = int(vis_bbox[5])
+        rect = ((cx, cy), (w, h), angle)
+        poly = cv2.boxPoints(longSideFormat2minAreaRect(rect))
+        poly = np.int0(poly)
+        cv2.drawContours(
+            img,
+            contours=[poly],
+            contourIdx=-1,
+            color=tuple([int(x) for x in Color[cls_id]]),
+            thickness=2,
+            lineType=cv2.LINE_AA,
+        )
+        # cv2.putText(
+        #     img,
+        #     f"{self.data_dict['names'][cls_id]}: {box_score:.2f}",
+        #     (cx - 5, cy - 5),
+        #     cv2.FONT_HERSHEY_COMPLEX,
+        #     0.5,
+        #     tuple([int(x) for x in Color[cls_id]]),
+        #     thickness=2,
+        # )
+    return img
+
+
+def plot_single_poly_img_test(img, labels):
+    # plot validation predictions
+    # TODO test
+
+    Color = [tuple(np.random.choice(range(256), size=3)) for _ in range(20)]
+
+    for poly in labels.tolist():
+        poly = np.int0(poly)
+        poly = poly.reshape(-1, 2)
+        cv2.drawContours(
+            img,
+            contours=[poly],
+            contourIdx=-1,
+            color=tuple([int(x) for x in Color[0]]),
+            thickness=2,
+            lineType=cv2.LINE_AA,
+        )
+        # cv2.putText(
+        #     img,
+        #     f"{self.data_dict['names'][cls_id]}: {box_score:.2f}",
+        #     (cx - 5, cy - 5),
+        #     cv2.FONT_HERSHEY_COMPLEX,
+        #     0.5,
+        #     tuple([int(x) for x in Color[cls_id]]),
+        #     thickness=2,
+        # )
+    return img
+
+
+def cal_line_length(point1, point2):
+    """Calculate the length of line.
+
+    Args:
+        point1 (List): [x,y]
+        point2 (List): [x,y]
+
+    Returns:
+        length (float)
+    """
+    return math.sqrt(math.pow(point1[0] - point2[0], 2) + math.pow(point1[1] - point2[1], 2))
+
+
+def get_best_begin_point_single(coordinate):
+    """Get the best begin point of the single polygon.
+
+    Args:
+        coordinate (List): [x1, y1, x2, y2, x3, y3, x4, y4, score]
+
+    Returns:
+        reorder coordinate (List): [x1, y1, x2, y2, x3, y3, x4, y4, score]
+    """
+    x1, y1, x2, y2, x3, y3, x4, y4 = coordinate
+    xmin = min(x1, x2, x3, x4)
+    ymin = min(y1, y2, y3, y4)
+    xmax = max(x1, x2, x3, x4)
+    ymax = max(y1, y2, y3, y4)
+    combine = [
+        [[x1, y1], [x2, y2], [x3, y3], [x4, y4]],
+        [[x2, y2], [x3, y3], [x4, y4], [x1, y1]],
+        [[x3, y3], [x4, y4], [x1, y1], [x2, y2]],
+        [[x4, y4], [x1, y1], [x2, y2], [x3, y3]],
+    ]
+    dst_coordinate = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
+    force = 100000000.0
+    force_flag = 0
+    for i in range(4):
+        temp_force = (
+            cal_line_length(combine[i][0], dst_coordinate[0])
+            + cal_line_length(combine[i][1], dst_coordinate[1])
+            + cal_line_length(combine[i][2], dst_coordinate[2])
+            + cal_line_length(combine[i][3], dst_coordinate[3])
+        )
+        if temp_force < force:
+            force = temp_force
+            force_flag = i
+    if force_flag != 0:
+        pass
+    return np.array(combine[force_flag]).reshape(8)
+
+
+def get_best_begin_point(coordinates):
+    """Get the best begin points of polygons.
+
+    Args:
+        coordinate (ndarray): shape(n, 9).
+
+    Returns:
+        reorder coordinate (ndarray): shape(n, 9).
+    """
+    coordinates = list(map(get_best_begin_point_single, coordinates.tolist()))
+    coordinates = np.array(coordinates)
+    return coordinates
+
+
+def obb2poly_bp_le180(obboxes):
+    """Convert oriented bounding boxes to polygons.
+
+    Args:
+        obbs (ndarray): [x_ctr,y_ctr,w,h,angle,score]
+
+    Returns:
+        polys (ndarray): [x0,y0,x1,y1,x2,y2,x3,y3,score]
+    """
+    try:
+        center, w, h, theta = np.split(obboxes, (2, 3, 4), axis=-1)
+    except:  # noqa: E722
+        results = np.stack([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], axis=-1)
+        return results.reshape(1, -1)
+    Cos, Sin = np.cos(theta * np.pi / 180.0), np.sin(theta * np.pi / 180.0)
+    vector1 = np.concatenate([w / 2 * Cos, w / 2 * Sin], axis=-1)
+    vector2 = np.concatenate([h / 2 * Sin, -h / 2 * Cos], axis=-1)
+    point1 = center - vector1 - vector2
+    point2 = center - vector1 + vector2
+    point3 = center + vector1 + vector2
+    point4 = center + vector1 - vector2
+    polys = np.concatenate([point1, point2, point3, point4], axis=-1)
+    polys = get_best_begin_point(polys)
+    return polys
+
+
+def poly2obb_np_le180(poly):
+    """Convert polygons to oriented bounding boxes.
+
+    Args:
+        polys (ndarray): [x0,y0,x1,y1,x2,y2,x3,y3]
+
+    Returns:
+        obbs (ndarray): [x_ctr,y_ctr,w,h,angle]
+    """
+    bboxps = np.array(poly).reshape((4, 2))
+    rbbox = cv2.minAreaRect(np.int0(bboxps))
+    x, y, width, height, theta = rbbox[0][0], rbbox[0][1], rbbox[1][0], rbbox[1][1], rbbox[2]
+    longSide = max(width, height)
+    shortSide = min(width, height)
+    if width < 2 or height < 2:
+        return
+
+    if theta == 90:
+        if longSide == width:
+            pass
+        else:
+            theta = 0
+        # * 正方形
+        if np.around(longSide, 2) == np.around(shortSide, 2):
+            theta = 0
+    else:
+        # * 正四边形 minAreaRect 会直接判定为左侧补角，符合要求 做长度截断判断即可
+        if np.around(longSide, 2) == np.around(shortSide, 2):
+            pass
+        else:
+            if longSide == width:
+                pass
+            else:
+                theta += 90
+
+    if 179 < theta <= 180:
+        # theta = 179
+        ...
+    if theta < 0 or theta >= 180:
+        raise ValueError("theta < 0 or theta >= 180")
+
+    return x, y, longSide, shortSide, theta
+
+
+class PolyRandomRotate(object):
+    """Rotate img & bbox.
+    Reference: https://github.com/hukaixuan19970627/OrientedRepPoints_DOTA
+
+    Args:
+        rotate_ratio (float, optional): The rotating probability.
+            Default: 0.5.
+        mode (str, optional) : Indicates whether the angle is chosen in a
+            random range (mode='range') or in a preset list of angles
+            (mode='value'). Defaults to 'range'.
+        angles_range(int|list[int], optional): The range of angles.
+            If mode='range', angle_ranges is an int and the angle is chosen
+            in (-angles_range, +angles_ranges).
+            If mode='value', angles_range is a non-empty list of int and the
+            angle is chosen in angles_range.
+            Defaults to 180 as default mode is 'range'.
+        auto_bound(bool, optional): whether to find the new width and height
+            bounds.
+        rect_classes (None|list, optional): Specifies classes that needs to
+            be rotated by a multiple of 90 degrees.
+        allow_negative (bool, optional): Whether to allow an image that does
+            not contain any bbox area. Default False.
+        version  (str, optional): Angle representations. Defaults to 'le90'.
+    """
+
+    def __init__(
+        self,
+        rotate_ratio=0.5,
+        mode="range",
+        angles_range=180,
+        auto_bound=False,
+        rect_classes=None,
+        allow_negative=False,
+        version="le90",
+    ):
+        self.rotate_ratio = rotate_ratio
+        self.auto_bound = auto_bound
+        assert mode in ["range", "value"], f"mode is supposed to be 'range' or 'value', but got {mode}."
+        if mode == "range":
+            assert isinstance(angles_range, int), "mode 'range' expects angle_range to be an int."
+        else:
+            assert mmcv.is_seq_of(angles_range, int) and len(
+                angles_range
+            ), "mode 'value' expects angle_range as a non-empty list of int."
+        self.mode = mode
+        self.angles_range = angles_range
+        self.discrete_range = [90, 180, -90, -180]
+        self.rect_classes = rect_classes
+        self.allow_negative = allow_negative
+        self.version = version
+
+    @property
+    def is_rotate(self):
+        """Randomly decide whether to rotate."""
+        return np.random.rand() < self.rotate_ratio
+
+    def apply_image(self, img, bound_h, bound_w, interp=cv2.INTER_LINEAR):
+        """
+        img should be a numpy array, formatted as Height * Width * Nchannels
+        """
+        if len(img) == 0:
+            return img
+        return cv2.warpAffine(img, self.rm_image, (bound_w, bound_h), flags=interp)
+
+    def apply_coords(self, coords):
+        """
+        coords should be a N * 2 array-like, containing N couples of (x, y)
+        points
+        """
+        if len(coords) == 0:
+            return coords
+        coords = np.asarray(coords, dtype=float)
+        return cv2.transform(coords[:, np.newaxis, :], self.rm_coords)[:, 0, :]
+
+    def create_rotation_matrix(self, center, angle, bound_h, bound_w, offset=0):
+        """Create rotation matrix."""
+        center += offset
+        rm = cv2.getRotationMatrix2D(tuple(center), angle, 1)
+        if self.auto_bound:
+            rot_im_center = cv2.transform(center[None, None, :] + offset, rm)[0, 0, :]
+            new_center = np.array([bound_w / 2, bound_h / 2]) + offset - rot_im_center
+            rm[:, 2] += new_center
+        return rm
+
+    def filter_border(self, bboxes, h, w):
+        """Filter the box whose center point is outside or whose side length is
+        less than 5."""
+        x_ctr, y_ctr = bboxes[:, 0], bboxes[:, 1]
+        w_bbox, h_bbox = bboxes[:, 2], bboxes[:, 3]
+        keep_inds = (x_ctr > 0) & (x_ctr < w) & (y_ctr > 0) & (y_ctr < h) & (w_bbox > 5) & (h_bbox > 5)
+        return keep_inds
+
+    def __call__(self, img, labels):
+        """Call function of PolyRandomRotate."""
+        if not self.is_rotate:
+            # results["rotate"] = False
+            angle = 0
+        else:
+            # results["rotate"] = True
+            if self.mode == "range":
+                angle = self.angles_range * (2 * np.random.rand() - 1)
+            else:
+                i = np.random.randint(len(self.angles_range))
+                angle = self.angles_range[i]
+
+            class_labels = labels[..., 0:1]
+            for classid in class_labels:
+                if self.rect_classes:
+                    if classid in self.rect_classes:
+                        np.random.shuffle(self.discrete_range)
+                        angle = self.discrete_range[0]
+                        break
+
+        # h, w, c = results["img_shape"]
+        h, w, c = img.shape
+        # img = results["img"]
+        # results["rotate_angle"] = angle
+
+        image_center = np.array((w / 2, h / 2))
+        abs_cos, abs_sin = abs(np.cos(angle / 180 * np.pi)), abs(np.sin(angle / 180 * np.pi))
+        if self.auto_bound:
+            bound_w, bound_h = np.rint([h * abs_sin + w * abs_cos, h * abs_cos + w * abs_sin]).astype(int)
+        else:
+            bound_w, bound_h = w, h
+
+        self.rm_coords = self.create_rotation_matrix(image_center, angle, bound_h, bound_w)
+        self.rm_image = self.create_rotation_matrix(image_center, angle, bound_h, bound_w, offset=-0.5)
+
+        ori_img = img.copy()
+        img = self.apply_image(img, bound_h, bound_w)
+        # results["img"] = img
+        # results["img_shape"] = (bound_h, bound_w, c)
+        # gt_bboxes = results.get("gt_bboxes", [])
+        # labels = results.get("gt_labels", [])
+        gt_bboxes = labels[..., 1:]
+
+        if len(gt_bboxes):
+            # gt_bboxes = np.concatenate([gt_bboxes, np.zeros((gt_bboxes.shape[0], 1))], axis=-1)
+            polys = obb2poly_bp_le180(gt_bboxes).reshape(-1, 2)
+            polys = self.apply_coords(polys).reshape(-1, 8)
+            gt_bboxes = []
+            for pt in polys:
+                pt = np.array(pt, dtype=np.float32)
+                obb = poly2obb_np_le180(pt) if poly2obb_np_le180(pt) is not None else [0, 0, 0, 0, 0]
+                gt_bboxes.append(obb)
+            gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
+            keep_inds = self.filter_border(gt_bboxes, bound_h, bound_w)
+            gt_bboxes = gt_bboxes[keep_inds, :]
+            class_labels = class_labels[keep_inds]
+        if len(gt_bboxes) == 0 and not self.allow_negative:
+            return img, np.zeros((1, 6))
+        # results["gt_bboxes"] = gt_bboxes
+        # results["gt_labels"] = labels
+
+        labels = np.concatenate((class_labels, gt_bboxes), axis=-1)
+
+        return img, labels
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += (
+            f"(rotate_ratio={self.rotate_ratio}, "
+            f"base_angles={self.base_angles}, "
+            f"angles_range={self.angles_range}, "
+            f"auto_bound={self.auto_bound})"
+        )
+        return repr_str
 
 
 def RFlipVertical(img: np.ndarray, bboxes: np.ndarray):
@@ -136,7 +570,7 @@ def augment_hsv(im, hgain=0.5, sgain=0.5, vgain=0.5):
         cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, dst=im)  # no return needed
 
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32, return_int=False):
+def letterbox(im, new_shape=(640, 640), color=(144, 144, 144), auto=True, scaleup=True, stride=32, return_int=False):
     """Resize and pad image while meeting stride-multiple constraints."""
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -172,7 +606,8 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
 
 def mixup(im, labels, im2, labels2):
     """Applies MixUp augmentation https://arxiv.org/pdf/1710.09412.pdf."""
-    r = np.random.beta(32.0, 32.0)  # mixup ratio, alpha=beta=32.0
+    # r = np.random.beta(32.0, 32.0)  # mixup ratio, alpha=beta=32.0
+    r = 0.5
     im = (im * r + im2 * (1 - r)).astype(np.uint8)
     labels = np.concatenate((labels, labels2), 0)
     return im, labels
@@ -313,10 +748,11 @@ def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp):
 
 def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
     """Applies Mosaic augmentation."""
+    # NOTE mosaic 对遥感场景尺度变化影响很大, 需要修改
     assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
 
     labels4 = []
-    s = img_size
+    s = img_size // 2
     yc, xc = (int(random.uniform(s // 2, 3 * s // 2)) for _ in range(2))  # mosaic center x, y
     for i in range(len(imgs)):
         # Load image
@@ -352,7 +788,7 @@ def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
             boxes[:, 2] = w * boxes[:, 2]  # longSide / w
             boxes[:, 3] = h * boxes[:, 3]  # shortSide / h
             # NOTE filter
-            valid_inds = filter_box_candidates(boxes, x1a, x2a, y1a, y2a, min_bbox_size=4)
+            valid_inds = filter_box_candidates(boxes, x1a, x2a, y1a, y2a, min_bbox_size=2)
             labels_per_img[:, 1:] = boxes
             labels_per_img = labels_per_img[valid_inds]
 
@@ -371,12 +807,12 @@ def mosaic_augmentation_obb(img_size, imgs, hs, ws, labels, hyp):
     #                               new_shape=(img_size, img_size))
 
     img4 = cv2.resize(img4, (img_size, img_size))
-    labels4[:, 1:5] /= 2.0
+    # labels4[:, 1:5] /= 2.0
 
     return img4, labels4
 
 
-def filter_box_candidates(bboxes, w_min, w_max, h_min, h_max, min_bbox_size=4, ratio=0.25):
+def filter_box_candidates(bboxes, w_min, w_max, h_min, h_max, min_bbox_size=2, ratio=0.1):
     """Filter out small bboxes and outside bboxes after Mosaic."""
     bbox_x, bbox_y, bbox_w, bbox_h = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
     # TODO 截断resize情况,比较复杂, 考虑中心点到边界距离

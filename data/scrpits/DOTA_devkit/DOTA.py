@@ -1,4 +1,4 @@
-#The code is used for visulization, inspired from cocoapi
+# The code is used for visulization, inspired from cocoapi
 #  Licensed under the Simplified BSD License [see bsd.txt]
 
 import os
@@ -10,16 +10,18 @@ import dota_utils as util
 from collections import defaultdict
 import cv2
 
+
 def _isArrayLike(obj):
     if type(obj) == str:
         return False
-    return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
+    return hasattr(obj, "__iter__") and hasattr(obj, "__len__")
+
 
 class DOTA:
     def __init__(self, basepath):
         self.basepath = basepath
-        self.labelpath = os.path.join(basepath, 'labelTxt')
-        self.imagepath = os.path.join(basepath, 'images')
+        self.labelpath = os.path.join(basepath, "labelTxt")
+        self.imagepath = os.path.join(basepath, "images")
         self.imgpaths = util.GetFileFromThisRootDir(self.labelpath)
         self.imglist = [util.custombasename(x) for x in self.imgpaths]
         self.catToImgs = defaultdict(list)
@@ -32,7 +34,7 @@ class DOTA:
             imgid = util.custombasename(filename)
             self.ImgToAnns[imgid] = objects
             for obj in objects:
-                cat = obj['name']
+                cat = obj["name"]
                 self.catToImgs[cat].append(imgid)
 
     def getImgIds(self, catNms=[]):
@@ -52,7 +54,7 @@ class DOTA:
                     imgids &= set(self.catToImgs[cat])
         return list(imgids)
 
-    def loadAnns(self, catNms=[], imgId = None, difficult=None):
+    def loadAnns(self, catNms=[], imgId=None, difficult=None):
         """
         :param catNms: category names
         :param imgId: the img to load anns
@@ -62,8 +64,9 @@ class DOTA:
         objects = self.ImgToAnns[imgId]
         if len(catNms) == 0:
             return objects
-        outobjects = [obj for obj in objects if (obj['name'] in catNms)]
+        outobjects = [obj for obj in objects if (obj["name"] in catNms)]
         return outobjects
+
     def showAnns(self, objects, imgId, range):
         """
         :param catNms: category names
@@ -74,7 +77,7 @@ class DOTA:
         """
         img = self.loadImgs(imgId)[0]
         plt.imshow(img)
-        plt.axis('off')
+        plt.axis("off")
 
         ax = plt.gca()
         ax.set_autoscale_on(False)
@@ -84,7 +87,7 @@ class DOTA:
         r = 5
         for obj in objects:
             c = (np.random.random((1, 3)) * 0.6 + 0.4).tolist()[0]
-            poly = obj['poly']
+            poly = obj["poly"]
             polygons.append(Polygon(poly))
             color.append(c)
             point = poly[0]
@@ -92,29 +95,31 @@ class DOTA:
             circles.append(circle)
         p = PatchCollection(polygons, facecolors=color, linewidths=0, alpha=0.4)
         ax.add_collection(p)
-        p = PatchCollection(polygons, facecolors='none', edgecolors=color, linewidths=2)
+        p = PatchCollection(polygons, facecolors="none", edgecolors=color, linewidths=2)
         ax.add_collection(p)
-        p = PatchCollection(circles, facecolors='red')
+        p = PatchCollection(circles, facecolors="red")
         ax.add_collection(p)
+
     def loadImgs(self, imgids=[]):
         """
         :param imgids: integer ids specifying img
         :return: loaded img objects
         """
-        print('isarralike:', _isArrayLike(imgids))
+        print("isarralike:", _isArrayLike(imgids))
         imgids = imgids if _isArrayLike(imgids) else [imgids]
-        print('imgids:', imgids)
+        print("imgids:", imgids)
         imgs = []
         for imgid in imgids:
-            filename = os.path.join(self.imagepath, imgid + '.png')
-            print('filename:', filename)
+            filename = os.path.join(self.imagepath, imgid + ".png")
+            print("filename:", filename)
             img = cv2.imread(filename)
             imgs.append(img)
         return imgs
 
-if __name__ == '__main__':
-    examplesplit = DOTA('/media/test/4d846cae-2315-4928-8d1b-ca6d3a61a3c6/DOTA/DOTAv2.0/trainval_split_1024')
-    imgids = examplesplit.getImgIds(catNms=['plane'])
+
+if __name__ == "__main__":
+    examplesplit = DOTA("/media/test/4d846cae-2315-4928-8d1b-ca6d3a61a3c6/DOTA/DOTAv2.0/trainval_split_1024")
+    imgids = examplesplit.getImgIds(catNms=["plane"])
     img = examplesplit.loadImgs(imgids)
     for imgid in imgids:
         anns = examplesplit.loadAnns(imgId=imgid)

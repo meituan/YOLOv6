@@ -72,7 +72,9 @@ class Detect(nn.Module):
     def initialize_biases(self):
 
         for conv in self.cls_preds:
-            b = conv.bias.view(-1,)
+            b = conv.bias.view(
+                -1,
+            )
             b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
             w = conv.weight
@@ -80,7 +82,9 @@ class Detect(nn.Module):
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
 
         for conv in self.reg_preds:
-            b = conv.bias.view(-1,)
+            b = conv.bias.view(
+                -1,
+            )
             b.data.fill_(1.0)
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
             w = conv.weight
@@ -88,7 +92,9 @@ class Detect(nn.Module):
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
 
         for conv in self.angle_preds:
-            b = conv.bias.view(-1,)
+            b = conv.bias.view(
+                -1,
+            )
             b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
             w = conv.weight
@@ -101,7 +107,9 @@ class Detect(nn.Module):
         )
         if self.angle_fitting_methods == "dfl":
             # TODO, 拟合值可以改变
-            self.proj_angle = (180.0 / self.angle_max) * nn.Parameter(torch.linspace(0, self.angle_max, self.angle_max + 1), requires_grad=False)
+            self.proj_angle = (180.0 / self.angle_max) * nn.Parameter(
+                torch.linspace(0, self.angle_max, self.angle_max + 1), requires_grad=False
+            )
             self.proj_angle_conv.weight = nn.parameter.Parameter(
                 self.proj_angle.view([1, self.angle_max + 1, 1, 1]).clone().detach(), requires_grad=False
             )
@@ -124,8 +132,8 @@ class Detect(nn.Module):
                 angle_feat = self.angle_convs[i](angle_x)
                 angle_output = self.angle_preds[i](angle_feat)
 
-                if self.angle_fitting_methods == 'regression':
-                    angle_output = angle_output ** 2
+                if self.angle_fitting_methods == "regression":
+                    angle_output = angle_output**2
 
                 # NOTE [BS, C, H, W]
                 cls_output = torch.sigmoid(cls_output)
@@ -137,7 +145,7 @@ class Detect(nn.Module):
             reg_distri_list = torch.cat(reg_distri_list, axis=1)
             angle_fitting_list = torch.cat(angle_fitting_list, axis=1)
 
-            if(torch.onnx.is_in_onnx_export()):
+            if torch.onnx.is_in_onnx_export():
                 return cls_score_list, reg_distri_list, angle_fitting_list
             else:
                 return x, cls_score_list, reg_distri_list, angle_fitting_list
@@ -170,25 +178,28 @@ class Detect(nn.Module):
                     reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
                     reg_output = self.proj_conv(F.softmax(reg_output, dim=1))
 
-                if self.angle_fitting_methods == 'regression':
-                    angle_output = angle_output ** 2
+                # NOTE 角度需要clip下
+                if self.angle_fitting_methods == "regression":
+                    angle_output = angle_output**2
                 elif self.angle_fitting_methods == "dfl":
                     angle_output = angle_output.reshape([-1, 1, self.angle_max + 1, l]).permute(0, 2, 1, 3)
                     angle_output = self.proj_angle_conv(F.softmax(angle_output, dim=1))
-                elif self.angle_fitting_methods == 'csl':
+                elif self.angle_fitting_methods == "csl":
                     # NOTE sigmoid / softmax
                     # [b, C, h, w]
                     angle_output = torch.sigmoid(angle_output)
                     # angle_output = torch.softmax(angle_output)
                     angle_output = torch.argmax(angle_output, dim=1, keepdim=True)
-                elif self.angle_fitting_methods == 'MGAR':
+                elif self.angle_fitting_methods == "MGAR":
                     # TODO MGAR
-                    angle_output_class = torch.sigmoid(angle_output[:, :self.angle_max, :, :])
+                    angle_output_class = torch.sigmoid(angle_output[:, : self.angle_max, :, :])
                     angle_output_class = torch.argmax(angle_output_class, dim=1, keepdim=True) * (180 / self.angle_max)
                     # regression Square
                     angle_output_regression = angle_output[:, -1:, :, :] ** 2
                     angle_output = angle_output_class + angle_output_regression
 
+                # NOTE clamp 下, 角度==180 算iou会出bug
+                angle_output = torch.clamp(angle_output, 0, 179.99)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
                 reg_dist_list.append(reg_output.reshape([b, 4, l]))
                 angle_fitting_list.append(angle_output.reshape([b, 1, l]))

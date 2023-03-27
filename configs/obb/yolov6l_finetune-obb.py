@@ -60,7 +60,7 @@ loss = dict(
         "dfl": 0.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
-        "MGAR_reg": 0.05,
+        "MGAR_reg": 0.0125,
         "cwd": 0.2,
     },
 )
@@ -70,8 +70,12 @@ solver = dict(
     lr_scheduler="Cosine",
     # lr0=0.0032,
     # lr0=0.0008,
+    # lr0=0.0005,
+    # NOTE 1xb8 0.00025
     lr0=0.00025,
-    lrf=0.12,
+    # lr0=0.00015,
+    # NOTE lrf = lrf * lr0
+    lrf=0.05,
     momentum=0.843,
     weight_decay=0.00036,
     # weight_decay=0.05,
@@ -85,20 +89,26 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
+
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
     flipud=0.5,
     fliplr=0.5,
     rotate=0.5,
-    # NOTE mosaic 数值需要确定一下
-    mosaic=0.25,
-    mixup_mosaic=0.5,
-    mixup=0.5,
+    # DOTA [9, 11] 类别特殊,其他为None
+    rect_classes=[9, 11],
+    # mosaic 和 mixup可能都会对DOTA的test产生影响, 实在不行跑100个epoch
+    mosaic=0.0,
+    mixup_mosaic=0.0,
+    # NOTE mixup 可能需要关闭掉
+    mixup=0.0,
 )
 
 eval_params = dict(
-    conf_thres=0.03,
+    conf_thres=0.05,
+    iou_thres=0.1,
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,

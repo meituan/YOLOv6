@@ -261,7 +261,7 @@ def non_max_suppression_obb(
 
 
 def non_max_suppression_obb_cuda(
-    prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=300
+    prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, multi_label=False, max_det=2000
 ):
     """Runs Non-Maximum Suppression (NMS) on inference results.
     This code is borrowed from: https://github.com/ultralytics/yolov5/blob/47233e1698b89fc437a4fb9463c815e9171be955/utils/general.py#L775
@@ -380,7 +380,7 @@ def rbox2poly(obboxes):
         return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
     else:
         center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
-        Cos, Sin = np.cos(theta), np.sin(theta)
+        Cos, Sin = np.cos(theta * np.pi / 180.0), np.sin(theta * torch.pi / 180.0)
 
         vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
         vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)

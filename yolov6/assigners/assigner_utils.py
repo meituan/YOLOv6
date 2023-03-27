@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
+
 def dist_calculator(gt_bboxes, anchor_bboxes):
     """compute center distance between all bbox and gt
 
@@ -22,6 +23,8 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
     distances = (gt_points[:, None, :] - ac_points[None, :, :]).pow(2).sum(-1).sqrt()
 
     return distances, ac_points
+
+
 def rbox2poly(obboxes):
     """
     Trans rbox format to poly format.
@@ -44,7 +47,7 @@ def rbox2poly(obboxes):
         return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
     else:
         center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
-        Cos, Sin = np.cos(theta), np.sin(theta)
+        Cos, Sin = np.cos(theta * np.pi / 180.0), np.sin(theta * np.pi / 180.0)
 
         vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
         vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
@@ -55,6 +58,8 @@ def rbox2poly(obboxes):
         point4 = center + vector1 - vector2
         order = obboxes.shape[:-1]
         return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)
+
+
 def select_candidates_in_gts_R(xy_center, gt_bboxes, gt_angle, eps=1e-9):
     """select the gt point in anchor's center in obb
 
@@ -68,10 +73,10 @@ def select_candidates_in_gts_R(xy_center, gt_bboxes, gt_angle, eps=1e-9):
     """
     gt_obbs = torch.concat([gt_bboxes, gt_angle], dim=-1)
     bs, n_max_boxes, _ = gt_bboxes.size()
-    _gt_obbs = gt_obbs.reshape([bs,-1,5])
-    _gt_poly = rbox2poly(_gt_obbs).reshape([bs,-1,4,2])
+    _gt_obbs = gt_obbs.reshape([bs, -1, 5])
+    _gt_poly = rbox2poly(_gt_obbs).reshape([bs, -1, 4, 2])
     points = xy_center.unsqueeze(0).unsqueeze(0)
-    a,b,c,d = torch.split(_gt_poly,[1,1,1,1], dim=2)
+    a, b, c, d = torch.split(_gt_poly, [1, 1, 1, 1], dim=2)
     ab = b - a
     ad = d - a
     # [B, N, L, 2]
@@ -85,12 +90,7 @@ def select_candidates_in_gts_R(xy_center, gt_bboxes, gt_angle, eps=1e-9):
     # [B, N, L] dot product
     ap_dot_ad = torch.sum(ap * ad, axis=-1)
     # [B, N, L] <A, B> = |A|*|B|*cos(theta)
-    is_in_box = (
-        (ap_dot_ab >= 0)
-        & (ap_dot_ab <= norm_ab)
-        & (ap_dot_ad >= 0)
-        & (ap_dot_ad <= norm_ad)
-    )
+    is_in_box = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= 0) & (ap_dot_ad <= norm_ad)
     return is_in_box
 
 
@@ -115,6 +115,7 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     bbox_deltas = bbox_deltas.reshape([bs, n_max_boxes, n_anchors, -1])
     return (bbox_deltas.min(axis=-1)[0] > eps).to(gt_bboxes.dtype)
 
+
 def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
     """if an anchor box is assigned to multiple gts,
         the one with the highest iou will be selected.
@@ -136,7 +137,8 @@ def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
         mask_pos = torch.where(mask_multi_gts, is_max_overlaps, mask_pos)
         fg_mask = mask_pos.sum(axis=-2)
     target_gt_idx = mask_pos.argmax(axis=-2)
-    return target_gt_idx, fg_mask , mask_pos
+    return target_gt_idx, fg_mask, mask_pos
+
 
 def iou_calculator(box1, box2, eps=1e-9):
     """Calculate iou for batch

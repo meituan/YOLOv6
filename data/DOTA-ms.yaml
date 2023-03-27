@@ -1,0 +1,29 @@
+# HRSC2016 HBB
+train: /mnt/datasets/DOTA_split_ms/images/train
+val: /mnt/datasets/DOTA_split_ms/images/val
+test: /mnt/datasets/DOTA_split_ms/images/test
+
+# number of classes
+nc: 15
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+
+# class names
+names:
+  [
+    "plane",
+    "baseball-diamond",
+    "bridge",
+    "ground-track-field",
+    "small-vehicle",
+    "large-vehicle",
+    "ship",
+    "tennis-court",
+    "basketball-court",
+    "storage-tank",
+    "soccer-ball-field",
+    "roundabout",
+    "harbor",
+    "swimming-pool",
+    "helicopter",
+  ]

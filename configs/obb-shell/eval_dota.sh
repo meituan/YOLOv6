@@ -1,20 +1,20 @@
-epoch=74
-eval_name="exp_$epoch"
+epoch=89
+eval_name="ss_mgar_new_aug_$epoch"
 eval_path="runs/DOTA/test"
-weight_path="./runs/DOTA/yolov6l_dfl_MGAR_AdamW_small_lr/weights/${epoch}_ckpt.pt"
+weight_path="./runs/DOTA/yolov6l_MGAR_1024_ss_new-1003/weights/${epoch}_ckpt.pt"
 
-CUDA_VISIBLE_DEVICES=1 python tools/eval_R.py \
-	--data "./data/DOTA.yaml" \
+CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
+	--data "./data/DOTA-ss.yaml" \
 	--weights $weight_path \
-	--batch-size 32 \
-	--img-size 800 \
+	--batch-size 64 \
+	--img-size 1024 \
 	--conf-thres 0.03 \
-	--iou-thres 0.65 \
+	--iou-thres 0.1 \
 	--task "test" \
 	--device 0 \
 	--save_dir $eval_path \
 	--name $eval_name \
-	--test_load_size 800 \
+	--test_load_size 1024 \
 	--do_coco_metric False \
 	--do_pr_metric False \
 	--ap_method 'VOC12' \
@@ -33,7 +33,7 @@ python yolov6/utils/TestJson2VocClassTxt.py \
 	--save_path "$eval_path/$eval_name/predictions"
 
 # merge
-python data/scrpits/DOTA_devkit/ResultMerge_multi_process.py \
+python data/scrpits/DOTA_devkit/ResultMerge_multi_process_new.py \
 	--scrpath "$eval_path/$eval_name/predictions" \
 	--dstpath "$eval_path/$eval_name/predictions_merge"
 

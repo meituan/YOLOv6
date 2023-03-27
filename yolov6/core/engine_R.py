@@ -25,6 +25,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 
 import tools.eval_R as eval
 from yolov6.data.data_load_R import create_dataloader
+from yolov6.data.data_augment_R import longSideFormat2minAreaRect
 from yolov6.models.losses.loss_distill_ns_R import ComputeLoss as ComputeLoss_distill_ns
 from yolov6.models.losses.loss_distill_R import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
@@ -250,7 +251,7 @@ class Trainer:
         # NOTE Targets: torch [num_labels_all_batchs, 7] [bs_id, class_id, x, y, w, h, angle] 相对值
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
-        if self.write_trainbatch_tb and self.main_process and self.step == 0:
+        if self.write_trainbatch_tb and self.main_process and self.step <= 3:
             # TODO
             self.plot_train_batch(images, targets)
             write_tbimg(
@@ -475,6 +476,7 @@ class Trainer:
             iou_type=self.cfg.model.head.iou_type,
             fpn_strides=self.cfg.model.head.strides,
             loss_weight=self.cfg.loss.loss_weight,
+            loss_mode=self.cfg.loss.loss_mode,
             angle_max=self.cfg.model.head.angle_max,
             angle_fitting_methods=self.cfg.model.head.angle_fitting_methods,
         )
@@ -673,6 +675,7 @@ class Trainer:
             data_dict=data_dict,
             task="train",
         )[0]
+
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
@@ -763,6 +766,7 @@ class Trainer:
         # NOTE batchsize gpu_cont 影响
         accumulate = max(1, round(64 / args.batch_size))
         cfg.solver.weight_decay *= args.batch_size * accumulate / 64
+        # NOTE print(args.bs_per_gpu)
         cfg.solver.lr0 *= args.batch_size / (self.world_size * args.bs_per_gpu)  # rescale lr0 related to batchsize
         optimizer = build_optimizer(cfg, model)
         return optimizer
@@ -834,7 +838,7 @@ class Trainer:
                     if labels:
                         label = f"{cls}"
                         rect = ((box[0], box[1]), (box[2], box[3]), int(angle[0]))
-                        poly = cv2.boxPoints(rect)
+                        poly = cv2.boxPoints(longSideFormat2minAreaRect(rect))
                         poly = np.int0(poly)
                         cv2.drawContours(
                             mosaic,
@@ -844,15 +848,15 @@ class Trainer:
                             thickness=2,
                             lineType=cv2.LINE_AA,
                         )
-                        cv2.putText(
-                            mosaic,
-                            label,
-                            (int(box[0] - 5), int(box[1] - 5)),
-                            cv2.FONT_HERSHEY_COMPLEX,
-                            0.5,
-                            color,
-                            thickness=2,
-                        )
+                        # cv2.putText(
+                        #     mosaic,
+                        #     label,
+                        #     (int(box[0] - 5), int(box[1] - 5)),
+                        #     cv2.FONT_HERSHEY_COMPLEX,
+                        #     0.5,
+                        #     color,
+                        #     thickness=2,
+                        # )
         self.vis_train_batch = mosaic.copy()
 
     def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=100):
@@ -874,7 +878,7 @@ class Trainer:
                 if box_score < vis_conf or bbox_idx > vis_max_box_num:
                     break
                 rect = ((cx, cy), (w, h), angle)
-                poly = cv2.boxPoints(rect)
+                poly = cv2.boxPoints(longSideFormat2minAreaRect(rect))
                 poly = np.int0(poly)
                 cv2.drawContours(
                     ori_img,
