@@ -291,10 +291,8 @@ class TrainValDataset(Dataset):
 
 
         img_paths = list(img_info.keys())
-        label_paths = sorted(
-            osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
-            for p in img_paths
-        )
+        label_paths = [osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
+                        for p in img_paths]
         assert label_paths, f"No labels found in {label_dir}."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
