@@ -9,7 +9,8 @@ import argparse
 import json
 import os
 import shutil
-
+import cv2
+import numpy as np
 # For DOTA-v2.0
 dotav2_classnames = [
     "plane",
@@ -128,6 +129,12 @@ if __name__ == "__main__":
         poly = data_dict["poly"]
         classid = data_dict["category_id"]
         classname = DOTA_CLASSES[classid]
+
+
+        # # NOTE DOTA 9, 11 类直接外界矩
+        # if classid == 9 or classid == 11:
+        #     poly = cv2.minAreaRect(np.array(poly).reshape(-1, 2))
+        #     poly = poly.reshape(-1, 8).tolist()
 
         lines = "%s %s %s %s %s %s %s %s %s %s\n" % (
             img_name,

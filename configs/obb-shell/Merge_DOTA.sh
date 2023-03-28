@@ -1,4 +1,4 @@
-eval_name="ss_mgar_new_aug_352"
+eval_name="ss_combine_99"
 eval_path="runs/DOTA/test"
 
 python yolov6/utils/TestJson2VocClassTxt.py \

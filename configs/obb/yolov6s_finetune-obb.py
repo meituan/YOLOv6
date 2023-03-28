@@ -2,6 +2,7 @@
 model = dict(
     type="YOLOv6s",
     pretrained="weights/yolov6s.pt",
+    # pretrained="",
     depth_multiple=0.33,
     width_multiple=0.50,
     backbone=dict(
@@ -27,8 +28,8 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type="giou",
-        use_dfl=True,  # set to True if you want to further train with distillation
-        reg_max=16,  # set to 16 if you want to further train with distillation
+        use_dfl=False,  # set to True if you want to further train with distillation
+        reg_max=0,  # set to 16 if you want to further train with distillation
         distill_weight={
             "class": 1.0,
             "dfl": 1.0,
@@ -61,7 +62,7 @@ loss = dict(
     # best
     loss_weight={
         "class": 1.0,
-        "iou": 2.5,
+        "iou": 2.0,
         "dfl": 0.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
@@ -74,14 +75,14 @@ solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
     # lr0=0.0032,
-    lr0=0.00015,
+    lr0=0.00025,
     lrf=0.05,
     momentum=0.843,
     weight_decay=0.00036,
     # Adamw 0.05
     # momentum=0.9,
     # weight_decay=0.05,
-    warmup_epochs=2.0,
+    warmup_epochs=1.0,
     warmup_momentum=0.5,
     warmup_bias_lr=0.05,
 )
@@ -91,18 +92,18 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
-    hsv=0.5,
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.5,
-    fliplr=0.5,
+    flipud=0.75,
+    fliplr=0.75,
     rotate=0.5,
     rect_classes=None,
     # NOTE mosaic 数值需要确定一下
     mosaic=0.0,
     mixup_mosaic=0.0,
-    mixup=0.5,
+    mixup=0.0,
 )
 
 eval_params = dict(

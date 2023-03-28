@@ -209,8 +209,6 @@ class ComputeLoss:
 
         elif self.loss_mode == "obb":
             loss_iou, loss_dfl = self.rbbox_loss(pred_distri, pred_bboxes, pred_angles, anchor_points_s, target_bboxes, target_angles, target_scores, target_scores_sum, fg_mask)
-            # torch.cuda.init()
-            # loss_iou, loss_dfl = self.rbbox_loss(pred_distri.detach().clone(), pred_bboxes.detach().clone(), pred_angles.detach().clone(), anchor_points_s.detach().clone(), target_bboxes.detach().clone(), target_angles.detach().clone(), target_scores.detach().clone(), target_scores_sum.detach().clone(), fg_mask.detach().clone())
             loss_angle = torch.zeros_like(loss_iou)
         elif self.loss_mode == "obb+angle":
             loss_iou, loss_dfl = self.rbbox_loss(pred_distri, pred_bboxes, pred_angles, anchor_points_s, target_bboxes, target_angles, target_scores, target_scores_sum, fg_mask)
@@ -383,12 +381,14 @@ class RotatedBboxesLoss(nn.Module):
 
             # TODO 查维度和clone
             with torch.cuda.amp.autocast(enabled=False):
-                loss_iou = self.iou_loss(pred_Rbboxes_pos, target_Rbboxes_pos.float()) * bbox_weight
+                # NOTE: 应不应该乘bbox_weight
+                loss_iou = self.iou_loss(pred_Rbboxes_pos, target_Rbboxes_pos.clone().float())  # * bbox_weight
 
-            if target_scores_sum == 0:
-                loss_iou = loss_iou.sum()
-            else:
-                loss_iou = loss_iou.sum() / target_scores_sum
+                if target_scores_sum == 0:
+                    loss_iou = loss_iou.sum()
+                else:
+                    # loss_iou = loss_iou.sum() / target_scores_sum
+                    loss_iou = loss_iou.mean()
 
             # dfl loss
             if self.use_dfl:
@@ -453,12 +453,13 @@ class AngleLoss(nn.Module):
             angle_weight = torch.masked_select(target_scores.sum(-1), fg_mask).unsqueeze(-1)
 
             if self.angle_fitting_methods == "regression":
-                loss_angle = F.smooth_l1_loss(pred_angle_pos, target_angle_pos, reduction="none") * angle_weight
+                loss_angle = F.smooth_l1_loss(pred_angle_pos, target_angle_pos, reduction="none") # * angle_weight
 
                 if target_scores_sum == 0:
                     loss_angle = loss_angle.sum()
                 else:
-                    loss_angle = loss_angle.sum() / target_scores_sum
+                    # loss_angle = loss_angle.sum() / target_scores_sum
+                    loss_angle = loss_angle.mean()
                 return loss_angle
 
             elif self.angle_fitting_methods == "csl":

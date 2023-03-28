@@ -77,7 +77,8 @@ class Trainer:
             self.optimizer = RepVGGOptimizer(model, scales, args, cfg, reinit=reinit)
         else:
             self.optimizer = self.get_optimizer(args, cfg, model)
-        self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer)
+        self.num_batches = len(self.train_loader)
+        self.scheduler, self.lf = self.get_lr_scheduler(args, cfg, self.optimizer, len(self.train_loader))
         self.ema = ModelEMA(model) if self.main_process else None
         # tensorboard
         self.tblogger = SummaryWriter(self.save_dir) if self.main_process else None
@@ -223,6 +224,7 @@ class Trainer:
             for self.step, self.batch_data in self.pbar:
                 if self.main_process:
                     self.progress.advance(self.task)
+                self.scheduler.step(self.step + self.epoch * self.num_batches)
                 self.train_in_steps(epoch_num, self.step)
                 self.print_details()
             if self.main_process:
@@ -516,8 +518,8 @@ class Trainer:
             )
 
     def prepare_for_steps(self):
-        if self.epoch > self.start_epoch:
-            self.scheduler.step()
+        # if self.epoch > self.start_epoch:
+        #     self.scheduler.step()
         # stop strong aug like mosaic and mixup from last n epoch by recreate dataloader
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
@@ -622,25 +624,26 @@ class Trainer:
 
     def update_optimizer(self):
         curr_step = self.step + self.max_stepnum * self.epoch
-        self.accumulate = max(1, round(64 / self.batch_size))
-        if curr_step <= self.warmup_stepnum:
-            self.accumulate = max(
-                1,
-                np.interp(curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]).round(),
-            )
-            for k, param in enumerate(self.optimizer.param_groups):
-                warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
-                param["lr"] = np.interp(
-                    curr_step,
-                    [0, self.warmup_stepnum],
-                    [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
-                )
-                if "momentum" in param:
-                    param["momentum"] = np.interp(
-                        curr_step,
-                        [0, self.warmup_stepnum],
-                        [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
-                    )
+        self.accumulate = 1
+        # self.accumulate = max(1, round(64 / self.batch_size))
+        # if curr_step <= self.warmup_stepnum:
+        #     self.accumulate = max(
+        #         1,
+        #         np.interp(curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]).round(),
+        #     )
+        #     for k, param in enumerate(self.optimizer.param_groups):
+        #         warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
+        #         param["lr"] = np.interp(
+        #             curr_step,
+        #             [0, self.warmup_stepnum],
+        #             [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
+        #         )
+        #         if "momentum" in param:
+        #             param["momentum"] = np.interp(
+        #                 curr_step,
+        #                 [0, self.warmup_stepnum],
+        #                 [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
+        #             )
         if curr_step - self.last_opt_step >= self.accumulate:
             self.scaler.step(self.optimizer)
             self.scaler.update()
@@ -772,9 +775,9 @@ class Trainer:
         return optimizer
 
     @staticmethod
-    def get_lr_scheduler(args, cfg, optimizer):
+    def get_lr_scheduler(args, cfg, optimizer, num_batches):
         epochs = args.epochs
-        lr_scheduler, lf = build_lr_scheduler(cfg, optimizer, epochs)
+        lr_scheduler, lf = build_lr_scheduler(cfg, optimizer, epochs, num_batches)
         return lr_scheduler, lf
 
     def plot_train_batch(self, images, targets, max_size=1920, max_subplots=16):

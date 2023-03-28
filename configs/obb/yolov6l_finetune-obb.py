@@ -27,15 +27,15 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type="giou",
-        use_dfl=True,
-        reg_max=16,  # if use_dfl is False, please set reg_max to 0
+        use_dfl=False,
+        reg_max=0,  # if use_dfl is False, please set reg_max to 0
         distill_weight={
             "class": 2.0,
             "dfl": 1.0,
         },
         # NOTE for angle regression
-        # angle_fitting_methods='regression',
-        # angle_max=1,
+        angle_fitting_methods='regression',
+        angle_max=1,
         # NOTE for angle csl
         # angle_fitting_methods="csl",
         # angle_max=180,
@@ -43,21 +43,21 @@ model = dict(
         # angle_fitting_methods='dfl',
         # angle_max=180,
         # NOTE for angle MGAR
-        angle_fitting_methods="MGAR",
-        angle_max=5,
+        # angle_fitting_methods="MGAR",
+        # angle_max=5,
     ),
 )
 
 loss = dict(
     # NOTE obb hbb+angle obb+angle
-    loss_mode="obb+angle",
+    loss_mode="obb",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle classification
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     loss_weight={
         "class": 1.0,
-        "iou": 2.5,
+        "iou": 2.0,
         "dfl": 0.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
@@ -73,7 +73,7 @@ solver = dict(
     # lr0=0.0008,
     # lr0=0.0005,
     # NOTE 1xb8 0.00025
-    lr0=0.00015,
+    lr0=0.00025,
     # lr0=0.00015,
     # NOTE lrf = lrf * lr0
     lrf=0.05,
@@ -91,7 +91,7 @@ data_aug = dict(
     # scale=0.898,
     # shear=0.602,
 
-    hsv=0.5,
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
@@ -101,10 +101,10 @@ data_aug = dict(
     # DOTA [9, 11] 类别特殊,其他为None
     rect_classes=[9, 11],
     # mosaic 和 mixup可能都会对DOTA的test产生影响, 实在不行跑100个epoch
-    mosaic=0.5,
-    mixup_mosaic=0.5,
+    mosaic=0.0,
+    mixup_mosaic=0.0,
     # NOTE mixup 可能需要关闭掉
-    mixup=0.5,
+    mixup=0.0,
 )
 
 eval_params = dict(

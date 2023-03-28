@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import math
-import os
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -35,7 +35,7 @@ def build_optimizer(cfg, model):
     return optimizer
 
 
-def build_lr_scheduler(cfg, optimizer, epochs):
+def build_lr_scheduler(cfg, optimizer, epochs, num_batches):
     """Build learning rate scheduler from cfg file."""
     # NOTE 怎么计算的?
     if cfg.solver.lr_scheduler == 'Cosine':
@@ -45,5 +45,43 @@ def build_lr_scheduler(cfg, optimizer, epochs):
     else:
         LOGGER.error('unknown lr scheduler, use Cosine defaulted')
 
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+
+    scheduler = CosineDecayLR(
+        optimizer,
+        T_max=epochs * num_batches,
+        lr_init=cfg.solver.lr0,
+        lr_min=cfg.solver.lr0 * cfg.solver.lrf,
+        warmup=cfg.solver.warmup_epochs * num_batches,
+    )
+
     return scheduler, lf
+
+
+class CosineDecayLR(object):
+    def __init__(self, optimizer, T_max, lr_init, lr_min=0., warmup=0):
+        """
+        a cosine decay scheduler about steps, not epochs.
+        :param optimizer: ex. optim.SGD
+        :param T_max:  max steps, and steps=epochs * batches
+        :param lr_max: lr_max is init lr.
+        :param warmup: in the training begin, the lr is smoothly increase from 0 to lr_init, which means "warmup",
+                        this means warmup steps, if 0 that means don't use lr warmup.
+        """
+        super(CosineDecayLR, self).__init__()
+        self.__optimizer = optimizer
+        self.__T_max = T_max
+        self.__lr_min = lr_min
+        self.__lr_max = lr_init
+        self.__warmup = warmup
+
+
+    def step(self, t):
+        if self.__warmup and t < self.__warmup:
+            lr = self.__lr_max / self.__warmup * t
+        else:
+            T_max = self.__T_max - self.__warmup
+            t = t - self.__warmup
+            lr = self.__lr_min + 0.5 * (self.__lr_max - self.__lr_min) * (1 + np.cos(t/T_max * np.pi))
+        for param_group in self.__optimizer.param_groups:
+            param_group["lr"] = lr

@@ -79,7 +79,6 @@ class TrainValDataset(Dataset):
         if self.main_process:
             LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
 
-        self.RandomRotate = PolyRandomRotate(rotate_ratio=1.0, rect_classes=self.hyp["rect_classes"])
 
     def __len__(self):
         """Get the length of dataset"""
@@ -376,7 +375,8 @@ class TrainValDataset(Dataset):
 
         if random.random() < self.hyp["rotate"]:
             # img, labels = RRotate(img, labels)
-            img, labels = self.RandomRotate(img, labels)
+            RandomRotate = PolyRandomRotate(rotate_ratio=1.0, rect_classes=self.hyp["rect_classes"])
+            img, labels = RandomRotate(img, labels)
 
         return img, labels
 
