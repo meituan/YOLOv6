@@ -13,7 +13,7 @@ from yolov6.assigners.atss_assigner_R import ATSSAssigner
 from yolov6.assigners.tal_assigner_R import TaskAlignedAssigner
 from yolov6.utils.figure_iou import IOUloss
 from yolov6.utils.general import bbox2dist, box_iou, dist2bbox, xywh2xyxy
-
+from yolov6.utils.nms_R import xyxy2xywh
 from mmcv.ops import diff_iou_rotated_2d
 
 
@@ -190,7 +190,7 @@ class ComputeLoss:
         # cls loss
         target_labels = torch.where(fg_mask > 0, target_labels, torch.full_like(target_labels, self.num_classes))
         one_hot_label = F.one_hot(target_labels.long(), self.num_classes + 1)[..., :-1]
-        smooth_one_hot_label = one_hot_label * (0.9 - 0.1 / (self.angle_max - 2)) + (0.1 / (self.angle_max - 2))
+        # smooth_one_hot_label = one_hot_label * (0.9 - 0.1 / (self.angle_max - 2)) + (0.1 / (self.angle_max - 2))
         loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
 
         target_scores_sum = target_scores.sum()
@@ -206,8 +206,11 @@ class ComputeLoss:
             )
             # angle loss
             loss_angle = self.angle_loss(pred_angles, target_angles, target_scores, target_scores_sum, fg_mask)
+
         elif self.loss_mode == "obb":
             loss_iou, loss_dfl = self.rbbox_loss(pred_distri, pred_bboxes, pred_angles, anchor_points_s, target_bboxes, target_angles, target_scores, target_scores_sum, fg_mask)
+            # torch.cuda.init()
+            # loss_iou, loss_dfl = self.rbbox_loss(pred_distri.detach().clone(), pred_bboxes.detach().clone(), pred_angles.detach().clone(), anchor_points_s.detach().clone(), target_bboxes.detach().clone(), target_angles.detach().clone(), target_scores.detach().clone(), target_scores_sum.detach().clone(), fg_mask.detach().clone())
             loss_angle = torch.zeros_like(loss_iou)
         elif self.loss_mode == "obb+angle":
             loss_iou, loss_dfl = self.rbbox_loss(pred_distri, pred_bboxes, pred_angles, anchor_points_s, target_bboxes, target_angles, target_scores, target_scores_sum, fg_mask)
@@ -355,6 +358,7 @@ class RotatedBboxesLoss(nn.Module):
 
             if self.angle_fitting_methods == "regression":
                 pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
+                pass
             elif self.angle_fitting_methods == "csl":
                 pred_angle_pos = torch.sigmoid(pred_angle_pos)
                 pred_angle_pos = torch.argmax(pred_angle_pos, dim=-1, keepdim=True)
@@ -366,16 +370,21 @@ class RotatedBboxesLoss(nn.Module):
                 pred_angle_class_pos = torch.sigmoid(pred_angle_pos[..., : (self.angle_max - 1)])
                 pred_angle_class_pos = torch.argmax(pred_angle_class_pos, dim=-1, keepdim=True) * angle_range
                 pred_angle_pos = pred_angle_class_pos + pred_angle_pos[..., -1:] ** 2
+                pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
 
             bbox_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 4])
             pred_bboxes_pos = torch.masked_select(pred_bboxes, bbox_mask).reshape([-1, 4])
             target_bboxes_pos = torch.masked_select(target_bboxes, bbox_mask).reshape([-1, 4])
             bbox_weight = torch.masked_select(target_scores.sum(-1), fg_mask).unsqueeze(-1)
+            pred_bboxes_pos = xyxy2xywh(pred_bboxes_pos)
+            target_bboxes_pos = xyxy2xywh(target_bboxes_pos)
             pred_Rbboxes_pos = torch.cat((pred_bboxes_pos, pred_angle_pos), dim=-1)
             target_Rbboxes_pos = torch.cat((target_bboxes_pos, target_angle_pos), dim=-1)
 
             # TODO 查维度和clone
-            loss_iou = self.iou_loss(pred_Rbboxes_pos, target_Rbboxes_pos) * bbox_weight
+            with torch.cuda.amp.autocast(enabled=False):
+                loss_iou = self.iou_loss(pred_Rbboxes_pos, target_Rbboxes_pos.float()) * bbox_weight
+
             if target_scores_sum == 0:
                 loss_iou = loss_iou.sum()
             else:
@@ -400,6 +409,26 @@ class RotatedBboxesLoss(nn.Module):
             loss_dfl = pred_dist.sum() * 0.0
 
         return loss_iou, loss_dfl
+
+
+    def _df_loss(self, pred_dist, target):
+        target_left = target.to(torch.long)
+        target_right = target_left + 1
+        weight_left = target_right.to(torch.float) - target
+        weight_right = 1 - weight_left
+        loss_left = (
+            F.cross_entropy(pred_dist.view(-1, self.reg_max + 1), target_left.view(-1), reduction="none").view(
+                target_left.shape
+            )
+            * weight_left
+        )
+        loss_right = (
+            F.cross_entropy(pred_dist.view(-1, self.reg_max + 1), target_right.view(-1), reduction="none").view(
+                target_left.shape
+            )
+            * weight_right
+        )
+        return (loss_left + loss_right).mean(-1, keepdim=True)
 
 
 class AngleLoss(nn.Module):
@@ -587,7 +616,7 @@ class RotatedIoULoss(nn.Module):
             Default: 'log'
     """
 
-    def __init__(self, linear=True, eps=1e-6, reduction="none", loss_weight=1.0, mode="log"):
+    def __init__(self, linear=True, eps=1e-1, reduction="none", loss_weight=1.0, mode="linear"):
         super(RotatedIoULoss, self).__init__()
         assert mode in ["linear", "square", "log"]
         if linear:
@@ -629,9 +658,10 @@ class RotatedIoULoss(nn.Module):
             # iou_loss of shape (n,)
             assert weight.shape == pred.shape
             weight = weight.mean(-1)
+        # NOTE bug theta 接近 1e-2这个量级会出nan
         ious = diff_iou_rotated_2d(pred.unsqueeze(0), target.unsqueeze(0))
+        # ious = torch.where(torch.isnan(ious), torch.full_like(ious, 1e-3), ious)
         ious = ious.squeeze(0).clamp(min=self.eps)
-
         if self.mode == 'linear':
             loss = 1 - ious
         elif self.mode == 'square':
@@ -641,4 +671,4 @@ class RotatedIoULoss(nn.Module):
         else:
             raise NotImplementedError
 
-        return loss
+        return loss.unsqueeze(-1)

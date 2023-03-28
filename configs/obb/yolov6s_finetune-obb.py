@@ -11,7 +11,11 @@ model = dict(
         fuse_P2=True,
         cspsppf=True,
     ),
-    neck=dict(type="RepBiFPANNeck", num_repeats=[12, 12, 12, 12], out_channels=[256, 128, 128, 256, 256, 512],),
+    neck=dict(
+        type="RepBiFPANNeck",
+        num_repeats=[12, 12, 12, 12],
+        out_channels=[256, 128, 128, 256, 256, 512],
+    ),
     head=dict(
         type="EffiDeHead",
         in_channels=[128, 256, 512],
@@ -25,7 +29,10 @@ model = dict(
         iou_type="giou",
         use_dfl=True,  # set to True if you want to further train with distillation
         reg_max=16,  # set to 16 if you want to further train with distillation
-        distill_weight={"class": 1.0, "dfl": 1.0,},
+        distill_weight={
+            "class": 1.0,
+            "dfl": 1.0,
+        },
         # NOTE for angle regression
         # angle_fitting_methods='regression',
         # angle_max=1,
@@ -36,13 +43,14 @@ model = dict(
         # angle_fitting_methods='dfl',
         # angle_max=180,
         # NOTE for angle MGAR
-        angle_fitting_methods='MGAR',
-        angle_max=5,
+        angle_fitting_methods="MGAR",
+        angle_max=3,
     ),
 )
 
 loss = dict(
-    loss_mode="obb",
+    # NOTE obb hbb+angle obb+angle
+    loss_mode="obb+angle",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
@@ -51,15 +59,23 @@ loss = dict(
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.25, 'cwd': 10},
     # NOTE for angle MGAR
     # best
-    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, "MGAR_cls": 0.05, "MGAR_reg": 0.05, 'cwd': 0.2, },
+    loss_weight={
+        "class": 1.0,
+        "iou": 2.5,
+        "dfl": 0.5,
+        "angle": 0.05,
+        "MGAR_cls": 0.05,
+        "MGAR_reg": 0.05,
+        "cwd": 0.2,
+    },
 )
 
 solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
     # lr0=0.0032,
-    lr0=0.0008,
-    lrf=0.12,
+    lr0=0.00015,
+    lrf=0.05,
     momentum=0.843,
     weight_decay=0.00036,
     # Adamw 0.05
@@ -75,18 +91,18 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
-    hsv=0.0,
+    hsv=0.5,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=1.0,
-    fliplr=1.0,
-    rotate=1.0,
+    flipud=0.5,
+    fliplr=0.5,
+    rotate=0.5,
     rect_classes=None,
     # NOTE mosaic 数值需要确定一下
-    mosaic=1.0,
+    mosaic=0.0,
     mixup_mosaic=0.0,
-    mixup=0.0,
+    mixup=0.5,
 )
 
 eval_params = dict(

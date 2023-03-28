@@ -134,7 +134,6 @@ class Detect(nn.Module):
 
                 if self.angle_fitting_methods == "regression":
                     angle_output = angle_output**2
-
                 # NOTE [BS, C, H, W]
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))

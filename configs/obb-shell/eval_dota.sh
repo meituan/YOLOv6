@@ -1,7 +1,7 @@
-epoch=89
+epoch=35
 eval_name="ss_mgar_new_aug_$epoch"
 eval_path="runs/DOTA/test"
-weight_path="./runs/DOTA/yolov6l_MGAR_1024_ss_new-1003/weights/${epoch}_ckpt.pt"
+weight_path="./runs/DOTA/yolov6l_MGAR_1024_ss_new-1004/weights/${epoch}_ckpt.pt"
 
 CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--data "./data/DOTA-ss.yaml" \

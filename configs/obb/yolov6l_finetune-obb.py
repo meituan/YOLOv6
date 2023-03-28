@@ -49,18 +49,19 @@ model = dict(
 )
 
 loss = dict(
+    # NOTE obb hbb+angle obb+angle
+    loss_mode="obb+angle",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle classification
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
-    # NOTE for angle MGAR
     loss_weight={
         "class": 1.0,
         "iou": 2.5,
         "dfl": 0.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
-        "MGAR_reg": 0.0125,
+        "MGAR_reg": 0.05,
         "cwd": 0.2,
     },
 )
@@ -72,7 +73,7 @@ solver = dict(
     # lr0=0.0008,
     # lr0=0.0005,
     # NOTE 1xb8 0.00025
-    lr0=0.00025,
+    lr0=0.00015,
     # lr0=0.00015,
     # NOTE lrf = lrf * lr0
     lrf=0.05,
@@ -90,20 +91,20 @@ data_aug = dict(
     # scale=0.898,
     # shear=0.602,
 
-    hsv=0.0,
+    hsv=0.5,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.5,
-    fliplr=0.5,
+    flipud=0.75,
+    fliplr=0.75,
     rotate=0.5,
     # DOTA [9, 11] 类别特殊,其他为None
     rect_classes=[9, 11],
     # mosaic 和 mixup可能都会对DOTA的test产生影响, 实在不行跑100个epoch
-    mosaic=0.0,
-    mixup_mosaic=0.0,
+    mosaic=0.5,
+    mixup_mosaic=0.5,
     # NOTE mixup 可能需要关闭掉
-    mixup=0.0,
+    mixup=0.5,
 )
 
 eval_params = dict(
