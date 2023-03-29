@@ -61,7 +61,7 @@ python ./deploy/ONNX/export_onnx.py \
     --ort
 ```
 
-You will get an onnx with **NonMaxSuppression** operater .
+You will get an onnx with **NonMaxSuppression** operator .
 
 ### TensorRT backend (TensorRT version == 7.2.3.4)
 #### Usage
