@@ -8,8 +8,8 @@
 
 ## Step 1: Get onnx model
 
-Follow the file [ONNX README](../../tools/quantization/tensorrt/post_training/README.md) to convert the pt mdoel to onnx `yolov6n.onnx`.
-**Now do't support end2end onnx model which include the nms plugin**
+Follow the file [ONNX README](../../tools/quantization/tensorrt/post_training/README.md) to convert the pt model to onnx `yolov6n.onnx`.
+**Now don't support end2end onnx model which include the nms plugin**
 ```shell
 python ./deploy/ONNX/export_onnx.py \
     --weights yolov6n.pt \
@@ -71,8 +71,8 @@ Then run the demo:
 ./yolov6 ../you.engine -i image_path
 ```
 
-# Evaluate the performace
- You can evaluate the performace of the TensorRT model.
+# Evaluate the performance
+ You can evaluate the performance of the TensorRT model.
  ```
  python deploy/TensorRT/eval_yolo_trt.py \
     --imgs_dir /path/to/images/val \
