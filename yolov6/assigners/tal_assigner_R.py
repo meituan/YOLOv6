@@ -2,9 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from yolov6.assigners.assigner_utils import (dist_calculator, iou_calculator,
-                                             select_candidates_in_gts,
-                                             select_highest_overlaps)
+from yolov6.assigners.assigner_utils import (
+    dist_calculator,
+    iou_calculator,
+    iou_calculator_xywh,
+    rbbox_overlaps,
+    select_candidates_in_gts,
+    select_candidates_in_gts_R,
+    select_highest_overlaps,
+)
 
 
 class TaskAlignedAssigner(nn.Module):
@@ -55,13 +61,14 @@ class TaskAlignedAssigner(nn.Module):
             start, end = i * step, (i + 1) * step
             pd_scores_ = pd_scores[start:end, ...]
             pd_bboxes_ = pd_bboxes[start:end, ...]
+            pd_angles_ = pd_angles[start:end, ...]
             gt_labels_ = gt_labels[start:end, ...]
             gt_bboxes_ = gt_bboxes[start:end, ...]
             gt_angles_ = gt_angles[start:end, ...]
             mask_gt_ = mask_gt[start:end, ...]
 
             mask_pos, align_metric, overlaps = self.get_pos_mask(
-                pd_scores_, pd_bboxes_, gt_labels_, gt_bboxes_, anc_points, mask_gt_
+                pd_scores_, pd_bboxes_, pd_angles_, gt_labels_, gt_bboxes_, gt_angles_, anc_points, mask_gt_
             )
 
             target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(mask_pos, overlaps, self.n_max_boxes)
@@ -92,12 +99,14 @@ class TaskAlignedAssigner(nn.Module):
 
         return target_labels, target_bboxes, target_angles, target_scores, fg_mask.bool()
 
-    def get_pos_mask(self, pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt):
+    def get_pos_mask(self, pd_scores, pd_bboxes, pd_angles, gt_labels, gt_bboxes, gt_angles, anc_points, mask_gt):
 
         # get anchor_align metric
         align_metric, overlaps = self.get_box_metrics(pd_scores, pd_bboxes, gt_labels, gt_bboxes)
+        # align_metric, overlaps = self.get_box_metrics_R(pd_scores, pd_bboxes, pd_angles, gt_labels, gt_bboxes, gt_angles)
         # get in_gts mask
-        mask_in_gts = select_candidates_in_gts(anc_points, gt_bboxes)
+        mask_in_gts = select_candidates_in_gts(anc_points, gt_bboxes, gt_angles)
+        # mask_in_gts = select_candidates_in_gts_R(anc_points, gt_bboxes, gt_angles)
         # get topk_metric mask
         mask_topk = self.select_topk_candidates(
             align_metric * mask_in_gts, topk_mask=mask_gt.repeat([1, 1, self.topk]).bool()
@@ -116,10 +125,41 @@ class TaskAlignedAssigner(nn.Module):
         ind[1] = gt_labels.squeeze(-1)
         bbox_scores = pd_scores[ind[0], ind[1]]
 
-        overlaps = iou_calculator(gt_bboxes, pd_bboxes)
+        # NOTE 原版使用xyxy计算
+        # overlaps = iou_calculator(gt_bboxes, pd_bboxes)
+        # NOTE 新版使用xywh计算
+        overlaps = iou_calculator_xywh(gt_bboxes, pd_bboxes)
+
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
 
         return align_metric, overlaps
+
+    # def get_box_metrics_R(self, pd_scores, pd_bboxes, pd_angles, gt_labels, gt_bboxes, gt_angles):
+
+    #     pd_scores = pd_scores.permute(0, 2, 1)
+    #     gt_labels = gt_labels.to(torch.long)
+    #     ind = torch.zeros([2, self.bs, self.n_max_boxes], dtype=torch.long)
+    #     ind[0] = torch.arange(end=self.bs).view(-1, 1).repeat(1, self.n_max_boxes)
+    #     ind[1] = gt_labels.squeeze(-1)
+    #     bbox_scores = pd_scores[ind[0], ind[1]]
+
+    #     # NOTE 原版使用xyxy计算
+    #     # overlaps = iou_calculator(gt_bboxes, pd_bboxes)
+    #     # NOTE 新版使用xywh计算
+    #     gt_labels = gt_labels / 180.0 * torch.pi
+    #     # for 循环
+    #     # [bs, N, 5]
+    #     gt_rbboxes = torch.cat((gt_bboxes, gt_angles), -1).detach()
+    #     # [bs, M, 5]
+    #     pd_rbboxes = torch.cat((pd_bboxes, pd_angles), -1).detach()
+    #     overlaps = torch.zeros((gt_rbboxes.shape[0], gt_rbboxes.shape[1], pd_rbboxes.shape[1])).to(gt_rbboxes.device)
+
+    #     for i in range(gt_rbboxes.shape[0]):
+    #         overlaps[i, :, :] = rbbox_overlaps(gt_rbboxes[i, :, :].reshape(-1, 5), pd_rbboxes[i, :, :].reshape(-1, 5)).unsqueeze(0)
+
+    #     align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
+
+    #     return align_metric, overlaps
 
     def select_topk_candidates(self, metrics, largest=True, topk_mask=None):
 

@@ -1,7 +1,9 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-
+from yolov6.utils.nms_R import xywh2xyxy
+from yolov6.utils.general import Rbbox2dist
+from mmcv.ops import box_iou_rotated
 
 def dist_calculator(gt_bboxes, anchor_bboxes):
     """compute center distance between all bbox and gt
@@ -60,41 +62,55 @@ def rbox2poly(obboxes):
         return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)
 
 
-def select_candidates_in_gts_R(xy_center, gt_bboxes, gt_angle, eps=1e-9):
+def select_candidates_in_gts_R(xy_centers, gt_bboxes, gt_angles, eps=1e-9):
     """select the gt point in anchor's center in obb
 
     Args:
         anc_points (Tensor): shape(num_total_anchors, 2)
         gt_bboxes (tensor): shape(bs, n_max_boxes, 4)
-        gt_angle (tensor): shape(bs, n_max_boxes, 1)
+        gt_angles (tensor): shape(bs, n_max_boxes, 1)
 
     Returns:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    gt_obbs = torch.concat([gt_bboxes, gt_angle], dim=-1)
+
+    gt_angles = gt_angles.clone() / 180.0 * torch.pi
+    n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
-    _gt_obbs = gt_obbs.reshape([bs, -1, 5])
-    _gt_poly = rbox2poly(_gt_obbs).reshape([bs, -1, 4, 2])
-    points = xy_center.unsqueeze(0).unsqueeze(0)
-    a, b, c, d = torch.split(_gt_poly, [1, 1, 1, 1], dim=2)
-    ab = b - a
-    ad = d - a
-    # [B, N, L, 2]
-    ap = points - a
-    # [B, N, L]
-    norm_ab = torch.sum(ab * ab, axis=-1)
-    # [B, N, L]
-    norm_ad = torch.sum(ad * ad, axis=-1)
-    # [B, N, L] dot product
-    ap_dot_ab = torch.sum(ap * ab, axis=-1)
-    # [B, N, L] dot product
-    ap_dot_ad = torch.sum(ap * ad, axis=-1)
-    # [B, N, L] <A, B> = |A|*|B|*cos(theta)
-    is_in_box = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= 0) & (ap_dot_ad <= norm_ad)
-    return is_in_box
+    _gt_bboxes = gt_bboxes.reshape([-1, 4])
+    _gt_angles = gt_angles.reshape([-1, 1])
+    xy_centers = xy_centers.unsqueeze(0).repeat(bs * n_max_boxes, 1, 1)
+    _gt_bboxes = _gt_bboxes.unsqueeze(1).repeat(1, n_anchors, 1)
+    _gt_angles = _gt_angles.unsqueeze(1).repeat(1, n_anchors, 1)
+    b_lt, b_rb = Rbbox2dist(xy_centers, _gt_bboxes, _gt_angles, reg_max=None).split(2, dim=-1)
+    bbox_deltas = torch.cat([b_lt, b_rb], dim=-1)
+    bbox_deltas = bbox_deltas.reshape([bs, n_max_boxes, n_anchors, -1])
+    return (bbox_deltas.min(axis=-1)[0] > eps).to(gt_bboxes.dtype)
+
+    # gt_obbs = torch.concat([gt_bboxes, gt_angle], dim=-1)
+    # bs, n_max_boxes, _ = gt_bboxes.size()
+    # _gt_obbs = gt_obbs.reshape([bs, -1, 5])
+    # _gt_poly = rbox2poly(_gt_obbs).reshape([bs, -1, 4, 2])
+    # points = xy_center.unsqueeze(0).unsqueeze(0)
+    # a, b, c, d = torch.split(_gt_poly, [1, 1, 1, 1], dim=2)
+    # ab = b - a
+    # ad = d - a
+    # # [B, N, L, 2]
+    # ap = points - a
+    # # [B, N, L]
+    # norm_ab = torch.sum(ab * ab, axis=-1)
+    # # [B, N, L]
+    # norm_ad = torch.sum(ad * ad, axis=-1)
+    # # [B, N, L] dot product
+    # ap_dot_ab = torch.sum(ap * ab, axis=-1)
+    # # [B, N, L] dot product
+    # ap_dot_ad = torch.sum(ap * ad, axis=-1)
+    # # [B, N, L] <A, B> = |A|*|B|*cos(theta)
+    # is_in_box = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= 0) & (ap_dot_ad <= norm_ad)
+    # return is_in_box
 
 
-def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
+def select_candidates_in_gts(xy_centers, gt_bboxes, gt_angles, eps=1e-9):
     """select the positive anchors's center in gt
 
     Args:
@@ -103,6 +119,7 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
+    gt_bboxes = xywh2xyxy(gt_bboxes)
     n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
     _gt_bboxes = gt_bboxes.reshape([-1, 4])
@@ -161,3 +178,74 @@ def iou_calculator(box1, box2, eps=1e-9):
     union = area1 + area2 - overlap + eps
 
     return overlap / union
+
+
+def iou_calculator_xywh(box1, box2, eps=1e-9):
+    """Calculate iou for batch
+
+    Args:
+        box1 (Tensor): shape(bs, n_max_boxes, 1, 4)
+        box2 (Tensor): shape(bs, 1, num_total_anchors, 4)
+    Return:
+        (Tensor): shape(bs, n_max_boxes, num_total_anchors)
+    """
+    box1 = xywh2xyxy(box1)
+    box2 = xywh2xyxy(box2)
+    box1 = box1.unsqueeze(2)  # [N, M1, 4] -> [N, M1, 1, 4]
+    box2 = box2.unsqueeze(1)  # [N, M2, 4] -> [N, 1, M2, 4]
+    px1y1, px2y2 = box1[:, :, :, 0:2], box1[:, :, :, 2:4]
+    gx1y1, gx2y2 = box2[:, :, :, 0:2], box2[:, :, :, 2:4]
+    x1y1 = torch.maximum(px1y1, gx1y1)
+    x2y2 = torch.minimum(px2y2, gx2y2)
+    overlap = (x2y2 - x1y1).clip(0).prod(-1)
+    area1 = (px2y2 - px1y1).clip(0).prod(-1)
+    area2 = (gx2y2 - gx1y1).clip(0).prod(-1)
+    union = area1 + area2 - overlap + eps
+
+    return overlap / union
+
+
+def rbbox_overlaps(bboxes1,
+                   bboxes2,
+                   mode: str = 'iou',
+                   is_aligned: bool = False):
+    """Calculate overlap between two set of rotated bboxes.
+
+    Args:
+        bboxes1 (Tensor): shape (B, m, 5) in <cx, cy, w, h, t> format
+            or empty.
+        bboxes2 (Tensor): shape (B, n, 5) in <cx, cy, w, h, t> format
+            or empty.
+        mode (str): 'iou' (intersection over union), 'iof' (intersection over
+            foreground). Defaults to 'iou'.
+        is_aligned (bool): If True, then m and n must be equal.
+            Defaults to False.
+
+    Returns:
+        Tensor: shape (m, n) if ``is_aligned`` is False else shape (m,)
+    """
+    assert mode in ['iou', 'iof']
+    # Either the boxes are empty or the length of boxes's last dimension is 5
+    assert (bboxes1.size(-1) == 5 or bboxes1.size(0) == 0)
+    assert (bboxes2.size(-1) == 5 or bboxes2.size(0) == 0)
+
+    rows = bboxes1.size(0)
+    cols = bboxes2.size(0)
+    if is_aligned:
+        assert rows == cols
+
+    if rows * cols == 0:
+        return bboxes1.new(rows, 1) if is_aligned else bboxes1.new(rows, cols)
+
+    # resolve `rbbox_overlaps` abnormal when input rbbox is too small.
+    clamped_bboxes1 = bboxes1.detach().clone()
+    clamped_bboxes2 = bboxes2.detach().clone()
+    clamped_bboxes1[:, 2:4].clamp_(min=1e-3)
+    clamped_bboxes2[:, 2:4].clamp_(min=1e-3)
+
+    # resolve `rbbox_overlaps` abnormal when coordinate value is too large.
+    # TODO: fix in mmcv
+    clamped_bboxes1[:, :2].clamp_(min=-1e7, max=1e7)
+    clamped_bboxes2[:, :2].clamp_(min=-1e7, max=1e7)
+
+    return box_iou_rotated(clamped_bboxes1, clamped_bboxes2, mode, is_aligned)

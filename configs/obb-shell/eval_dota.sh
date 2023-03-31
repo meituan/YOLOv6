@@ -1,7 +1,7 @@
-epoch=99
-eval_name="ss_combine_$epoch"
-eval_path="runs/DOTA/test"
-weight_path="./runs/DOTA/yolov6l_Combine_100/weights/${epoch}_ckpt.pt"
+epoch=35
+eval_name="ss_l_1_$epoch"
+eval_path="runs/DOTA-ss/test"
+weight_path="./runs/DOTA-ss/yolov6l-obb/weights/${epoch}_ckpt.pt"
 CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--data "./data/DOTA-ss.yaml" \
 	--weights $weight_path \

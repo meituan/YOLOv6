@@ -45,15 +45,15 @@ def build_lr_scheduler(cfg, optimizer, epochs, num_batches):
     else:
         LOGGER.error('unknown lr scheduler, use Cosine defaulted')
 
-    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
-    scheduler = CosineDecayLR(
-        optimizer,
-        T_max=epochs * num_batches,
-        lr_init=cfg.solver.lr0,
-        lr_min=cfg.solver.lr0 * cfg.solver.lrf,
-        warmup=cfg.solver.warmup_epochs * num_batches,
-    )
+    # scheduler = CosineDecayLR(
+    #     optimizer,
+    #     T_max=epochs * num_batches,
+    #     lr_init=cfg.solver.lr0,
+    #     lr_min=cfg.solver.lr0 * cfg.solver.lrf,
+    #     warmup=cfg.solver.warmup_epochs * num_batches,
+    # )
 
     return scheduler, lf
 

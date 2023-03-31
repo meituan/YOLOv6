@@ -45,13 +45,15 @@ model = dict(
         # angle_max=180,
         # NOTE for angle MGAR
         angle_fitting_methods="MGAR",
-        angle_max=3,
+        angle_max=5,
     ),
 )
 
 loss = dict(
     # NOTE obb hbb+angle obb+angle
-    loss_mode="obb+angle",
+    loss_mode="hbb+angle",
+    # loss_mode="obb",
+    # loss_mode="obb+angle",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
@@ -60,6 +62,7 @@ loss = dict(
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.25, 'cwd': 10},
     # NOTE for angle MGAR
     # best
+    # TODO class 分支的分类loss感觉也有挺多影响
     loss_weight={
         "class": 1.0,
         "iou": 2.0,
@@ -96,9 +99,9 @@ data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.75,
-    fliplr=0.75,
-    rotate=0.5,
+    flipud=0.0,
+    fliplr=0.0,
+    rotate=0.0,
     rect_classes=None,
     # NOTE mosaic 数值需要确定一下
     mosaic=0.0,
@@ -107,7 +110,7 @@ data_aug = dict(
 )
 
 eval_params = dict(
-    conf_thres=0.03,
+    conf_thres=0.05,
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,

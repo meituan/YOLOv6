@@ -31,12 +31,12 @@ def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description="YOLOv6 PyTorch Training", add_help=add_help)
     parser.add_argument("--data-path", default="./data/HRSC2016.yaml", type=str, help="path of dataset")
     parser.add_argument("--conf-file", default="./configs/obb/yolov6s_finetune-obb.py", type=str, help="experiments description file")
-    parser.add_argument("--img-size", default=640, type=int, help="train, val image size (pixels)")
-    parser.add_argument("--batch-size", default=8, type=int, help="total batch size for all GPUs")
+    parser.add_argument("--img-size", default=800, type=int, help="train, val image size (pixels)")
+    parser.add_argument("--batch-size", default=1, type=int, help="total batch size for all GPUs")
     parser.add_argument("--epochs", default=400, type=int, help="number of total epochs to run")
     parser.add_argument("--workers", default=8, type=int, help="number of data loading workers (default: 8)")
     parser.add_argument("--device", default="0", type=str, help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
-    parser.add_argument("--eval-interval", default=20, type=int, help="evaluate at every interval epochs")
+    parser.add_argument("--eval-interval", default=1, type=int, help="evaluate at every interval epochs")
     parser.add_argument("--eval-final-only", action="store_true", help="only evaluate at the final epoch")
     parser.add_argument(
         "--heavy-eval-range",
@@ -122,6 +122,7 @@ def check_and_init(args):
     device = select_device(args.device)
     # set random seed
     set_random_seed(1 + args.rank, deterministic=(args.rank == -1))
+    # set_random_seed(1 + args.rank, deterministic=False)
     # save args
     if master_process:
         save_yaml(vars(args), osp.join(args.save_dir, "args.yaml"))

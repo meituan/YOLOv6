@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from yolov6.assigners.anchor_generator import generate_anchors
 from yolov6.layers.common import *
-from yolov6.utils.general import dist2bbox
+from yolov6.utils.general import dist2bbox, dist2Rbbox
 
 
 class Detect(nn.Module):
@@ -134,6 +134,8 @@ class Detect(nn.Module):
 
                 if self.angle_fitting_methods == "regression":
                     angle_output = angle_output**2
+                    pass
+
                 # NOTE [BS, C, H, W]
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
@@ -190,7 +192,6 @@ class Detect(nn.Module):
                     # angle_output = torch.softmax(angle_output)
                     angle_output = torch.argmax(angle_output, dim=1, keepdim=True)
                 elif self.angle_fitting_methods == "MGAR":
-                    # TODO MGAR
                     angle_output_class = torch.sigmoid(angle_output[:, : self.angle_max, :, :])
                     angle_output_class = torch.argmax(angle_output_class, dim=1, keepdim=True) * (180 / self.angle_max)
                     # regression Square
@@ -209,7 +210,12 @@ class Detect(nn.Module):
             angle_fitting_list = torch.cat(angle_fitting_list, axis=-1).permute(0, 2, 1)
 
             # NOTE 转绝对值
-            pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
+            # pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
+
+            pred_bboxes = dist2Rbbox(
+                reg_dist_list, angle_fitting_list / 180.0 * torch.pi, anchor_points, box_format="xywh"
+            )
+
             pred_bboxes *= stride_tensor
             # NOTE [BS, 8400, 4+1+1+classes] [x, y, w, h, angle, conf, classes]
             # NOTE 暂时屏蔽angle

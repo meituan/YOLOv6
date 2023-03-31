@@ -27,8 +27,8 @@ model = dict(
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type="giou",
-        use_dfl=True,  # set to True if you want to further train with distillation
-        reg_max=16,  # set to 16 if you want to further train with distillation
+        use_dfl=False,  # set to True if you want to further train with distillation
+        reg_max=0,  # set to 16 if you want to further train with distillation
         distill_weight={
             "class": 1.0,
             "dfl": 1.0,
@@ -38,18 +38,19 @@ model = dict(
         # angle_fitting_methods='regression',
         # angle_max=1,
         # NOTE for angle csl
-        # angle_fitting_methods="csl",
-        # angle_max=180,
+        angle_fitting_methods="csl",
+        angle_max=180,
         # NOTE for angle dfl
         # angle_fitting_methods='dfl',
         # angle_max=180,
         # NOTE for angle MGAR
-        angle_fitting_methods='MGAR',
-        angle_max=5,
+        # angle_fitting_methods='MGAR',
+        # angle_max=5,
     ),
 )
 
 loss = dict(
+    loss_mode="obb+angle",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
@@ -57,17 +58,17 @@ loss = dict(
     # NOTE for angle dfl
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.25, 'cwd': 10},
     # NOTE for angle MGAR
-    loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05, "MGAR_cls": 0.2, "MGAR_reg": 0.1, 'cwd': 0.2, },
+    loss_weight={"class": 1.0, "iou": 2.0, "dfl": 0.5, "angle": 0.05, "MGAR_cls": 0.05, "MGAR_reg": 0.05, 'cwd': 0.2, },
 )
 solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
-    lr0=0.0032,
-    lrf=0.12,
+    lr0=0.00025,
+    lrf=0.05,
     momentum=0.843,
     weight_decay=0.05,
     weight_frcay=0.05,
-    warmup_epochs=2.0,
+    warmup_epochs=1.0,
     warmup_momentum=0.5,
     warmup_bias_lr=0.05,
 )
@@ -77,16 +78,18 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
+    hsv=0.5,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
     flipud=0.5,
     fliplr=0.5,
     rotate=0.5,
+    rect_classes=[9, 11],
     # NOTE mosaic 数值需要确定一下
-    mosaic=0.2,
-    mixup_mosaic=0.5,
-    mixup=0.5,
+    mosaic=0.0,
+    mixup_mosaic=0.0,
+    mixup=0.0,
 )
 
 eval_params = dict(

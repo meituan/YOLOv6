@@ -95,8 +95,8 @@ data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.75,
-    fliplr=0.75,
+    flipud=0.5,
+    fliplr=0.5,
     rotate=0.5,
     # DOTA [9, 11] 类别特殊,其他为None
     rect_classes=[9, 11],

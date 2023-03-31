@@ -224,7 +224,7 @@ class Trainer:
             for self.step, self.batch_data in self.pbar:
                 if self.main_process:
                     self.progress.advance(self.task)
-                self.scheduler.step(self.step + self.epoch * self.num_batches)
+                # self.scheduler.step(self.step + self.epoch * self.num_batches)
                 self.train_in_steps(epoch_num, self.step)
                 self.print_details()
             if self.main_process:
@@ -264,6 +264,7 @@ class Trainer:
             )
 
         # forward
+        # with amp.autocast(enabled=False):
         with amp.autocast(enabled=self.device != "cpu"):
             preds, s_featmaps = self.model(images)
             if self.distill_ns:
@@ -346,10 +347,11 @@ class Trainer:
 
     def eval_and_save(self):
         remaining_epochs = self.max_epoch - self.epoch
-        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
+        # eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
+        eval_interval = self.args.eval_interval
         is_val_epoch = (
             (not self.args.eval_final_only or (remaining_epochs == 1))
-            and (self.epoch % eval_interval == 0)
+            and ((self.epoch + 1) % eval_interval == 0)
             and (self.epoch != 0)
         )
         if self.main_process:
@@ -518,8 +520,8 @@ class Trainer:
             )
 
     def prepare_for_steps(self):
-        # if self.epoch > self.start_epoch:
-        #     self.scheduler.step()
+        if self.epoch > self.start_epoch:
+            self.scheduler.step()
         # stop strong aug like mosaic and mixup from last n epoch by recreate dataloader
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
@@ -624,26 +626,27 @@ class Trainer:
 
     def update_optimizer(self):
         curr_step = self.step + self.max_stepnum * self.epoch
-        self.accumulate = 1
+
         # self.accumulate = max(1, round(64 / self.batch_size))
-        # if curr_step <= self.warmup_stepnum:
-        #     self.accumulate = max(
-        #         1,
-        #         np.interp(curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]).round(),
-        #     )
-        #     for k, param in enumerate(self.optimizer.param_groups):
-        #         warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
-        #         param["lr"] = np.interp(
-        #             curr_step,
-        #             [0, self.warmup_stepnum],
-        #             [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
-        #         )
-        #         if "momentum" in param:
-        #             param["momentum"] = np.interp(
-        #                 curr_step,
-        #                 [0, self.warmup_stepnum],
-        #                 [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
-        #             )
+        self.accumulate = 1
+        if curr_step <= self.warmup_stepnum:
+            self.accumulate = max(
+                1,
+                np.interp(curr_step, [0, self.warmup_stepnum], [1, 64 / self.batch_size]).round(),
+            )
+            for k, param in enumerate(self.optimizer.param_groups):
+                warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
+                param["lr"] = np.interp(
+                    curr_step,
+                    [0, self.warmup_stepnum],
+                    [warmup_bias_lr, param["initial_lr"] * self.lf(self.epoch)],
+                )
+                if "momentum" in param:
+                    param["momentum"] = np.interp(
+                        curr_step,
+                        [0, self.warmup_stepnum],
+                        [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
+                    )
         if curr_step - self.last_opt_step >= self.accumulate:
             self.scaler.step(self.optimizer)
             self.scaler.update()
