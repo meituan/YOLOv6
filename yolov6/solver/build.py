@@ -20,7 +20,7 @@ def build_optimizer(cfg, model):
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
             g_w.append(v.weight)
 
-    assert cfg.solver.optim == 'SGD' or 'Adam', 'ERROR: unknown optimizer, use SGD defaulted'
+    # assert cfg.solver.optim == 'SGD' or 'Adam', 'ERROR: unknown optimizer, use SGD defaulted'
     if cfg.solver.optim == 'SGD':
         optimizer = torch.optim.SGD(g_bnw, lr=cfg.solver.lr0, momentum=cfg.solver.momentum, nesterov=True)
     elif cfg.solver.optim == 'Adam':

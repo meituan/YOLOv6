@@ -7,6 +7,6 @@ CUDA_VISIBLE_DEVICES=0 python tools/train_R.py \
 	--conf configs/obb/yolov6n_finetune-obb.py \
 	--data data/HRSC2016.yaml \
 	--output-dir './runs/HRSC2016-baseline' \
-	--name 'yolov6n-obb+angle+Regression' \
+	--name 'yolov6n-obb+nodetach' \
 	--bs_per_gpu 8
 # --write_trainbatch_tb

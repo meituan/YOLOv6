@@ -461,6 +461,7 @@ class Trainer:
         self.warmup_stepnum = (
             max(round(self.cfg.solver.warmup_epochs * self.max_stepnum), 1000) if self.args.quant is False else 0
         )
+        # print(self.warmup_stepnum)
         self.scheduler.last_epoch = self.start_epoch - 1
         self.last_opt_step = -1
         self.scaler = amp.GradScaler(enabled=self.device != "cpu")
@@ -627,8 +628,7 @@ class Trainer:
     def update_optimizer(self):
         curr_step = self.step + self.max_stepnum * self.epoch
 
-        # self.accumulate = max(1, round(64 / self.batch_size))
-        self.accumulate = 1
+        self.accumulate = max(1, round(64 / self.batch_size))
         if curr_step <= self.warmup_stepnum:
             self.accumulate = max(
                 1,
@@ -647,6 +647,9 @@ class Trainer:
                         [0, self.warmup_stepnum],
                         [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum],
                     )
+        # 不作梯度累加 batchsize 过大
+        # NOTE accumulate 影响很大, accumulate为8时候 好过 1 for DOTA
+        # self.accumulate = 1
         if curr_step - self.last_opt_step >= self.accumulate:
             self.scaler.step(self.optimizer)
             self.scaler.update()

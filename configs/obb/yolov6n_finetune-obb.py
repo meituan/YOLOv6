@@ -35,11 +35,11 @@ model = dict(
             "angle": 1.0
         },
         # NOTE for angle regression
-        # angle_fitting_methods='regression',
-        # angle_max=1,
+        angle_fitting_methods='regression',
+        angle_max=1,
         # NOTE for angle csl
-        angle_fitting_methods="csl",
-        angle_max=180,
+        # angle_fitting_methods="csl",
+        # angle_max=180,
         # NOTE for angle dfl
         # angle_fitting_methods='dfl',
         # angle_max=180,
@@ -50,7 +50,9 @@ model = dict(
 )
 
 loss = dict(
-    loss_mode="obb+angle",
+    # loss_mode="hbb+angle",
+    loss_mode="obb",
+    # loss_mode="obb+angle",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle csl
@@ -78,7 +80,7 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
-    hsv=0.5,
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,

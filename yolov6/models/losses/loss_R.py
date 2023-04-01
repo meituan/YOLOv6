@@ -298,7 +298,7 @@ class ComputeLoss:
             pred_angles_MGAR_reg = pred_angles[..., -1:] ** 2
             pred_angles_decode = pred_angles_MGAR_cls + pred_angles_MGAR_reg
 
-        pred_angles_decode = pred_angles_decode / 180.0 * torch.pi
+        # pred_angles_decode = pred_angles_decode / 180.0 * torch.pi
 
         return pred_angles_decode
 
@@ -403,7 +403,7 @@ class RotatedBboxesLoss(nn.Module):
             target_angle_pos = target_angle_pos / 180.0 * torch.pi
 
             if self.angle_fitting_methods == "regression":
-                pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
+                # pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
                 pass
             elif self.angle_fitting_methods == "csl":
                 pred_angle_pos = torch.sigmoid(pred_angle_pos)

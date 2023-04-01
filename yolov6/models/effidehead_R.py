@@ -95,7 +95,8 @@ class Detect(nn.Module):
             b = conv.bias.view(
                 -1,
             )
-            b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
+            # b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
+            b.data.fill_(1.0)
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
             w = conv.weight
             w.data.fill_(0.0)
@@ -133,7 +134,8 @@ class Detect(nn.Module):
                 angle_output = self.angle_preds[i](angle_feat)
 
                 if self.angle_fitting_methods == "regression":
-                    angle_output = angle_output**2
+                    angle_output = angle_output ** 2
+                    # angle_output = torch.pi * torch.sigmoid(angle_output) * (1.05)
                     pass
 
                 # NOTE [BS, C, H, W]
@@ -145,6 +147,8 @@ class Detect(nn.Module):
             cls_score_list = torch.cat(cls_score_list, axis=1)
             reg_distri_list = torch.cat(reg_distri_list, axis=1)
             angle_fitting_list = torch.cat(angle_fitting_list, axis=1)
+
+            # print(torch.max(angle_fitting_list), torch.min(angle_fitting_list))
 
             if torch.onnx.is_in_onnx_export():
                 return cls_score_list, reg_distri_list, angle_fitting_list
@@ -181,7 +185,9 @@ class Detect(nn.Module):
 
                 # NOTE 角度需要clip下
                 if self.angle_fitting_methods == "regression":
-                    angle_output = angle_output**2
+                    angle_output = angle_output ** 2
+                    # angle_output = torch.pi * torch.sigmoid(angle_output) * (1.05)
+                    pass
                 elif self.angle_fitting_methods == "dfl":
                     angle_output = angle_output.reshape([-1, 1, self.angle_max + 1, l]).permute(0, 2, 1, 3)
                     angle_output = self.proj_angle_conv(F.softmax(angle_output, dim=1))
@@ -199,7 +205,7 @@ class Detect(nn.Module):
                     angle_output = angle_output_class + angle_output_regression
 
                 # NOTE clamp 下, 角度==180 算iou会出bug
-                angle_output = torch.clamp(angle_output, 0, 179.99)
+                # angle_output = torch.clamp(angle_output, 0, 179.99)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
                 reg_dist_list.append(reg_output.reshape([b, 4, l]))
                 angle_fitting_list.append(angle_output.reshape([b, 1, l]))
@@ -213,9 +219,11 @@ class Detect(nn.Module):
             # pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
 
             pred_bboxes = dist2Rbbox(
-                reg_dist_list, angle_fitting_list / 180.0 * torch.pi, anchor_points, box_format="xywh"
+                reg_dist_list, angle_fitting_list, anchor_points, box_format="xywh"
             )
 
+            angle_fitting_list = angle_fitting_list * 180 / torch.pi
+            angle_fitting_list = torch.clamp(angle_fitting_list, 0, 179.99)
             pred_bboxes *= stride_tensor
             # NOTE [BS, 8400, 4+1+1+classes] [x, y, w, h, angle, conf, classes]
             # NOTE 暂时屏蔽angle
