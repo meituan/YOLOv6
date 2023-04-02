@@ -105,8 +105,8 @@ class TaskAlignedAssigner(nn.Module):
         align_metric, overlaps = self.get_box_metrics(pd_scores, pd_bboxes, gt_labels, gt_bboxes)
         # align_metric, overlaps = self.get_box_metrics_R(pd_scores, pd_bboxes, pd_angles, gt_labels, gt_bboxes, gt_angles)
         # get in_gts mask
-        mask_in_gts = select_candidates_in_gts(anc_points, gt_bboxes, gt_angles)
-        # mask_in_gts = select_candidates_in_gts_R(anc_points, gt_bboxes, gt_angles)
+        # mask_in_gts = select_candidates_in_gts(anc_points, gt_bboxes, gt_angles)
+        mask_in_gts = select_candidates_in_gts_R(anc_points, gt_bboxes, gt_angles)
         # get topk_metric mask
         mask_topk = self.select_topk_candidates(
             align_metric * mask_in_gts, topk_mask=mask_gt.repeat([1, 1, self.topk]).bool()

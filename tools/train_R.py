@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
-
+from shutil import copy
 from yolov6.core.engine_R import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
@@ -30,7 +30,9 @@ def get_args_parser(add_help=True):
     # NOTE 方便调试
     parser = argparse.ArgumentParser(description="YOLOv6 PyTorch Training", add_help=add_help)
     parser.add_argument("--data-path", default="./data/HRSC2016.yaml", type=str, help="path of dataset")
-    parser.add_argument("--conf-file", default="./configs/obb/yolov6n_finetune-obb.py", type=str, help="experiments description file")
+    parser.add_argument(
+        "--conf-file", default="./configs/obb/yolov6n_finetune-obb.py", type=str, help="experiments description file"
+    )
     parser.add_argument("--img-size", default=800, type=int, help="train, val image size (pixels)")
     parser.add_argument("--batch-size", default=1, type=int, help="total batch size for all GPUs")
     parser.add_argument("--epochs", default=400, type=int, help="number of total epochs to run")
@@ -127,6 +129,8 @@ def check_and_init(args):
     if master_process:
         save_yaml(vars(args), osp.join(args.save_dir, "args.yaml"))
 
+        # save config
+        copy(Path(args.conf_file), Path(args.save_dir) / str(Path(args.conf_file).name))
     return cfg, device, args
 
 

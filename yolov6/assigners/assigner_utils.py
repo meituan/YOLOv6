@@ -5,6 +5,9 @@ from yolov6.utils.nms_R import xywh2xyxy
 from yolov6.utils.general import Rbbox2dist
 from mmcv.ops import box_iou_rotated
 
+from yolov6.utils.nms_R import rbox2poly, rbox2poly_radius
+
+
 def dist_calculator(gt_bboxes, anchor_bboxes):
     """compute center distance between all bbox and gt
 
@@ -27,87 +30,42 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
     return distances, ac_points
 
 
-def rbox2poly(obboxes):
-    """
-    Trans rbox format to poly format.
-    Args:
-        rboxes (array/tensor): (num_gts, [cx cy l s theta]) theta∈[0, 180)
-    Returns:
-        polys (array/tensor): (num_gts, [x1 y1 x2 y2 x3 y3 x4 y4])
-    """
-    if isinstance(obboxes, torch.Tensor):
-        center, longSide, shortSide, theta = obboxes[:, :2], obboxes[:, 2:3], obboxes[:, 3:4], obboxes[:, 4:5]
-        Cos, Sin = torch.cos(theta * torch.pi / 180.0), torch.sin(theta * torch.pi / 180.0)
-
-        vector1 = torch.cat((longSide / 2.0 * Cos, longSide / 2.0 * Sin), dim=-1)
-        vector2 = torch.cat((shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos), dim=-1)
-        point1 = center - vector1 - vector2
-        point2 = center - vector1 + vector2
-        point3 = center + vector1 + vector2
-        point4 = center + vector1 - vector2
-        order = obboxes.shape[:-1]
-        return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
-    else:
-        center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
-        Cos, Sin = np.cos(theta * np.pi / 180.0), np.sin(theta * np.pi / 180.0)
-
-        vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
-        vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
-
-        point1 = center - vector1 - vector2
-        point2 = center - vector1 + vector2
-        point3 = center + vector1 + vector2
-        point4 = center + vector1 - vector2
-        order = obboxes.shape[:-1]
-        return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)
-
-
 def select_candidates_in_gts_R(xy_centers, gt_bboxes, gt_angles, eps=1e-9):
     """select the gt point in anchor's center in obb
 
     Args:
         anc_points (Tensor): shape(num_total_anchors, 2)
-        gt_bboxes (tensor): shape(bs, n_max_boxes, 4)
+        gt_bboxes (tensor): shape(bs, n_max_boxes, 5) angles radius
         gt_angles (tensor): shape(bs, n_max_boxes, 1)
 
     Returns:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
 
-    gt_angles = gt_angles.clone() / 180.0 * torch.pi
-    n_anchors = xy_centers.size(0)
+    gt_obbs = torch.concat([gt_bboxes, gt_angles], dim=-1)
     bs, n_max_boxes, _ = gt_bboxes.size()
-    _gt_bboxes = gt_bboxes.reshape([-1, 4])
-    _gt_angles = gt_angles.reshape([-1, 1])
-    xy_centers = xy_centers.unsqueeze(0).repeat(bs * n_max_boxes, 1, 1)
-    _gt_bboxes = _gt_bboxes.unsqueeze(1).repeat(1, n_anchors, 1)
-    _gt_angles = _gt_angles.unsqueeze(1).repeat(1, n_anchors, 1)
-    b_lt, b_rb = Rbbox2dist(xy_centers, _gt_bboxes, _gt_angles, reg_max=None).split(2, dim=-1)
-    bbox_deltas = torch.cat([b_lt, b_rb], dim=-1)
-    bbox_deltas = bbox_deltas.reshape([bs, n_max_boxes, n_anchors, -1])
-    return (bbox_deltas.min(axis=-1)[0] > eps).to(gt_bboxes.dtype)
-
-    # gt_obbs = torch.concat([gt_bboxes, gt_angle], dim=-1)
-    # bs, n_max_boxes, _ = gt_bboxes.size()
-    # _gt_obbs = gt_obbs.reshape([bs, -1, 5])
-    # _gt_poly = rbox2poly(_gt_obbs).reshape([bs, -1, 4, 2])
-    # points = xy_center.unsqueeze(0).unsqueeze(0)
-    # a, b, c, d = torch.split(_gt_poly, [1, 1, 1, 1], dim=2)
-    # ab = b - a
-    # ad = d - a
-    # # [B, N, L, 2]
-    # ap = points - a
-    # # [B, N, L]
-    # norm_ab = torch.sum(ab * ab, axis=-1)
-    # # [B, N, L]
-    # norm_ad = torch.sum(ad * ad, axis=-1)
-    # # [B, N, L] dot product
-    # ap_dot_ab = torch.sum(ap * ab, axis=-1)
-    # # [B, N, L] dot product
-    # ap_dot_ad = torch.sum(ap * ad, axis=-1)
-    # # [B, N, L] <A, B> = |A|*|B|*cos(theta)
-    # is_in_box = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= 0) & (ap_dot_ad <= norm_ad)
-    # return is_in_box
+    # NOTE [bs, N, 5] -> [bs, N, 4, 2]
+    _gt_obbs = gt_obbs.reshape([bs, -1, 5])
+    _gt_poly = rbox2poly(_gt_obbs).reshape([bs, -1, 4, 2])
+    # _gt_poly = rbox2poly_radius(_gt_obbs).reshape([bs, -1, 4, 2])
+    # NOTE [1, L, 2] -> [1, 1, L, 2]
+    points = xy_centers.unsqueeze(0).unsqueeze(0)
+    a, b, c, d = torch.split(_gt_poly, [1, 1, 1, 1], dim=2)
+    ab = b - a
+    ad = d - a
+    # [B, N, L, 2]
+    ap = points - a
+    # [B, N, L]
+    norm_ab = torch.sum(ab * ab, axis=-1)
+    # [B, N, L]
+    norm_ad = torch.sum(ad * ad, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ab = torch.sum(ap * ab, axis=-1)
+    # [B, N, L] dot product
+    ap_dot_ad = torch.sum(ap * ad, axis=-1)
+    # [B, N, L] <A, B> = |A|*|B|*cos(theta)
+    is_in_box = (ap_dot_ab >= eps) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= eps) & (ap_dot_ad <= norm_ad)
+    return is_in_box.to(gt_bboxes.dtype)
 
 
 def select_candidates_in_gts(xy_centers, gt_bboxes, gt_angles, eps=1e-9):
@@ -205,10 +163,7 @@ def iou_calculator_xywh(box1, box2, eps=1e-9):
     return overlap / union
 
 
-def rbbox_overlaps(bboxes1,
-                   bboxes2,
-                   mode: str = 'iou',
-                   is_aligned: bool = False):
+def rbbox_overlaps(bboxes1, bboxes2, mode: str = "iou", is_aligned: bool = False):
     """Calculate overlap between two set of rotated bboxes.
 
     Args:
@@ -224,10 +179,10 @@ def rbbox_overlaps(bboxes1,
     Returns:
         Tensor: shape (m, n) if ``is_aligned`` is False else shape (m,)
     """
-    assert mode in ['iou', 'iof']
+    assert mode in ["iou", "iof"]
     # Either the boxes are empty or the length of boxes's last dimension is 5
-    assert (bboxes1.size(-1) == 5 or bboxes1.size(0) == 0)
-    assert (bboxes2.size(-1) == 5 or bboxes2.size(0) == 0)
+    assert bboxes1.size(-1) == 5 or bboxes1.size(0) == 0
+    assert bboxes2.size(-1) == 5 or bboxes2.size(0) == 0
 
     rows = bboxes1.size(0)
     cols = bboxes2.size(0)

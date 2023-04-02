@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=0 python tools/train_R.py \
+CUDA_VISIBLE_DEVICES=1 python tools/train_R.py \
 	--device 0 \
 	--batch 32 \
 	--epochs 100 \

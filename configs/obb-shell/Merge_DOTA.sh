@@ -1,5 +1,5 @@
-eval_name="ss_combine_99"
-eval_path="runs/DOTA/test"
+eval_name="yolov6n_352"
+eval_path="runs/DOTA-test/test"
 
 python yolov6/utils/TestJson2VocClassTxt.py \
 	--json_path "$eval_path/$eval_name/predictions.json" \

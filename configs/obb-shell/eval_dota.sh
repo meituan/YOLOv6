@@ -1,14 +1,14 @@
 epoch=35
-eval_name="ss_l_1_$epoch"
-eval_path="runs/DOTA-ss/test"
-weight_path="./runs/DOTA-ss/yolov6l-obb/weights/${epoch}_ckpt.pt"
-CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
+eval_name="yolov6n_3_$epoch"
+eval_path="runs/DOTA-test/test"
+weight_path="./runs/DOTA-ss-baseline/yolov6n-csl-nodetach20/weights/${epoch}_ckpt.pt"
+CUDA_VISIBLE_DEVICES=1 python tools/eval_R.py \
 	--data "./data/DOTA-ss.yaml" \
 	--weights $weight_path \
 	--batch-size 64 \
 	--img-size 1024 \
 	--conf-thres 0.03 \
-	--iou-thres 0.1 \
+	--iou-thres 0.65 \
 	--task "test" \
 	--device 0 \
 	--save_dir $eval_path \

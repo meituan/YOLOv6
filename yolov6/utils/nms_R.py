@@ -367,7 +367,7 @@ def rbox2poly(obboxes):
     """
 
     if isinstance(obboxes, torch.Tensor):
-        center, longSide, shortSide, theta = obboxes[:, :2], obboxes[:, 2:3], obboxes[:, 3:4], obboxes[:, 4:5]
+        center, longSide, shortSide, theta = obboxes[..., :2], obboxes[..., 2:3], obboxes[..., 3:4], obboxes[..., 4:5]
         Cos, Sin = torch.cos(theta * torch.pi / 180.0), torch.sin(theta * torch.pi / 180.0)
 
         vector1 = torch.cat((longSide / 2.0 * Cos, longSide / 2.0 * Sin), dim=-1)
@@ -381,6 +381,42 @@ def rbox2poly(obboxes):
     else:
         center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
         Cos, Sin = np.cos(theta * np.pi / 180.0), np.sin(theta * torch.pi / 180.0)
+
+        vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
+        vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
+
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return np.concatenate([point1, point2, point3, point4], axis=-1).reshape(*order, 8)
+
+
+def rbox2poly_radius(obboxes):
+    """
+    Trans rbox format to poly format.
+    Args:
+        rboxes (array/tensor): (num_gts, [cx cy longSide shortSide theta]) theta∈[0, 180)
+    Returns:
+        polys (array/tensor): (num_gts, [x1 y1 x2 y2 x3 y3 x4 y4])
+    """
+
+    if isinstance(obboxes, torch.Tensor):
+        center, longSide, shortSide, theta = obboxes[..., :2], obboxes[..., 2:3], obboxes[..., 3:4], obboxes[..., 4:5]
+        Cos, Sin = torch.cos(theta), torch.sin(theta)
+
+        vector1 = torch.cat((longSide / 2.0 * Cos, longSide / 2.0 * Sin), dim=-1)
+        vector2 = torch.cat((shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos), dim=-1)
+        point1 = center - vector1 - vector2
+        point2 = center - vector1 + vector2
+        point3 = center + vector1 + vector2
+        point4 = center + vector1 - vector2
+        order = obboxes.shape[:-1]
+        return torch.cat((point1, point2, point3, point4), dim=-1).reshape(*order, 8)
+    else:
+        center, longSide, shortSide, theta = np.split(obboxes, (2, 3, 4), axis=-1)
+        Cos, Sin = np.cos(theta), np.sin(theta)
 
         vector1 = np.concatenate([longSide / 2.0 * Cos, longSide / 2.0 * Sin], axis=-1)
         vector2 = np.concatenate([shortSide / 2.0 * Sin, -shortSide / 2.0 * Cos], axis=-1)
