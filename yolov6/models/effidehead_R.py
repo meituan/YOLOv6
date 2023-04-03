@@ -218,16 +218,16 @@ class Detect(nn.Module):
 
 
             if self.angle_fitting_methods == "regression":
+                pred_bboxes = dist2Rbbox(
+                    reg_dist_list, angle_fitting_list, anchor_points, box_format="xywh"
+                )
                 angle_fitting_list = angle_fitting_list * 180 / torch.pi
+            else:
+                pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
 
             angle_fitting_list = torch.clamp(angle_fitting_list, 0, 179.99)
 
-            # NOTE 转绝对值
-            pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
 
-            # pred_bboxes = dist2Rbbox(
-            #     reg_dist_list, angle_fitting_list / 180.0 * torch.pi, anchor_points, box_format="xywh"
-            # )
 
             pred_bboxes *= stride_tensor
             # NOTE [BS, 8400, 4+1+1+classes] [x, y, w, h, angle, conf, classes]

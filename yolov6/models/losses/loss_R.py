@@ -104,12 +104,14 @@ class ComputeLoss:
         # NOTE 角度解码
         pred_angles_decode = self.angle_decode(pred_angles)
 
-        pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
+        if self.angle_fitting_methods == "regression":
+            # NOTE 按照R解码, 和非R解码 在HRSC上差别不是太大
+            pred_bboxes = self.Rbbox_decode(
+                anchor_points_s, pred_distri, pred_angles_decode.detach()
+            )  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
+        else:
+            pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
 
-        # NOTE 按照R解码, 和非R解码 在HRSC上差别不是太大
-        # pred_bboxes = self.Rbbox_decode(
-        #     anchor_points_s, pred_distri, pred_angles_decode.detach()
-        # )  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
 
         try:
             # TODO
