@@ -1,8 +1,8 @@
 epoch=35
-eval_name="yolov6n_3_$epoch"
+eval_name="yolov6n_41_$epoch"
 eval_path="runs/DOTA-test/test"
-weight_path="./runs/DOTA-ss-baseline/yolov6n-csl-nodetach20/weights/${epoch}_ckpt.pt"
-CUDA_VISIBLE_DEVICES=1 python tools/eval_R.py \
+weight_path="./runs/DOTA-ss-baseline/yolov6n-csl-nodetach41/weights/${epoch}_ckpt.pt"
+CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
 	--data "./data/DOTA-ss.yaml" \
 	--weights $weight_path \
 	--batch-size 64 \

@@ -95,8 +95,10 @@ class Detect(nn.Module):
             b = conv.bias.view(
                 -1,
             )
-            # b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
-            b.data.fill_(1.0)
+            if self.angle_fitting_methods != "regression":
+                b.data.fill_(-math.log((1 - self.prior_prob) / self.prior_prob))
+            else:
+                b.data.fill_(1.0)
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
             w = conv.weight
             w.data.fill_(0.0)
@@ -205,7 +207,6 @@ class Detect(nn.Module):
                     angle_output = angle_output_class + angle_output_regression
 
                 # NOTE clamp 下, 角度==180 算iou会出bug
-                # angle_output = torch.clamp(angle_output, 0, 179.99)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
                 reg_dist_list.append(reg_output.reshape([b, 4, l]))
                 angle_fitting_list.append(angle_output.reshape([b, 1, l]))
@@ -215,15 +216,19 @@ class Detect(nn.Module):
             reg_dist_list = torch.cat(reg_dist_list, axis=-1).permute(0, 2, 1)
             angle_fitting_list = torch.cat(angle_fitting_list, axis=-1).permute(0, 2, 1)
 
-            # NOTE 转绝对值
-            # pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
 
-            pred_bboxes = dist2Rbbox(
-                reg_dist_list, angle_fitting_list, anchor_points, box_format="xywh"
-            )
+            if self.angle_fitting_methods == "regression":
+                angle_fitting_list = angle_fitting_list * 180 / torch.pi
 
-            angle_fitting_list = angle_fitting_list * 180 / torch.pi
             angle_fitting_list = torch.clamp(angle_fitting_list, 0, 179.99)
+
+            # NOTE 转绝对值
+            pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
+
+            # pred_bboxes = dist2Rbbox(
+            #     reg_dist_list, angle_fitting_list / 180.0 * torch.pi, anchor_points, box_format="xywh"
+            # )
+
             pred_bboxes *= stride_tensor
             # NOTE [BS, 8400, 4+1+1+classes] [x, y, w, h, angle, conf, classes]
             # NOTE 暂时屏蔽angle

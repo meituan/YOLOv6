@@ -101,14 +101,15 @@ class ComputeLoss:
         anchor_points_s = anchor_points / stride_tensor
 
 
-        # pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
         # NOTE 角度解码
         pred_angles_decode = self.angle_decode(pred_angles)
 
-        # NOTE 相对值 xywh
-        pred_bboxes = self.Rbbox_decode(
-            anchor_points_s, pred_distri, pred_angles_decode.detach()
-        )  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
+        pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
+
+        # NOTE 按照R解码, 和非R解码 在HRSC上差别不是太大
+        # pred_bboxes = self.Rbbox_decode(
+        #     anchor_points_s, pred_distri, pred_angles_decode.detach()
+        # )  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
 
         try:
             # TODO
@@ -298,7 +299,8 @@ class ComputeLoss:
             pred_angles_MGAR_reg = pred_angles[..., -1:] ** 2
             pred_angles_decode = pred_angles_MGAR_cls + pred_angles_MGAR_reg
 
-        # pred_angles_decode = pred_angles_decode / 180.0 * torch.pi
+        if self.angle_fitting_methods != "regression":
+            pred_angles_decode = pred_angles_decode / 180.0 * torch.pi
 
         return pred_angles_decode
 
@@ -322,7 +324,7 @@ class ComputeLoss:
             pred_dist = F.softmax(pred_dist.view(batch_size, n_anchors, 4, self.reg_max + 1), dim=-1).matmul(
                 self.proj.to(pred_dist.device)
             )
-        return dist2bbox(pred_dist, anchor_points, box_format="xyxy")
+        return dist2bbox(pred_dist, anchor_points, box_format="xywh")
 
     def Rbbox_decode(self, anchor_points, pred_dist, pred_angle_decode):
         if self.use_dfl:
