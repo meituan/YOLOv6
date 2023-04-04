@@ -31,6 +31,7 @@ from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_opti
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 from yolov6.utils.nms import xywh2xyxy
+from yolov6.utils.general import download_ckpt
 
 
 class Trainer:
@@ -381,6 +382,8 @@ class Trainer:
         model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
         weights = cfg.model.pretrained
         if weights:  # finetune if pretrained model is set
+            if not os.path.exists(weights):
+                download_ckpt(weights)
             LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
             model = load_state_dict(weights, model, map_location=device)
 

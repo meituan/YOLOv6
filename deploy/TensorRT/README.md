@@ -8,8 +8,8 @@
 
 ## Step 1: Get onnx model
 
-Follow the file [ONNX README](../../tools/quantization/tensorrt/post_training/README.md) to convert the pt mdoel to onnx `yolov6n.onnx`.
-**Now do't support end2end onnx model which include the nms plugin**
+Follow the file [ONNX README](../../tools/quantization/tensorrt/post_training/README.md) to convert the pt model to onnx `yolov6n.onnx`.
+**Now don't support end2end onnx model which include the nms plugin**
 ```shell
 python ./deploy/ONNX/export_onnx.py \
     --weights yolov6n.pt \
@@ -70,12 +70,31 @@ Then run the demo:
 ```shell
 ./yolov6 ../you.engine -i image_path
 ```
-# Testing on image
-You can do testing on images using .trt weights, just give path of image directory & its annotation path
 
+# Evaluate the performance
+ You can evaluate the performance of the TensorRT model.
+ ```
+ python deploy/TensorRT/eval_yolo_trt.py \
+    --imgs_dir /path/to/images/val \
+    --labels_dir /path/to/labels/val\
+    --annotations /path/to/coco/format/annotation/file \ --batch 1 \
+    --img_size 640 \
+    --model /path/to/tensorrt/model \
+    --do_pr_metric --is_coco
+ ```
+Tips:
+`--is_coco`:  if you are evaluating the COCO dataset, add this, if not, do not add this parameter.
+`--do_pr_metric`: If you want to get PR metric, add this.
+
+For example:
 ```
-python3 deploy/TensorRT/eval_yolo_trt.py -v -m model.trt \
---imgs-dir /workdir/datasets/coco/images/val2017 \
---annotations /workdir/datasets/coco/annotations/instances_val2017.json \
---conf-thres 0.40 --iou-thres 0.45
+python deploy/TensorRT/eval_yolo_trt.py \
+ --imgs_dir /workdir/datasets/coco/images/val2017/ \
+ --labels_dir /workdir/datasets/coco/labels/val2017\
+ --annotations /workdir/datasets/coco/annotations/instances_val2017.json \
+ --batch 1 \
+ --img_size 640 \ 
+ --model weights/yolov6n.trt \
+ --do_pr_metric --is_coco
+
 ```

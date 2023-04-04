@@ -16,6 +16,8 @@
 
 
 ## 更新日志
+- [2023.03.10] 发布 [YOLOv6-Face](https://github.com/meituan/YOLOv6/tree/yolov6-face). 🔥 [人脸检测模型指标](https://github.com/meituan/YOLOv6/blob/yolov6-face/README_cn.md#widerface-%E6%A8%A1%E5%9E%8B%E6%8C%87%E6%A0%87)
+- [2023.03.02] 更新 [基础版模型](configs/base/READM_cn.md) 到 3.0 版本
 - [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级 ⭐️ [模型指标](#模型指标)
     - 添加 BiC 模块 和 SimCSPSPPF 模块以增强检测网络颈部的表征能力。
     - 提出一个锚点辅助训练 (AAT) 策略。
