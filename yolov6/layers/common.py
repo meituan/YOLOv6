@@ -271,6 +271,15 @@ class RepVGGBlock(nn.Module):
         kernelid, biasid = self._fuse_bn_tensor(self.rbr_identity)
         return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1) + kernelid, bias3x3 + bias1x1 + biasid
 
+    def _avg_to_3x3_tensor(self, avgp):
+        channels = self.in_channels
+        groups = self.groups
+        kernel_size = avgp.kernel_size
+        input_dim = channels // groups
+        k = torch.zeros((channels, input_dim, kernel_size, kernel_size))
+        k[np.arange(channels), np.tile(np.arange(input_dim), groups), :, :] = 1.0 / kernel_size ** 2
+        return k
+    
     def _pad_1x1_to_3x3_tensor(self, kernel1x1):
         if kernel1x1 is None:
             return 0
@@ -338,6 +347,7 @@ class QARepVGGBlock(RepVGGBlock):
             self.bn = nn.BatchNorm2d(out_channels)
             self.rbr_1x1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, groups=groups, bias=False)
             self.rbr_identity = nn.Identity() if out_channels == in_channels and stride == 1 else None
+            self.rbr_avg = nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding) if out_channels == in_channels and stride == 1 else None
         self._id_tensor = None
 
     def forward(self, inputs):
@@ -348,13 +358,20 @@ class QARepVGGBlock(RepVGGBlock):
             id_out = 0
         else:
             id_out = self.rbr_identity(inputs)
+        if self.rbr_avg is None:
+            avg_out = 0
+        else:
+            avg_out = self.rbr_avg(inputs)
 
-        return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out)))
+        return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out + avg_out)))
 
 
     def get_equivalent_kernel_bias(self):
         kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
         kernel = kernel3x3 + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
+        if self.rbr_avg is not None:
+            kernelavg = self._avg_to_3x3_tensor(self.rbr_avg)
+            kernel = kernel + kernelavg.to(self.rbr_1x1.weight.device)
         bias = bias3x3
 
         if self.rbr_identity is not None:
@@ -392,6 +409,8 @@ class QARepVGGBlock(RepVGGBlock):
         self.__delattr__('rbr_1x1')
         if hasattr(self, 'rbr_identity'):
             self.__delattr__('rbr_identity')
+        if hasattr(self, 'rbr_avg'):
+            self.__delattr__('rbr_avg')
         if hasattr(self, 'id_tensor'):
             self.__delattr__('id_tensor')
         # keep post bn for QAT
