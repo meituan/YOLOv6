@@ -70,6 +70,12 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     NECK = eval(config.model.neck.type)
 
     if 'CSP' in config.model.backbone.type:
+
+        if "stage_block_type" in config.model.backbone:
+            stage_block_type = config.model.backbone.stage_block_type
+        else:
+            stage_block_type = "BepC3"  #default
+
         backbone = BACKBONE(
             in_channels=channels,
             channels_list=channels_list,
@@ -77,14 +83,16 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
             block=block,
             csp_e=config.model.backbone.csp_e,
             fuse_P2=fuse_P2,
-            cspsppf=cspsppf
+            cspsppf=cspsppf,
+            stage_block_type=stage_block_type
         )
 
         neck = NECK(
             channels_list=channels_list,
             num_repeats=num_repeat,
             block=block,
-            csp_e=config.model.neck.csp_e
+            csp_e=config.model.neck.csp_e,
+            stage_block_type=stage_block_type
         )
     else:
         backbone = BACKBONE(

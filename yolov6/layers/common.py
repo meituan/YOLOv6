@@ -630,6 +630,27 @@ def autopad(k, p=None):  # kernel, padding
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
     return p
 
+class BottleRep3(nn.Module):
+
+    def __init__(self, in_channels, out_channels, basic_block=RepVGGBlock, weight=False):
+        super().__init__()
+        self.conv1 = basic_block(in_channels, out_channels)
+        self.conv2 = basic_block(out_channels, out_channels)
+        self.conv3 = basic_block(out_channels, out_channels)
+        if in_channels != out_channels:
+            self.shortcut = False
+        else:
+            self.shortcut = True
+        if weight:
+            self.alpha = Parameter(torch.ones(1))
+        else:
+            self.alpha = 1.0
+
+    def forward(self, x):
+        outputs = self.conv1(x)
+        outputs = self.conv2(outputs)
+        outputs = self.conv3(outputs)
+        return outputs + self.alpha * x if self.shortcut else outputs
 
 class Conv_C3(nn.Module):
     '''Standard convolution in BepC3-Block'''
@@ -668,6 +689,48 @@ class BepC3(nn.Module):
         else:
             return self.cv3(self.m(self.cv1(x)))
 
+class MBLABlock(nn.Module):
+    ''' Multi Branch Layer Aggregation Block'''
+    def __init__(self, in_channels, out_channels, n=1, e=0.5, concat=True, block=RepVGGBlock):
+        super().__init__()
+        self.concat = concat
+        assert(self.concat is True)
+        n = n // 2
+        if n <= 0:
+            n = 1
+        
+        # max add one branch
+        if n == 1:
+            n_list = [0, 1]
+        else:
+            extra_branch_steps = 1
+            while extra_branch_steps * 2 < n:
+                extra_branch_steps *= 2
+            n_list = [0, extra_branch_steps, n]
+        branch_num = len(n_list)
+
+        c_ = int(out_channels * e)  # hidden channels
+        self.c = c_
+        self.cv1 = Conv_C3(in_channels, branch_num * self.c, 1, 1)
+        self.cv2 = Conv_C3((sum(n_list) + branch_num) * self.c, out_channels, 1)
+
+        if block == ConvWrapper:
+            self.cv1 = Conv_C3(in_channels, branch_num * self.c, 1, 1, act=nn.SiLU())
+            self.cv2 = Conv_C3((sum(n_list) + branch_num) * self.c, out_channels, 1, act=nn.SiLU())
+
+        self.m = nn.ModuleList()
+        for n_list_i in n_list[1:]:
+            self.m.append(nn.Sequential(*(BottleRep3(self.c, self.c, basic_block=block, weight=True) for _ in range(n_list_i))))
+        
+        self.split_num = tuple([self.c]*branch_num)
+        
+    def forward(self, x):
+        y = list(self.cv1(x).split(self.split_num, 1))
+        all_y = [y[0]]
+        for m_idx, m_i in enumerate(self.m):
+            all_y.append(y[m_idx+1])
+            all_y.extend(m(all_y[-1]) for m in m_i)
+        return self.cv2(torch.cat(all_y, 1))
 
 class BiFusion(nn.Module):
     '''BiFusion Block in PAN'''
