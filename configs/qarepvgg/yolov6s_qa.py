@@ -64,4 +64,4 @@ data_aug = dict(
     mixup=0.0,
 )
 
-training_mode='qarepvgg'
+training_mode='qarepvggv2'
