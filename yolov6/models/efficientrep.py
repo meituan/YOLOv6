@@ -1,6 +1,6 @@
 from pickle import FALSE
 from torch import nn
-from yolov6.layers.common import BottleRep, RepVGGBlock, RepBlock, BepC3, SimSPPF, SPPF, SimCSPSPPF, CSPSPPF, ConvWrapper
+from yolov6.layers.common import BottleRep, RepVGGBlock, RepBlock, BepC3, SimSPPF, SPPF, SimCSPSPPF, CSPSPPF, ConvWrapper, MBLABlock
 
 
 class EfficientRep(nn.Module):
@@ -259,7 +259,8 @@ class CSPBepBackbone(nn.Module):
         block=RepVGGBlock,
         csp_e=float(1)/2,
         fuse_P2=False,
-        cspsppf=False
+        cspsppf=False,
+        stage_block_type="BepC3"
     ):
         super().__init__()
 
@@ -274,6 +275,13 @@ class CSPBepBackbone(nn.Module):
             stride=2
         )
 
+        if stage_block_type == "BepC3":
+            stage_block = BepC3
+        elif stage_block_type == "MBLABlock":
+            stage_block = MBLABlock
+        else:
+            raise NotImplementedError
+
         self.ERBlock_2 = nn.Sequential(
             block(
                 in_channels=channels_list[0],
@@ -281,7 +289,7 @@ class CSPBepBackbone(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[1],
                 out_channels=channels_list[1],
                 n=num_repeats[1],
@@ -297,7 +305,7 @@ class CSPBepBackbone(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[2],
                 out_channels=channels_list[2],
                 n=num_repeats[2],
@@ -313,7 +321,7 @@ class CSPBepBackbone(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[3],
                 out_channels=channels_list[3],
                 n=num_repeats[3],
@@ -333,7 +341,7 @@ class CSPBepBackbone(nn.Module):
                 kernel_size=3,
                 stride=2,
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[4],
                 out_channels=channels_list[4],
                 n=num_repeats[4],

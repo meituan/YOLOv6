@@ -88,5 +88,37 @@ eval_params = dict(
         scale_exact=True,
         force_no_pad=True,
         not_infer_on_rect=True,
+    ),
+    yolov6s_mbla = dict(
+        img_size=640,
+        test_load_size=633,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6m_mbla = dict(
+        img_size=640,
+        test_load_size=633,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6l_mbla = dict(
+        img_size=640,
+        test_load_size=633,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
+    ),
+    yolov6x_mbla = dict(
+        img_size=640,
+        test_load_size=637,
+        letterbox_return_int=True,
+        scale_exact=True,
+        force_no_pad=True,
+        not_infer_on_rect=True,
     )
 )

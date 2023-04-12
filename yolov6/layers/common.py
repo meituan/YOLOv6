@@ -347,6 +347,80 @@ class QARepVGGBlock(RepVGGBlock):
             self.bn = nn.BatchNorm2d(out_channels)
             self.rbr_1x1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, groups=groups, bias=False)
             self.rbr_identity = nn.Identity() if out_channels == in_channels and stride == 1 else None
+        self._id_tensor = None
+
+    def forward(self, inputs):
+        if hasattr(self, 'rbr_reparam'):
+            return self.nonlinearity(self.bn(self.se(self.rbr_reparam(inputs))))
+
+        if self.rbr_identity is None:
+            id_out = 0
+        else:
+            id_out = self.rbr_identity(inputs)
+
+        return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out)))
+
+    def get_equivalent_kernel_bias(self):
+        kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
+        kernel = kernel3x3 + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
+        bias = bias3x3
+
+        if self.rbr_identity is not None:
+            input_dim = self.in_channels // self.groups
+            kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)
+            for i in range(self.in_channels):
+                kernel_value[i, i % input_dim, 1, 1] = 1
+            id_tensor = torch.from_numpy(kernel_value).to(self.rbr_1x1.weight.device)
+            kernel = kernel + id_tensor
+        return kernel, bias
+
+    def _fuse_extra_bn_tensor(self, kernel, bias, branch):
+        assert isinstance(branch, nn.BatchNorm2d)
+        running_mean = branch.running_mean - bias # remove bias
+        running_var = branch.running_var
+        gamma = branch.weight
+        beta = branch.bias
+        eps = branch.eps
+        std = (running_var + eps).sqrt()
+        t = (gamma / std).reshape(-1, 1, 1, 1)
+        return kernel * t, beta - running_mean * gamma / std
+
+    def switch_to_deploy(self):
+        if hasattr(self, 'rbr_reparam'):
+            return
+        kernel, bias = self.get_equivalent_kernel_bias()
+        self.rbr_reparam = nn.Conv2d(in_channels=self.rbr_dense.conv.in_channels, out_channels=self.rbr_dense.conv.out_channels,
+                                     kernel_size=self.rbr_dense.conv.kernel_size, stride=self.rbr_dense.conv.stride,
+                                     padding=self.rbr_dense.conv.padding, dilation=self.rbr_dense.conv.dilation, groups=self.rbr_dense.conv.groups, bias=True)
+        self.rbr_reparam.weight.data = kernel
+        self.rbr_reparam.bias.data = bias
+        for para in self.parameters():
+            para.detach_()
+        self.__delattr__('rbr_dense')
+        self.__delattr__('rbr_1x1')
+        if hasattr(self, 'rbr_identity'):
+            self.__delattr__('rbr_identity')
+        if hasattr(self, 'id_tensor'):
+            self.__delattr__('id_tensor')
+        # keep post bn for QAT
+        # if hasattr(self, 'bn'):
+        #     self.__delattr__('bn')
+        self.deploy = True
+
+
+class QARepVGGBlockV2(RepVGGBlock):
+    """
+    RepVGGBlock is a basic rep-style block, including training and deploy status
+    This code is based on https://arxiv.org/abs/2212.01593
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=3,
+                 stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
+        super(QARepVGGBlockV2, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
+                                              padding_mode, deploy, use_se)
+        if not deploy:
+            self.bn = nn.BatchNorm2d(out_channels)
+            self.rbr_1x1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, groups=groups, bias=False)
+            self.rbr_identity = nn.Identity() if out_channels == in_channels and stride == 1 else None
             self.rbr_avg = nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding) if out_channels == in_channels and stride == 1 else None
         self._id_tensor = None
 
@@ -364,7 +438,6 @@ class QARepVGGBlock(RepVGGBlock):
             avg_out = self.rbr_avg(inputs)
 
         return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out + avg_out)))
-
 
     def get_equivalent_kernel_bias(self):
         kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
@@ -557,6 +630,27 @@ def autopad(k, p=None):  # kernel, padding
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
     return p
 
+class BottleRep3(nn.Module):
+
+    def __init__(self, in_channels, out_channels, basic_block=RepVGGBlock, weight=False):
+        super().__init__()
+        self.conv1 = basic_block(in_channels, out_channels)
+        self.conv2 = basic_block(out_channels, out_channels)
+        self.conv3 = basic_block(out_channels, out_channels)
+        if in_channels != out_channels:
+            self.shortcut = False
+        else:
+            self.shortcut = True
+        if weight:
+            self.alpha = Parameter(torch.ones(1))
+        else:
+            self.alpha = 1.0
+
+    def forward(self, x):
+        outputs = self.conv1(x)
+        outputs = self.conv2(outputs)
+        outputs = self.conv3(outputs)
+        return outputs + self.alpha * x if self.shortcut else outputs
 
 class Conv_C3(nn.Module):
     '''Standard convolution in BepC3-Block'''
@@ -595,6 +689,48 @@ class BepC3(nn.Module):
         else:
             return self.cv3(self.m(self.cv1(x)))
 
+class MBLABlock(nn.Module):
+    ''' Multi Branch Layer Aggregation Block'''
+    def __init__(self, in_channels, out_channels, n=1, e=0.5, concat=True, block=RepVGGBlock):
+        super().__init__()
+        self.concat = concat
+        assert(self.concat is True)
+        n = n // 2
+        if n <= 0:
+            n = 1
+        
+        # max add one branch
+        if n == 1:
+            n_list = [0, 1]
+        else:
+            extra_branch_steps = 1
+            while extra_branch_steps * 2 < n:
+                extra_branch_steps *= 2
+            n_list = [0, extra_branch_steps, n]
+        branch_num = len(n_list)
+
+        c_ = int(out_channels * e)  # hidden channels
+        self.c = c_
+        self.cv1 = Conv_C3(in_channels, branch_num * self.c, 1, 1)
+        self.cv2 = Conv_C3((sum(n_list) + branch_num) * self.c, out_channels, 1)
+
+        if block == ConvWrapper:
+            self.cv1 = Conv_C3(in_channels, branch_num * self.c, 1, 1, act=nn.SiLU())
+            self.cv2 = Conv_C3((sum(n_list) + branch_num) * self.c, out_channels, 1, act=nn.SiLU())
+
+        self.m = nn.ModuleList()
+        for n_list_i in n_list[1:]:
+            self.m.append(nn.Sequential(*(BottleRep3(self.c, self.c, basic_block=block, weight=True) for _ in range(n_list_i))))
+        
+        self.split_num = tuple([self.c]*branch_num)
+        
+    def forward(self, x):
+        y = list(self.cv1(x).split(self.split_num, 1))
+        all_y = [y[0]]
+        for m_idx, m_i in enumerate(self.m):
+            all_y.append(y[m_idx+1])
+            all_y.extend(m(all_y[-1]) for m in m_i)
+        return self.cv2(torch.cat(all_y, 1))
 
 class BiFusion(nn.Module):
     '''BiFusion Block in PAN'''
@@ -627,6 +763,8 @@ def get_block(mode):
         return RepVGGBlock
     elif mode == 'qarepvgg':
         return QARepVGGBlock
+    elif mode == 'qarepvggv2':
+        return QARepVGGBlockV2
     elif mode == 'hyper_search':
         return LinearAddBlock
     elif mode == 'repopt':
