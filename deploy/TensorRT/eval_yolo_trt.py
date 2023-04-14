@@ -13,7 +13,7 @@ from tqdm import tqdm
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-from Processor import Processor
+from tensorrt_processor import Processor
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
@@ -45,10 +45,7 @@ def parse_args():
         help='IOU threshold for NMS')
     parser.add_argument('--class_num', type=int, default=3, help='class list for general datasets that must be specified')
     parser.add_argument('--is_coco', action='store_true', help='whether the validation dataset is coco, default is False.')
-    parser.add_argument('--test_load_size', type=int, default=634, help='load img resize when test')
-    parser.add_argument('--letterbox_return_int', type=bool, default=True, help='return int offset for letterbox')
-    parser.add_argument('--scale_exact', type=bool, default=True, help='use exact scale size to scale coords')
-    parser.add_argument('--force_no_pad', type=bool, default=True, help='for no extra pad in letterbox')
+    parser.add_argument('--shrink_size', type=int, default=4, help='load img with size (img_size - shrink_size), for better performace.')
     parser.add_argument('--visualize', '-v', action="store_true", default=False, help='visualize demo')
     parser.add_argument('--num_imgs_to_visualize', type=int, default=10, help='number of images to visualize')
     parser.add_argument('--do_pr_metric', action='store_true', help='use pr_metric to evaluate models')
@@ -62,34 +59,26 @@ def parse_args():
     return args
 
 
-def scale_coords(scale_exact, img1_shape, coords, img0_shape, ratio_pad=None):
-        '''Rescale coords (xyxy) from img1_shape to img0_shape.'''
-        if ratio_pad is None:  # calculate from img0_shape
-            gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
-            if scale_exact:
-                gain = [img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1]]
-            pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-        else:
-            gain = ratio_pad[0]
-            pad = ratio_pad[1]
+def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
+    '''Rescale coords (xyxy) from img1_shape to img0_shape.'''
 
-        coords[:, [0, 2]] -= pad[0]  # x padding
-        if scale_exact:
-            coords[:, [0, 2]] /= gain[1]  # x gain
-        else:
-            coords[:, [0, 2]] /= gain[0]  # raw x gain
-        coords[:, [1, 3]] -= pad[1]  # y padding
-        coords[:, [1, 3]] /= gain[0]  # y gain
+    gain = ratio_pad[0]
+    pad = ratio_pad[1]
 
-        if isinstance(coords, torch.Tensor):  # faster individually
-            coords[:, 0].clamp_(0, img0_shape[1])  # x1
-            coords[:, 1].clamp_(0, img0_shape[0])  # y1
-            coords[:, 2].clamp_(0, img0_shape[1])  # x2
-            coords[:, 3].clamp_(0, img0_shape[0])  # y2
-        else:  # np.array (faster grouped)
-            coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
-            coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
-        return coords
+    coords[:, [0, 2]] -= pad[0]  # x padding
+    coords[:, [0, 2]] /= gain[0]  # raw x gain
+    coords[:, [1, 3]] -= pad[1]  # y padding
+    coords[:, [1, 3]] /= gain[0]  # y gain
+
+    if isinstance(coords, torch.Tensor):  # faster individually
+        coords[:, 0].clamp_(0, img0_shape[1])  # x1
+        coords[:, 1].clamp_(0, img0_shape[0])  # y1
+        coords[:, 2].clamp_(0, img0_shape[1])  # x2
+        coords[:, 3].clamp_(0, img0_shape[0])  # y2
+    else:  # np.array (faster grouped)
+        coords[:, [0, 2]] = coords[:, [0, 2]].clip(0, img0_shape[1])  # x1, x2
+        coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
+    return coords
 
 
 def check_args(args):
@@ -100,7 +89,24 @@ def check_args(args):
         sys.exit('%s is not a valid file' % args.annotations)
 
 
-def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matrix, processor, imgs_dir, labels_dir, valid_images, results_file, conf_thres, iou_thres, is_coco, batch_size=1, test_load_size=640, visualize=False, num_imgs_to_visualize=0, imgname2id={}):
+def generate_results(data_class,
+                      model_names, 
+                      do_pr_metric, 
+                      plot_confusion_matrix, 
+                      processor, 
+                      imgs_dir, 
+                      labels_dir, 
+                      valid_images, 
+                      results_file, 
+                      conf_thres, 
+                      iou_thres, 
+                      is_coco, 
+                      batch_size=1,
+                      img_size=[640, 640], 
+                      shrink_size=0, 
+                      visualize=False, 
+                      num_imgs_to_visualize=0, 
+                      imgname2id={}):
     """Run detection on each jpg and write results to file."""
     results = []
     pbar = tqdm(range(math.ceil(len(valid_images)/batch_size)), desc="TRT-Model test in val datasets.")
@@ -135,7 +141,7 @@ def generate_results(data_class, model_names, do_pr_metric, plot_confusion_matri
 
             img_src = img.copy()
             h0, w0 = img.shape[:2]
-            r = test_load_size / max(h0, w0)
+            r = (max(img_size) - shrink_size) / max(h0, w0)
             if r != 1:
                 img = cv2.resize(
                     img,
@@ -257,7 +263,7 @@ def main():
         model_names = list(range(0, args.class_num))
 
     # setup processor
-    processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad, is_end2end=args.is_end2end)
+    processor = Processor(model=args.model, is_end2end=args.is_end2end)
     image_names = [p for p in os.listdir(args.imgs_dir) if p.split(".")[-1].lower() in IMG_FORMATS]
     # Eliminate data with missing labels.
     with open(args.annotations) as f:
@@ -278,8 +284,24 @@ def main():
             continue
     assert len(valid_images) > 0, 'No valid images are found. Please check you image format or whether annotation file is match.'
     #targets=[j for j in os.listdir(args.labels_dir) if j.endswith('.txt')]
-    stats, seen = generate_results(data_class, model_names, args.do_pr_metric, args.plot_confusion_matrix, processor, args.imgs_dir, args.labels_dir, valid_images, results_file,  args.conf_thres, args.iou_thres, args.is_coco, batch_size=args.batch_size, test_load_size=args.test_load_size,
-                     visualize=args.visualize, num_imgs_to_visualize=args.num_imgs_to_visualize, imgname2id=imgname2id)
+    stats, seen = generate_results(data_class, 
+                                    model_names,
+                                    args.do_pr_metric,
+                                    args.plot_confusion_matrix,
+                                    processor, 
+                                    args.imgs_dir, 
+                                    args.labels_dir, 
+                                    valid_images, 
+                                    results_file,  
+                                    args.conf_thres, 
+                                    args.iou_thres, 
+                                    args.is_coco, 
+                                    batch_size=args.batch_size,
+                                    img_size = args.img_size, 
+                                    shrink_size=args.shrink_size,
+                                    visualize=args.visualize,
+                                    num_imgs_to_visualize=args.num_imgs_to_visualize, 
+                                    imgname2id=imgname2id)
 
     # Run COCO mAP evaluation
     # Reference: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb

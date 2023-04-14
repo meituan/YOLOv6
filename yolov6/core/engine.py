@@ -231,11 +231,8 @@ class Trainer:
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
                             task='train',
-                            test_load_size=get_cfg_value(self.cfg.eval_params, "test_load_size", eval_img_size),
-                            letterbox_return_int=get_cfg_value(self.cfg.eval_params, "letterbox_return_int", False),
-                            force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad", False),
-                            not_infer_on_rect=get_cfg_value(self.cfg.eval_params, "not_infer_on_rect", False),
-                            scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact", False),
+                            shrink_size=get_cfg_value(self.cfg.eval_params, "shrink_size", eval_img_size),
+                            infer_on_rect=get_cfg_value(self.cfg.eval_params, "infer_on_rect", False),
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
                             do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
                             do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
@@ -366,7 +363,7 @@ class Trainer:
         val_loader = None
         if args.rank in [-1, 0]:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
-                                           hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
+                                           hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.,
                                            workers=args.workers, check_images=args.check_images,
                                            check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
 

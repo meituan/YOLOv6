@@ -22,13 +22,15 @@ python ./deploy/ONNX/export_onnx.py \
 Follow the file [post training README](../../tools/quantization/tensorrt/post_training/README.md) to convert and save the serialized engine file `yolov6.engine`.
 
 ```shell
-python3 onnx_to_tensorrt.py --fp16 --int8 -v \
+python3 onnx_to_tensorrt.py --model ${ONNX_MODEL} \
+        --dtype int8  \
         --max_calibration_size=${MAX_CALIBRATION_SIZE} \
         --calibration-data=${CALIBRATION_DATA} \
         --calibration-cache=${CACHE_FILENAME} \
         --preprocess_func=${PREPROCESS_FUNC} \
         --explicit-batch \
-        --onnx ${ONNX_MODEL} -o ${OUTPUT}
+        --verbose
+        
 ```
 
 ## Step 3: build the demo

@@ -5,7 +5,7 @@ import pycuda.autoinit
 import numpy as np
 import cv2
 import glob
-from Processor import letterbox
+from tensorrt_processor import letterbox
 
 import ctypes
 import logging
