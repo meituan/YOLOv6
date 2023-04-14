@@ -26,7 +26,7 @@ def augment_hsv(im, hgain=0.5, sgain=0.5, vgain=0.5):
         cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, dst=im)  # no return needed
 
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32, return_int=False):
+def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32):
     '''Resize and pad image while meeting stride-multiple constraints.'''
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -54,10 +54,8 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
     im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-    if not return_int:
-        return im, r, (dw, dh)
-    else:
-        return im, r, (left, top)
+
+    return im, r, (left, top)
 
 
 def mixup(im, labels, im2, labels2):

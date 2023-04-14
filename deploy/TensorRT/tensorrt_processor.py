@@ -44,7 +44,7 @@ def get_input_shape(engine):
     else:
         raise ValueError('bad dims of binding %s: %s' % (binding, str(binding_dims)))
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=False, stride=32, return_int=False):
+def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=False, stride=32):
     # Resize and pad image while meeting stride-multiple constraints
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -70,18 +70,13 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleu
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
     im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-    if not return_int:
-        return im, r, (dw, dh)
-    else:
-        return im, r, (left, top)
+
+    return im, r, (left, top)
 
 
 class Processor():
-    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0'), return_int=False, scale_exact=False, force_no_pad=False, is_end2end=False):
+    def __init__(self, model, num_classes=80, num_layers=3, anchors=1, device=torch.device('cuda:0'), is_end2end=False):
         # load tensorrt engine)
-        self.return_int = return_int
-        self.scale_exact = scale_exact
-        self.force_no_pad = force_no_pad
         self.is_end2end = is_end2end
         Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
         self.logger = trt.Logger(trt.Logger.INFO)
@@ -135,7 +130,7 @@ class Processor():
         """Preprocess an image before TRT YOLO inferencing.
         """
         input_shape = input_shape if input_shape is not None else self.input_shape
-        image, ratio, pad = letterbox(img_src, input_shape, auto=False, return_int=self.return_int, scaleup=True)
+        image, ratio, pad = letterbox(img_src, input_shape, auto=False, scaleup=False)
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         image = torch.from_numpy(np.ascontiguousarray(image)).to(self.device).float()
@@ -278,20 +273,12 @@ class Processor():
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
         # Rescale coords (xyxy) from img1_shape to img0_shape
-        if ratio_pad is None:  # calculate from img0_shape
-            gain = [min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])]  # gain  = old / new
-            if self.scale_exact:
-                gain = [img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1]]
-            pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-        else:
-            gain = ratio_pad[0]
-            pad = ratio_pad[1]
+
+        gain = ratio_pad[0]
+        pad = ratio_pad[1]
 
         coords[:, [0, 2]] -= pad[0]  # x padding
-        if self.scale_exact:
-            coords[:, [0, 2]] /= gain[1]  # x gain
-        else:
-            coords[:, [0, 2]] /= gain[0]  # raw x gain
+        coords[:, [0, 2]] /= gain[0]  # raw x gain
         coords[:, [1, 3]] -= pad[1]  # y padding
         coords[:, [1, 3]] /= gain[0]  # y gain
 
