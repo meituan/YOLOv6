@@ -63,4 +63,4 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.0,
 )
-training_mode='qarepvgg'
+training_mode='qarepvggv2'

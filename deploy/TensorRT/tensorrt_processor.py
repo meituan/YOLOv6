@@ -161,7 +161,7 @@ class Processor():
 
             y = torch.cat([reg_output, obj_output.sigmoid(), cls_output.sigmoid()], 1)
             bs, _, ny, nx = y.shape
-            y = y.view(bs, -1, 85, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
+            y = y.view(bs, -1, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
 
             if self.grid[i].shape[2:4] != y.shape[2:4]:
                 d = self.stride.device

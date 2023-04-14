@@ -271,6 +271,15 @@ class RepVGGBlock(nn.Module):
         kernelid, biasid = self._fuse_bn_tensor(self.rbr_identity)
         return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1) + kernelid, bias3x3 + bias1x1 + biasid
 
+    def _avg_to_3x3_tensor(self, avgp):
+        channels = self.in_channels
+        groups = self.groups
+        kernel_size = avgp.kernel_size
+        input_dim = channels // groups
+        k = torch.zeros((channels, input_dim, kernel_size, kernel_size))
+        k[np.arange(channels), np.tile(np.arange(input_dim), groups), :, :] = 1.0 / kernel_size ** 2
+        return k
+    
     def _pad_1x1_to_3x3_tensor(self, kernel1x1):
         if kernel1x1 is None:
             return 0
@@ -351,7 +360,6 @@ class QARepVGGBlock(RepVGGBlock):
 
         return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out)))
 
-
     def get_equivalent_kernel_bias(self):
         kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
         kernel = kernel3x3 + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
@@ -392,6 +400,90 @@ class QARepVGGBlock(RepVGGBlock):
         self.__delattr__('rbr_1x1')
         if hasattr(self, 'rbr_identity'):
             self.__delattr__('rbr_identity')
+        if hasattr(self, 'id_tensor'):
+            self.__delattr__('id_tensor')
+        # keep post bn for QAT
+        # if hasattr(self, 'bn'):
+        #     self.__delattr__('bn')
+        self.deploy = True
+
+
+class QARepVGGBlockV2(RepVGGBlock):
+    """
+    RepVGGBlock is a basic rep-style block, including training and deploy status
+    This code is based on https://arxiv.org/abs/2212.01593
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=3,
+                 stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
+        super(QARepVGGBlockV2, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
+                                              padding_mode, deploy, use_se)
+        if not deploy:
+            self.bn = nn.BatchNorm2d(out_channels)
+            self.rbr_1x1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, groups=groups, bias=False)
+            self.rbr_identity = nn.Identity() if out_channels == in_channels and stride == 1 else None
+            self.rbr_avg = nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding) if out_channels == in_channels and stride == 1 else None
+        self._id_tensor = None
+
+    def forward(self, inputs):
+        if hasattr(self, 'rbr_reparam'):
+            return self.nonlinearity(self.bn(self.se(self.rbr_reparam(inputs))))
+
+        if self.rbr_identity is None:
+            id_out = 0
+        else:
+            id_out = self.rbr_identity(inputs)
+        if self.rbr_avg is None:
+            avg_out = 0
+        else:
+            avg_out = self.rbr_avg(inputs)
+
+        return self.nonlinearity(self.bn(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out + avg_out)))
+
+    def get_equivalent_kernel_bias(self):
+        kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
+        kernel = kernel3x3 + self._pad_1x1_to_3x3_tensor(self.rbr_1x1.weight)
+        if self.rbr_avg is not None:
+            kernelavg = self._avg_to_3x3_tensor(self.rbr_avg)
+            kernel = kernel + kernelavg.to(self.rbr_1x1.weight.device)
+        bias = bias3x3
+
+        if self.rbr_identity is not None:
+            input_dim = self.in_channels // self.groups
+            kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)
+            for i in range(self.in_channels):
+                kernel_value[i, i % input_dim, 1, 1] = 1
+            id_tensor = torch.from_numpy(kernel_value).to(self.rbr_1x1.weight.device)
+            kernel = kernel + id_tensor
+        return kernel, bias
+
+    def _fuse_extra_bn_tensor(self, kernel, bias, branch):
+        assert isinstance(branch, nn.BatchNorm2d)
+        running_mean = branch.running_mean - bias # remove bias
+        running_var = branch.running_var
+        gamma = branch.weight
+        beta = branch.bias
+        eps = branch.eps
+        std = (running_var + eps).sqrt()
+        t = (gamma / std).reshape(-1, 1, 1, 1)
+        return kernel * t, beta - running_mean * gamma / std
+
+    def switch_to_deploy(self):
+        if hasattr(self, 'rbr_reparam'):
+            return
+        kernel, bias = self.get_equivalent_kernel_bias()
+        self.rbr_reparam = nn.Conv2d(in_channels=self.rbr_dense.conv.in_channels, out_channels=self.rbr_dense.conv.out_channels,
+                                     kernel_size=self.rbr_dense.conv.kernel_size, stride=self.rbr_dense.conv.stride,
+                                     padding=self.rbr_dense.conv.padding, dilation=self.rbr_dense.conv.dilation, groups=self.rbr_dense.conv.groups, bias=True)
+        self.rbr_reparam.weight.data = kernel
+        self.rbr_reparam.bias.data = bias
+        for para in self.parameters():
+            para.detach_()
+        self.__delattr__('rbr_dense')
+        self.__delattr__('rbr_1x1')
+        if hasattr(self, 'rbr_identity'):
+            self.__delattr__('rbr_identity')
+        if hasattr(self, 'rbr_avg'):
+            self.__delattr__('rbr_avg')
         if hasattr(self, 'id_tensor'):
             self.__delattr__('id_tensor')
         # keep post bn for QAT
@@ -608,6 +700,8 @@ def get_block(mode):
         return RepVGGBlock
     elif mode == 'qarepvgg':
         return QARepVGGBlock
+    elif mode == 'qarepvggv2':
+        return QARepVGGBlockV2
     elif mode == 'hyper_search':
         return LinearAddBlock
     elif mode == 'repopt':
