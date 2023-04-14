@@ -261,6 +261,7 @@ class TrainValDataset(Dataset):
 
         assert img_paths, f"No images found in {img_dir}."
         img_hash = self.get_hash(img_paths)
+        LOGGER.info(f'img record infomation path is:{valid_img_record}')
         if osp.exists(valid_img_record):
             with open(valid_img_record, "r") as f:
                 cache_info = json.load(f)
