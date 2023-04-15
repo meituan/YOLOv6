@@ -45,7 +45,6 @@ if __name__ == '__main__':
     # Check device
     cuda = args.device != 'cpu' and torch.cuda.is_available()
     device = torch.device(f'cuda:{args.device}' if cuda else 'cpu')
-    assert not (device.type == 'cpu' and args.half), '--half only compatible with GPU export, i.e. use --device 0'
     # Load PyTorch model
     model = load_checkpoint(args.weights, map_location=device, inplace=True, fuse=True)  # load FP32 model
     for layer in model.modules():
@@ -54,9 +53,6 @@ if __name__ == '__main__':
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
 
-    # Update model
-    if args.half:
-        img, model = img.half(), model.half()  # to FP16
     model.eval()
     for k, m in model.named_modules():
         if isinstance(m, Conv):  # assign export-friendly activations
@@ -119,6 +115,16 @@ if __name__ == '__main__':
                 for i in onnx_model.graph.output:
                     for j in i.type.tensor_type.shape.dim:
                         j.dim_param = str(shapes.pop(0))
+        
+        # Half precision
+        if args.half:
+            try:
+                from onnxconverter_common import float16
+                LOGGER.info(f'Starting to FP16 half-precision...')
+                onnx_model = float16.convert_float_to_float16(onnx_model)
+            except Exception as e:
+                LOGGER.info(f'FP16 half-precision failure: {e}')
+        
         if args.simplify:
             try:
                 import onnxsim
