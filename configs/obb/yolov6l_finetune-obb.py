@@ -34,8 +34,8 @@ model = dict(
             "dfl": 1.0,
         },
         # NOTE for angle regression
-        angle_fitting_methods='regression',
-        angle_max=1,
+        # angle_fitting_methods='regression',
+        # angle_max=1,
         # NOTE for angle csl
         # angle_fitting_methods="csl",
         # angle_max=180,
@@ -43,21 +43,22 @@ model = dict(
         # angle_fitting_methods='dfl',
         # angle_max=180,
         # NOTE for angle MGAR
-        # angle_fitting_methods="MGAR",
-        # angle_max=5,
+        angle_fitting_methods="MGAR",
+        angle_max=5,
     ),
 )
 
 loss = dict(
     # NOTE obb hbb+angle obb+angle
-    loss_mode="obb",
+    loss_mode="hbb+angle",
+    # loss_mode="obb",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle classification
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     loss_weight={
         "class": 1.0,
-        "iou": 2.0,
+        "iou": 2.5,
         "dfl": 0.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
@@ -108,8 +109,8 @@ data_aug = dict(
 )
 
 eval_params = dict(
-    conf_thres=0.05,
-    iou_thres=0.1,
+    conf_thres=0.03,
+    # iou_thres=0.1,
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,

@@ -454,10 +454,10 @@ class TrainValDataset(Dataset):
                     assert all(len(l) == 6 for l in labels), f"{lb_path}: wrong label format."
                     assert (labels >= 0).all(), f"{lb_path}: Label values error: all values in label file must > 0"
                     # NOTE 这个warning可以忽略, 有些长宽是对角线
-                    # TODO 如果归一化标签有溢出怎么办?
+                    # TODO 如j果归一化标签有溢出怎么办?
                     assert (
-                        labels[:, 1:5] <= 1.2
-                    ).all(), f"{lb_path}: Label values error: all coordinates must be normalized"
+                        labels[:, 1:5] <= 1.5
+                        ).all(), f"{lb_path}: Label values error: all coordinates must be normalized"
 
                     _, indices = np.unique(labels, axis=0, return_index=True)
                     if len(indices) < len(labels):  # duplicate row check

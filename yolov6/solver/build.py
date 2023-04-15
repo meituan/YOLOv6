@@ -27,6 +27,8 @@ def build_optimizer(cfg, model):
         optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
     elif cfg.solver.optim == 'AdamW':
         optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, eps=1e-3, weight_decay=0.05)
+        # TODO ???? 有影响?
+        # optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, weight_decay=0.05)
 
     optimizer.add_param_group({'params': g_w, 'weight_decay': cfg.solver.weight_decay})
     optimizer.add_param_group({'params': g_b})

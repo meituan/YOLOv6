@@ -103,7 +103,7 @@ eval_params = dict(
     do_coco_metric=False,
     do_pr_metric=True,
     plot_curve=False,
-    plot_confusion_matrix=False,
+    plot_confusion_matrix=True,
     # NOTE VOC12 VOC07 COCO
     # NOTE DOTA use COCO
     # NOTE HRSC use VOC07 or VOC12

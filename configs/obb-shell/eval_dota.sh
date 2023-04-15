@@ -1,9 +1,9 @@
-epoch=35
-eval_name="yolov6n_41_$epoch"
+epoch=best
+eval_name="yolov6m_MGAR_ss_new_aug_1_$epoch"
 eval_path="runs/DOTA-test/test"
-weight_path="./runs/DOTA-ss-baseline/yolov6n-csl-nodetach41/weights/${epoch}_ckpt.pt"
+weight_path="./runs/DOTA-ss-baseline/yolov6l_MGAR_ss_new/weights/${epoch}_ckpt.pt"
 CUDA_VISIBLE_DEVICES=0 python tools/eval_R.py \
-	--data "./data/DOTA-ss.yaml" \
+	--data "./data/DOTA_ss_new.yaml" \
 	--weights $weight_path \
 	--batch-size 64 \
 	--img-size 1024 \

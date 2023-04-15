@@ -1,7 +1,7 @@
 # HRSC2016 HBB
-train: /mnt/datasets/DOTA_ms/images/train
-val: /mnt/datasets/DOTA_ms/images/train
-test: /mnt/datasets/DOTA_ms/images/test
+train: /mnt/datasets/DOTA_ss/images/train
+val: /mnt/datasets/DOTA_ss/images/train
+test: /mnt/datasets/DOTA_ss/images/test
 
 # number of classes
 nc: 15
@@ -9,6 +9,7 @@ nc: 15
 is_coco: False
 
 # class names
+# storage-tank & roundabout 好像是全矩形标准, 近似0度, test时候可以手动调整为0度
 names:
   [
     "plane",

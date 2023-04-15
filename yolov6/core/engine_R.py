@@ -99,6 +99,7 @@ class Trainer:
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
+        self.accumulate = max(1, round(64 / self.batch_size))
         self.vis_imgs_list = []
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
@@ -339,7 +340,10 @@ class Trainer:
             else:
                 total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num)  # YOLOv6_af
             if self.rank != -1:
+                # 应不应该增加这个部分?
+                # total_loss = total_loss / self.accumulate
                 total_loss *= self.world_size
+        total_loss = total_loss / self.accumulate
         # backward
         self.scaler.scale(total_loss).backward()
         self.loss_items = loss_items
@@ -347,8 +351,8 @@ class Trainer:
 
     def eval_and_save(self):
         remaining_epochs = self.max_epoch - self.epoch
-        # eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
-        eval_interval = self.args.eval_interval
+        eval_interval = self.args.eval_interval if remaining_epochs > self.args.heavy_eval_range else 3
+        # eval_interval = self.args.eval_interval
         is_val_epoch = (
             (not self.args.eval_final_only or (remaining_epochs == 1))
             and ((self.epoch + 1) % eval_interval == 0)

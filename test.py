@@ -2,9 +2,11 @@ from mmcv.ops import diff_iou_rotated_2d
 
 import torch
 
-
-a = torch.tensor([[[1, 1, 30, 10, 0 / 180.0 * torch.pi]]]).to("cuda:0")
-b = torch.tensor([[[1, 1, 30, 10, 179 / 180.0 * torch.pi]]]).to("cuda:0")
+s = 32
+a1 = 180
+a2 = 180
+a = torch.tensor([[[1 * s, 1 * s, 30 * s, 10 * s, a1 / 180.0 * torch.pi]]]).to("cuda:0")
+b = torch.tensor([[[1 * s, 1 * s, 30 * s, 10 * s, a2 / 180.0 * torch.pi]]]).to("cuda:0")
 
 # 179 - 180
 

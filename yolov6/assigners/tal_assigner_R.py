@@ -148,6 +148,7 @@ class TaskAlignedAssigner(nn.Module):
         # NOTE 原版使用xyxy计算
         # overlaps = iou_calculator(gt_bboxes, pd_bboxes)
         # NOTE 新版使用xywh计算
+        # gt_labels = torch.where(gt_labels<=90, gt_labels, gt_labels-180.0)
         gt_labels = gt_labels / 180.0 * torch.pi
         # for 循环
         # [bs, N, 5]

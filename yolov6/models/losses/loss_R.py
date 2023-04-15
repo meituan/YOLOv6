@@ -48,8 +48,9 @@ class ComputeLoss:
         self.warmup_assigner = ATSSAssigner(
             9, num_classes=self.num_classes, angle_max=angle_max, angle_fitting_methods=angle_fitting_methods
         )  # NOTE ATSS
+        # NOTE change this
         self.formal_assigner = TaskAlignedAssigner(
-            topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0
+            topk=13, num_classes=self.num_classes, alpha=1.0, beta=4.0
         )  # NOTE TAL
 
         self.use_dfl = use_dfl
@@ -67,7 +68,9 @@ class ComputeLoss:
 
         self.iou_type = iou_type
         self.varifocal_loss = VarifocalLoss().cuda()
-        self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type).cuda()
+        self.bbox_loss = BboxLoss(
+            self.num_classes, self.reg_max, self.angle_max, self.angle_fitting_methods, self.use_dfl, self.iou_type
+        ).cuda()
         self.rbbox_loss = RotatedBboxesLoss(
             self.num_classes, self.reg_max, self.angle_max, self.angle_fitting_methods, self.use_dfl
         ).cuda()
@@ -100,7 +103,6 @@ class ComputeLoss:
         # pboxes
         anchor_points_s = anchor_points / stride_tensor
 
-
         # NOTE 角度解码
         pred_angles_decode = self.angle_decode(pred_angles)
 
@@ -111,7 +113,6 @@ class ComputeLoss:
             )  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
         else:
             pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri)  # NOTE 相对值 xyxy [bs, 13125/8400, 4]
-
 
         try:
             # TODO
@@ -201,7 +202,7 @@ class ComputeLoss:
 
         # NOTE rescale bbox 相对特征图的值, 相对值
         target_bboxes /= stride_tensor
-
+        # pred_bboxes *= stride_tensor
         # cls loss
         target_labels = torch.where(fg_mask > 0, target_labels, torch.full_like(target_labels, self.num_classes))
         one_hot_label = F.one_hot(target_labels.long(), self.num_classes + 1)[..., :-1]
@@ -217,7 +218,15 @@ class ComputeLoss:
         # bbox loss
         if self.loss_mode == "hbb+angle":
             loss_iou, loss_dfl = self.bbox_loss(
-                pred_distri, pred_bboxes, anchor_points_s, target_bboxes, target_scores, target_scores_sum, fg_mask
+                pred_distri,
+                pred_bboxes,
+                pred_angles,
+                anchor_points_s,
+                target_bboxes,
+                target_angles,
+                target_scores,
+                target_scores_sum,
+                fg_mask,
             )
             # angle loss
             loss_angle = self.angle_loss(pred_angles, target_angles, target_scores, target_scores_sum, fg_mask)
@@ -404,8 +413,10 @@ class RotatedBboxesLoss(nn.Module):
             pred_angle_pos = torch.masked_select(pred_angles, angle_mask).reshape([-1, self.angle_max])
             # angle -> theta
             target_angle_pos = torch.masked_select(target_angles, target_angle_mask).reshape([-1, 1])
+            # target_angle_pos = torch.where(target_angle_pos <=90, target_angle_pos, target_angle_pos-180.0)
             target_angle_pos = target_angle_pos / 180.0 * torch.pi
-
+            # import rich
+            # rich.print(torch.max(target_angle_pos), torch.min(target_angle_pos))
             if self.angle_fitting_methods == "regression":
                 # pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
                 pass
@@ -545,6 +556,7 @@ class AngleLoss(nn.Module):
                 loss_angle_regression = (
                     F.smooth_l1_loss(pred_angle_pos[..., -1:] ** 2, regression_value, reduction="none") * angle_weight
                 )
+
                 loss_angle_class = (
                     self.bce(pred_angle_pos[:, : (self.angle_max - 1)], smooth_one_hot_label.float()) * angle_weight
                 )
@@ -590,24 +602,89 @@ class AngleLoss(nn.Module):
 
 
 class BboxLoss(nn.Module):
-    def __init__(self, num_classes, reg_max, use_dfl=False, iou_type="giou"):
+    def __init__(
+        self, num_classes, reg_max, angle_max, angle_fitting_methods, use_dfl=False, iou_type="giou", use_reg=False
+    ):
         super(BboxLoss, self).__init__()
         self.num_classes = num_classes
         self.iou_loss = IOUloss(box_format="xywh", iou_type=iou_type, eps=1e-10)
         self.reg_max = reg_max
         self.use_dfl = use_dfl
+        self.use_reg = use_reg
+        self.angle_max = angle_max
+        self.angle_fitting_methods = angle_fitting_methods
+        if self.angle_fitting_methods == "dfl" or self.angle_fitting_methods == "MGAR":
+            self.angle_max += 1
 
-    def forward(self, pred_dist, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask):
+    def forward(
+        self,
+        pred_dist,
+        pred_bboxes,
+        pred_angles,
+        anchor_points,
+        target_bboxes,
+        target_angles,
+        target_scores,
+        target_scores_sum,
+        fg_mask,
+    ):
 
         # select positive samples mask
         num_pos = fg_mask.sum()
         if num_pos > 0:
+            angle_mask = fg_mask.unsqueeze(-1).repeat([1, 1, self.angle_max])
+            target_angle_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 1])
+            # (N, 5)
+            pred_angle_pos = torch.masked_select(pred_angles, angle_mask).reshape([-1, self.angle_max])
+            # angle -> theta
+            target_angle_pos = torch.masked_select(target_angles, target_angle_mask).reshape([-1, 1])
+            # target_angle_pos = torch.where(target_angle_pos <=90, target_angle_pos, target_angle_pos-180.0)
+            target_angle_pos = target_angle_pos / 180.0 * torch.pi
+            # import rich
+            # rich.print(torch.max(target_angle_pos), torch.min(target_angle_pos))
+            if self.angle_fitting_methods == "regression":
+                # pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
+                pass
+            elif self.angle_fitting_methods == "csl":
+                pred_angle_pos = torch.sigmoid(pred_angle_pos)
+                pred_angle_pos = torch.argmax(pred_angle_pos, dim=-1, keepdim=True)
+                pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
+            elif self.angle_fitting_methods == "dfl":
+                pass
+            elif self.angle_fitting_methods == "MGAR":
+                angle_range = 180 / (self.angle_max - 1)
+                pred_angle_class_pos = torch.sigmoid(pred_angle_pos[..., : (self.angle_max - 1)])
+                pred_angle_class_pos = torch.argmax(pred_angle_class_pos, dim=-1, keepdim=True) * angle_range
+                pred_angle_pos = pred_angle_class_pos + pred_angle_pos[..., -1:] ** 2
+                pred_angle_pos = pred_angle_pos / 180.0 * torch.pi
+
+            # pred_angle_pos = pred_angle_pos.detach()
+
             # iou loss
             bbox_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 4])
             pred_bboxes_pos = torch.masked_select(pred_bboxes, bbox_mask).reshape([-1, 4])
             target_bboxes_pos = torch.masked_select(target_bboxes, bbox_mask).reshape([-1, 4])
             bbox_weight = torch.masked_select(target_scores.sum(-1), fg_mask).unsqueeze(-1)
-            loss_iou = self.iou_loss(pred_bboxes_pos, target_bboxes_pos) * bbox_weight
+
+            pred_bboxes_hbb_pos = pred_bboxes_pos.clone()
+            new_pred_bboxes_hbb_pos = pred_bboxes_hbb_pos.clone()
+            new_pred_bboxes_hbb_pos[..., 2:3] = pred_bboxes_hbb_pos[..., 2:3] * torch.abs(
+                torch.cos(pred_angle_pos)
+            ) + pred_bboxes_hbb_pos[..., 3:4] * torch.abs(torch.sin(pred_angle_pos))
+
+            target_bboxes_hbb_pos = target_bboxes_pos.clone()
+
+            new_target_bboxes_hbb_pos = target_bboxes_hbb_pos.clone()
+            new_target_bboxes_hbb_pos[..., 2:3] = target_bboxes_hbb_pos[..., 2:3] * torch.abs(
+                torch.cos(target_angle_pos)
+            ) + target_bboxes_hbb_pos[..., 3:4] * torch.abs(torch.sin(target_angle_pos))
+
+            if not self.use_reg:
+                loss_iou = self.iou_loss(pred_bboxes_pos, target_bboxes_pos) * bbox_weight
+                # loss_iou = self.iou_loss(new_pred_bboxes_hbb_pos, new_target_bboxes_hbb_pos) * bbox_weight
+            else:
+                loss_iou = F.smooth_l1_loss(pred_bboxes_pos, target_bboxes_pos, reduction="none") * bbox_weight
+
             if target_scores_sum == 0:
                 loss_iou = loss_iou.sum()
             else:
@@ -627,7 +704,7 @@ class BboxLoss(nn.Module):
                     loss_dfl = loss_dfl.sum() / target_scores_sum
             else:
                 loss_dfl = pred_dist.sum() * 0.0
-
+                # pass
         else:
             loss_iou = pred_dist.sum() * 0.0
             loss_dfl = pred_dist.sum() * 0.0
@@ -725,3 +802,11 @@ class RotatedIoULoss(nn.Module):
             raise NotImplementedError
 
         return loss.unsqueeze(-1)
+
+class SoftmaxCELoss(nn.Module):
+    def __init__(self):
+        super(SoftmaxCELoss, self).__init__()
+
+    def forward(self, input, target):
+        log_probability = F.log_softmax(input, dim=-1)
+        return -1.0 * log_probability * target

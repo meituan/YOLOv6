@@ -65,8 +65,8 @@ loss = dict(
     # TODO class 分支的分类loss感觉也有挺多影响
     loss_weight={
         "class": 1.0,
-        "iou": 2.0,
-        "dfl": 0.5,
+        "iou": 2.5,
+        "dfl": 2.5,
         "angle": 0.05,
         "MGAR_cls": 0.05,
         "MGAR_reg": 0.05,
@@ -78,6 +78,7 @@ solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
     # lr0=0.0032,
+    # lr0=0.000125,
     lr0=0.00025,
     lrf=0.05,
     momentum=0.843,
@@ -99,10 +100,10 @@ data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
-    flipud=0.0,
-    fliplr=0.0,
-    rotate=0.0,
-    rect_classes=None,
+    flipud=0.5,
+    fliplr=0.5,
+    rotate=0.5,
+    rect_classes=[9, 11],
     # NOTE mosaic 数值需要确定一下
     mosaic=0.0,
     mixup_mosaic=0.0,
@@ -110,12 +111,12 @@ data_aug = dict(
 )
 
 eval_params = dict(
-    conf_thres=0.05,
+    conf_thres=0.03,
     verbose=True,
     do_coco_metric=False,
     do_pr_metric=True,
     plot_curve=False,
-    plot_confusion_matrix=False,
+    plot_confusion_matrix=True,
     # NOTE VOC12 VOC07 COCO
-    ap_method="VOC12",
+    ap_method="COCO",
 )

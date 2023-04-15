@@ -47,6 +47,8 @@ model = dict(
 )
 
 loss = dict(
+    loss_mode="hbb+angle",
+    # loss_mode="obb",
     # NOTE for angle regression
     # loss_weight={"class": 1.0, "iou": 2.5, "dfl": 0.5, "angle": 0.05},
     # NOTE for angle classification
@@ -57,8 +59,8 @@ loss = dict(
 solver = dict(
     optim="AdamW",
     lr_scheduler="Cosine",
-    lr0=0.0032,
-    lrf=0.12,
+    lr0=0.00025,
+    lrf=0.05,
     momentum=0.843,
     weight_decay=0.00036,
     warmup_epochs=2.0,
@@ -71,16 +73,18 @@ data_aug = dict(
     # translate=0.245,
     # scale=0.898,
     # shear=0.602,
+    hsv=0.0,
     hsv_h=0.0138,
     hsv_s=0.664,
     hsv_v=0.464,
     flipud=0.5,
     fliplr=0.5,
     rotate=0.5,
+    rect_classes=[9,11],
     # NOTE mosaic 数值需要确定一下
-    mosaic=0.2,
-    mixup_mosaic=0.5,
-    mixup=0.5,
+    mosaic=0.0,
+    mixup_mosaic=0.0,
+    mixup=0.0,
 )
 
 eval_params = dict(
@@ -91,5 +95,5 @@ eval_params = dict(
     plot_curve=True,
     plot_confusion_matrix=True,
     # NOTE VOC12 VOC07 COCO
-    ap_method="VOC12",
+    ap_method="COCO",
 )

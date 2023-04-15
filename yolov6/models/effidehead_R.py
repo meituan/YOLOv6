@@ -221,11 +221,14 @@ class Detect(nn.Module):
                 pred_bboxes = dist2Rbbox(
                     reg_dist_list, angle_fitting_list, anchor_points, box_format="xywh"
                 )
+
                 angle_fitting_list = angle_fitting_list * 180 / torch.pi
+                # angle_fitting_list = torch.clamp(angle_fitting_list, -90, 90)
+                # angle_fitting_list = torch.where(angle_fitting_list <0, angle_fitting_list, angle_fitting_list+180.0)
             else:
                 pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format="xywh")
 
-            angle_fitting_list = torch.clamp(angle_fitting_list, 0, 179.99)
+            # angle_fitting_list = torch.clamp(angle_fitting_list, 0, 179.99)
 
 
 
