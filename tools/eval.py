@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 from yolov6.core.evaler import Evaler
 from yolov6.utils.events import LOGGER
-from yolov6.utils.general import increment_name
+from yolov6.utils.general import increment_name, check_img_size
 from yolov6.utils.config import Config
 
 def boolean_string(s):
@@ -43,6 +43,9 @@ def get_args_parser(add_help=True):
     parser.add_argument('--plot_confusion_matrix', default=False, action='store_true', help='whether to save confusion matrix plots when do pr metric, might cause no harm warning print')
     parser.add_argument('--verbose', default=False, action='store_true', help='whether to print metric on each class')
     parser.add_argument('--config-file', default='', type=str, help='experiments description file, lower priority than reproduce_640_eval')
+    parser.add_argument('--specific-shape', action='store_true', help='rectangular training')
+    parser.add_argument('--height', type=int, default=None, help='image height of model input')
+    parser.add_argument('--width', type=int, default=None, help='image width of model input')
     args = parser.parse_args()
 
     if args.config_file:
@@ -108,6 +111,9 @@ def run(data,
         plot_curve=False,
         plot_confusion_matrix=False,
         config_file=None,
+        specific_shape=False,
+        height=640,
+        width=640
         ):
     """ Run the evaluation process
 
@@ -133,6 +139,9 @@ def run(data,
     data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
 
     # init
+    if specific_shape:
+        height = check_img_size(height, 32, floor= 128)  # verify imgsz is gs-multiple
+        width = check_img_size(width, 32, floor= 128)  # verify imgsz is gs-multiple
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
                 shrink_size, infer_on_rect,

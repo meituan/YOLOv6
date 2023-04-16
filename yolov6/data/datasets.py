@@ -40,6 +40,10 @@ for k, v in ExifTags.TAGS.items():
         ORIENTATION = k
         break
 
+def img2label_paths(img_paths):
+    # Define label paths as a function of image paths
+    sa, sb = f'{os.sep}images{os.sep}', f'{os.sep}labels{os.sep}'  # /images/, /labels/ substrings
+    return [sb.join(x.rsplit(sa, 1)).rsplit('.', 1)[0] + '.txt' for x in img_paths]
 
 class TrainValDataset(Dataset):
     '''YOLOv6 train_loader/val_loader, loads images and labels for training and validation.'''
@@ -58,6 +62,10 @@ class TrainValDataset(Dataset):
         rank=-1,
         data_dict=None,
         task="train",
+        specific_shape = False,
+        height=1088,
+        width=1920
+
     ):
         assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
         t1 = time.time()
@@ -66,6 +74,10 @@ class TrainValDataset(Dataset):
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
+        self.rect = rect
+        self.specific_shape = specific_shape
+        self.target_height = height
+        self.target_width = width
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -138,6 +150,10 @@ class TrainValDataset(Dataset):
                 labels[:, 1:] = boxes
 
             if self.augment:
+                if self.specific_shape:
+                    new_shape=(self.target_height, self.target_width)
+                else:
+                    new_shape = (self.img_size, self.img_size)
                 img, labels = random_affine(
                     img,
                     labels,
@@ -145,7 +161,7 @@ class TrainValDataset(Dataset):
                     translate=self.hyp["translate"],
                     scale=self.hyp["scale"],
                     shear=self.hyp["shear"],
-                    new_shape=(self.img_size, self.img_size),
+                    new_shape=new_shape,
                 )
 
         if len(labels):
@@ -190,18 +206,24 @@ class TrainValDataset(Dataset):
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
 
         h0, w0 = im.shape[:2]  # origin shape
-        if shrink_size:
-            r = (self.img_size - shrink_size) / max(h0, w0)
+        if self.specific_shape:
+            # keep ratio resize
+            ratio = min(self.target_width / w0, self.target_height / h0)
+
+        elif shrink_size:
+            ratio = (self.img_size - shrink_size) / max(h0, w0)
+    
         else:
-            r = self.img_size / max(h0, w0)
-        if r != 1:
-            im = cv2.resize(
-                im,
-                (int(w0 * r), int(h0 * r)),
-                interpolation=cv2.INTER_AREA
-                if r < 1 and not self.augment
-                else cv2.INTER_LINEAR,
-            )
+            ratio = self.img_size / max(h0, w0)
+    
+        if ratio != 1:
+                im = cv2.resize(
+                    im,
+                    (int(w0 * ratio), int(h0 * ratio)),
+                    interpolation=cv2.INTER_AREA
+                    if ratio < 1 and not self.augment
+                    else cv2.INTER_LINEAR,
+                )
         return im, (h0, w0), im.shape[:2]
 
     @staticmethod
@@ -212,21 +234,26 @@ class TrainValDataset(Dataset):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
-    def get_imgs_labels(self, img_dir):
-
-        assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
+    def get_imgs_labels(self, img_dirs):
+        if not isinstance(img_dirs, list):
+            img_dirs = [img_dirs]
+        # we store the cache img file in the first directory of img_dirs
         valid_img_record = osp.join(
-            osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
+            osp.dirname(img_dirs[0]), "." + osp.basename(img_dirs[0]) + "_cache.json"
         )
         NUM_THREADS = min(8, os.cpu_count())
+        img_paths = []
+        for img_dir in img_dirs:
+            assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
+            img_paths += glob.glob(osp.join(img_dir, "**/*"), recursive=True)
 
-        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
-        assert img_paths, f"No images found in {img_dir}."
 
+        assert img_paths, f"No images found in {img_dir}."
         img_hash = self.get_hash(img_paths)
+        LOGGER.info(f'img record infomation path is:{valid_img_record}')
         if osp.exists(valid_img_record):
             with open(valid_img_record, "r") as f:
                 cache_info = json.load(f)
@@ -266,30 +293,9 @@ class TrainValDataset(Dataset):
                 json.dump(cache_info, f)
 
         # check and load anns
-        base_dir = osp.basename(img_dir)
-        if base_dir != "":
-            label_dir = osp.join(
-            osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
-            )
-            assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
-        else:
-            sub_dirs= []
-            label_dir = img_dir
-            for rootdir, dirs, files in os.walk(label_dir):
-                for subdir in dirs:
-                    sub_dirs.append(subdir)
-            assert "labels" in sub_dirs, f"Could not find a labels directory!"
-
-
-        # Look for labels in the save relative dir that the images are in
-        def _new_rel_path_with_ext(base_path: str, full_path: str, new_ext: str):
-            rel_path = osp.relpath(full_path, base_path)
-            return osp.join(osp.dirname(rel_path), osp.splitext(osp.basename(rel_path))[0] + new_ext)
-
 
         img_paths = list(img_info.keys())
-        label_paths = [osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
-                        for p in img_paths]
+        label_paths = img2label_paths(img_paths)
         assert label_paths, f"No labels found in {label_dir}."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
@@ -345,11 +351,11 @@ class TrainValDataset(Dataset):
                 assert (
                     self.class_names
                 ), "Class names is required when converting labels to coco format for evaluating."
-                save_dir = osp.join(osp.dirname(osp.dirname(img_dir)), "annotations")
+                save_dir = osp.join(osp.dirname(osp.dirname(img_dirs[0])), "annotations")
                 if not osp.exists(save_dir):
                     os.mkdir(save_dir)
                 save_path = osp.join(
-                    save_dir, "instances_" + osp.basename(img_dir) + ".json"
+                    save_dir, "instances_" + osp.basename(img_dirs[0]) + ".json"
                 )
                 TrainValDataset.generate_coco_format_labels(
                     img_info, self.class_names, save_path
@@ -388,7 +394,7 @@ class TrainValDataset(Dataset):
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
-        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp)
+        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp, self.specific_shape, self.target_height, self.target_width)
         return img, labels
 
     def general_augment(self, img, labels):

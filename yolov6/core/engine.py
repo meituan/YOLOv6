@@ -31,7 +31,7 @@ from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_opti
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 from yolov6.utils.nms import xywh2xyxy
-from yolov6.utils.general import download_ckpt
+from yolov6.utils.general import download_ckpt    
 
 
 class Trainer:
@@ -93,9 +93,12 @@ class Trainer:
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
         self.color = [tuple(np.random.choice(range(256), size=3)) for _ in range(self.model.nc)]
+        self.specific_shape = args.specific_shape
+        self.height = args.height
+        self.width = args.width
 
         self.loss_num = 3
-        self.loss_info = ['Epoch', 'iou_loss', 'dfl_loss', 'cls_loss']
+        self.loss_info = ['Epoch', 'lr', 'iou_loss', 'dfl_loss', 'cls_loss']
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ['cwd_loss']
@@ -133,6 +136,7 @@ class Trainer:
 
     # Training loop for batchdata
     def train_in_steps(self, epoch_num, step_num):
+        # import pdb; pdb.set_trace()
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
@@ -212,7 +216,11 @@ class Trainer:
                             conf_thres=0.03,
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
-                            task='train')
+                            task='train',
+                            specific_shape=self.specific_shape,
+                            height=self.height,
+                            width=self.width
+                            )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
                 if value_str in cfg_dict:
@@ -238,6 +246,9 @@ class Trainer:
                             do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
                             plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
                             plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                            specific_shape=self.specific_shape,
+                            height=self.height,
+                            width=self.width
                             )
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
@@ -264,7 +275,10 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
-										fpn_strides=self.cfg.model.head.strides)
+										fpn_strides=self.cfg.model.head.strides,
+                                        specific_shape=self.specific_shape,
+                                        height=self.height,
+                                        width=self.width)
 
         if self.args.fuse_ab:
             self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],
@@ -273,7 +287,11 @@ class Trainer:
                                         use_dfl=False,
                                         reg_max=0,
                                         iou_type=self.cfg.model.head.iou_type,
-                                        fpn_strides=self.cfg.model.head.strides)
+                                        fpn_strides=self.cfg.model.head.strides,
+                                        specific_shape=self.specific_shape,
+                                        height=self.height,
+                                        width=self.width
+                                        )
         if self.args.distill :
             if self.cfg.model.type in ['YOLOv6n','YOLOv6s']:
                 Loss_distill_func = ComputeLoss_distill_ns
@@ -291,6 +309,16 @@ class Trainer:
                                                         distill_feat = self.args.distill_feat,
                                                         )
 
+        if self.args.distill:
+            self.compute_loss_distill = ComputeLoss_distill(num_classes=self.data_dict['nc'],
+                                                            ori_img_size=self.img_size,
+                                                            use_dfl=self.cfg.model.head.use_dfl,
+                                                            reg_max=self.cfg.model.head.reg_max,
+                                                            iou_type=self.cfg.model.head.iou_type,
+                                                            distill_weight = self.cfg.model.head.distill_weight,
+                                                            distill_feat = self.args.distill_feat,
+                                                            )
+
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
@@ -305,7 +333,7 @@ class Trainer:
         self.mean_loss = torch.zeros(self.loss_num, device=self.device)
         self.optimizer.zero_grad()
 
-        LOGGER.info(('\n' + '%10s' * (self.loss_num + 1)) % (*self.loss_info,))
+        LOGGER.info(('\n' + '%10s' * (self.loss_num + 2)) % (*self.loss_info,))
         self.pbar = enumerate(self.train_loader)
         if self.main_process:
             self.pbar = tqdm(self.pbar, total=self.max_stepnum, ncols=NCOLS, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
@@ -314,8 +342,8 @@ class Trainer:
     def print_details(self):
         if self.main_process:
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
-            self.pbar.set_description(('%10s' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
-                                                                *(self.mean_loss)))
+            self.pbar.set_description(('%10s' + ' %10.4g' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
+                                                                self.scheduler.get_last_lr()[0], *(self.mean_loss)))
 
     def strip_model(self):
         if self.main_process:
@@ -358,14 +386,16 @@ class Trainer:
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                          hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
-                                         check_labels=args.check_labels, data_dict=data_dict, task='train')[0]
+                                         check_labels=args.check_labels, data_dict=data_dict, task='train',
+                                         specific_shape=args.specific_shape, height=args.height, width=args.width)[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.,
                                            workers=args.workers, check_images=args.check_images,
-                                           check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
+                                           check_labels=args.check_labels, data_dict=data_dict, task='val',
+                                           specific_shape=args.specific_shape, height=args.height, width=args.width)[0]
 
         return train_loader, val_loader
 
