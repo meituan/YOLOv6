@@ -64,8 +64,11 @@ eval_params = dict(
     iou_thres=0.65,
 
     #pading and scale coord
-    shrink_size=None, # None mean will not shrink the image.
-    infer_on_rect=True,
+    test_load_size=None, #None mean will be the same as test image size
+    letterbox_return_int=False,
+    force_no_pad=False,
+    not_infer_on_rect=False,
+    scale_exact=False,
 
     #metric
     verbose=False,
