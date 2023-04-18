@@ -29,6 +29,7 @@ from .data_augment import (
 )
 from yolov6.utils.events import LOGGER
 
+
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
 VID_FORMATS = ["mp4", "mov", "avi", "mkv"]
@@ -121,8 +122,8 @@ class TrainValDataset(Dataset):
 
             # Letterbox
             shape = (
-                self.batch_shapes[self.batch_indices[index]]
-                if self.rect
+                (self.target_height, self.target_width) if self.specific_shape else
+                self.batch_shapes[self.batch_indices[index]] if self.rect
                 else self.img_size
             )  # final letterboxed shape
 
@@ -296,7 +297,7 @@ class TrainValDataset(Dataset):
 
         img_paths = list(img_info.keys())
         label_paths = img2label_paths(img_paths)
-        assert label_paths, f"No labels found in {label_dir}."
+        assert label_paths, f"No labels found."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
             self.check_labels = True
@@ -460,7 +461,7 @@ class TrainValDataset(Dataset):
             im = Image.open(im_file)
             im.verify()  # PIL verify
             im = Image.open(im_file)  # need to reload the image after using verify()
-            shape = im.size  # (width, height)
+            shape = (im.height, im.width)  # (height, width)
             try:
                 im_exif = im._getexif()
                 if im_exif and ORIENTATION in im_exif:
@@ -469,10 +470,6 @@ class TrainValDataset(Dataset):
                         shape = (shape[1], shape[0])
             except:
                 im_exif = None
-            if im_exif and ORIENTATION in im_exif:
-                rotation = im_exif[ORIENTATION]
-                if rotation in (6, 8):
-                    shape = (shape[1], shape[0])
 
             assert (shape[0] > 9) & (shape[1] > 9), f"image size {shape} <10 pixels"
             assert im.format.lower() in IMG_FORMATS, f"invalid image format {im.format}"
