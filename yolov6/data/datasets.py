@@ -101,15 +101,21 @@ class TrainValDataset(Dataset):
         This function applies mosaic and mixup augments during training.
         During validation, letterbox augment is applied.
         """
+        target_shape = (
+                (self.target_height, self.target_width) if self.specific_shape else
+                self.batch_shapes[self.batch_indices[index]] if self.rect
+                else self.img_size
+                )
+
         # Mosaic Augmentation
         if self.augment and random.random() < self.hyp["mosaic"]:
-            img, labels = self.get_mosaic(index)
+            img, labels = self.get_mosaic(index, target_shape)
             shapes = None
 
             # MixUp augmentation
             if random.random() < self.hyp["mixup"]:
                 img_other, labels_other = self.get_mosaic(
-                    random.randint(0, len(self.img_paths) - 1)
+                    random.randint(0, len(self.img_paths) - 1), target_shape
                 )
                 img, labels = mixup(img, labels, img_other, labels_other)
 
@@ -120,14 +126,8 @@ class TrainValDataset(Dataset):
             else:
                 img, (h0, w0), (h, w) = self.load_image(index)
 
-            # Letterbox
-            shape = (
-                (self.target_height, self.target_width) if self.specific_shape else
-                self.batch_shapes[self.batch_indices[index]] if self.rect
-                else self.img_size
-            )  # final letterboxed shape
-
-            img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
+            # letterbox
+            img, ratio, pad = letterbox(img, target_shape, auto=False, scaleup=self.augment)
             shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
@@ -151,10 +151,6 @@ class TrainValDataset(Dataset):
                 labels[:, 1:] = boxes
 
             if self.augment:
-                if self.specific_shape:
-                    new_shape=(self.target_height, self.target_width)
-                else:
-                    new_shape = (self.img_size, self.img_size)
                 img, labels = random_affine(
                     img,
                     labels,
@@ -162,7 +158,7 @@ class TrainValDataset(Dataset):
                     translate=self.hyp["translate"],
                     scale=self.hyp["scale"],
                     shear=self.hyp["shear"],
-                    new_shape=new_shape,
+                    new_shape=target_shape,
                 )
 
         if len(labels):
@@ -381,7 +377,7 @@ class TrainValDataset(Dataset):
         )
         return img_paths, labels
 
-    def get_mosaic(self, index):
+    def get_mosaic(self, index, shape):
         """Gets images and labels after mosaic augments"""
         indices = [index] + random.choices(
             range(0, len(self.img_paths)), k=3
@@ -395,7 +391,7 @@ class TrainValDataset(Dataset):
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
-        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp, self.specific_shape, self.target_height, self.target_width)
+        img, labels = mosaic_augmentation(shape, imgs, hs, ws, labels, self.hyp, self.specific_shape, self.target_height, self.target_width)
         return img, labels
 
     def general_augment(self, img, labels):
@@ -429,7 +425,7 @@ class TrainValDataset(Dataset):
     def sort_files_shapes(self):
         '''Sort by aspect ratio.'''
         batch_num = self.batch_indices[-1] + 1
-        s = self.shapes  # wh
+        s = self.shapes  # [height, width]
         ar = s[:, 1] / s[:, 0]  # aspect ratio
         irect = ar.argsort()
         self.img_paths = [self.img_paths[i] for i in irect]
@@ -443,9 +439,9 @@ class TrainValDataset(Dataset):
             ari = ar[self.batch_indices == i]
             mini, maxi = ari.min(), ari.max()
             if maxi < 1:
-                shapes[i] = [maxi, 1]
+                shapes[i] = [1, maxi]
             elif mini > 1:
-                shapes[i] = [1, 1 / mini]
+                shapes[i] = [1 / mini, 1]
         self.batch_shapes = (
             np.ceil(np.array(shapes) * self.img_size / self.stride + self.pad).astype(
                 np.int_
@@ -542,7 +538,7 @@ class TrainValDataset(Dataset):
         for i, (img_path, info) in enumerate(tqdm(img_info.items())):
             labels = info["labels"] if info["labels"] else []
             img_id = osp.splitext(osp.basename(img_path))[0]
-            img_w, img_h = info["shape"]
+            img_h, img_w = info["shape"]
             dataset["images"].append(
                 {
                     "file_name": os.path.basename(img_path),

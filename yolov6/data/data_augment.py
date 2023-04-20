@@ -140,13 +140,15 @@ def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate)
     return M, s
 
 
-def mosaic_augmentation(img_size, imgs, hs, ws, labels, hyp, specific_shape = False, target_height=640, target_width=640):
+def mosaic_augmentation(shape, imgs, hs, ws, labels, hyp, specific_shape = False, target_height=640, target_width=640):
     '''Applies Mosaic augmentation.'''
     assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
-
     labels4 = []
     if not specific_shape:
-        target_height = target_width = img_size
+        if isinstance(shape, list) or isinstance(shape, np.ndarray):
+            target_height, target_width = shape
+        else:
+            target_height = target_width = shape
 
     yc, xc = (int(random.uniform(x//2, 3*x//2)) for x in (target_height, target_width) )  # mosaic center x, y
 

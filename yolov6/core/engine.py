@@ -89,6 +89,7 @@ class Trainer:
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
+        self.rect = args.rect
         self.vis_imgs_list = []
         self.write_trainbatch_tb = args.write_trainbatch_tb
         # set color for classnames
@@ -136,7 +137,6 @@ class Trainer:
 
     # Training loop for batchdata
     def train_in_steps(self, epoch_num, step_num):
-        # import pdb; pdb.set_trace()
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
@@ -169,7 +169,7 @@ class Trainer:
 
     def eval_and_save(self):
         remaining_epochs = self.max_epoch - 1 - self.epoch # self.epoch is start from 0
-        eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else 3
+        eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else min(self.args.eval_interval, 3)
         is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
@@ -384,13 +384,14 @@ class Trainer:
         grid_size = max(int(max(cfg.model.head.strides)), 32)
         # create train dataloader
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
-                                         hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
+                                         hyp=dict(cfg.data_aug), augment=True, rect=args.rect, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
                                          check_labels=args.check_labels, data_dict=data_dict, task='train',
                                          specific_shape=args.specific_shape, height=args.height, width=args.width)[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
+             # TODO: check whether to set rect to self.rect?
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.,
                                            workers=args.workers, check_images=args.check_images,
