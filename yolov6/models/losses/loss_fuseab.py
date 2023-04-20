@@ -27,9 +27,6 @@ class ComputeLoss:
                      'class': 1.0,
                      'iou': 2.5,
                      'dfl': 0.5},
-                specific_shape=False,
-                height=640,
-                width=640,
                 ):
 
         self.fpn_strides = fpn_strides
@@ -37,10 +34,6 @@ class ComputeLoss:
         self.grid_cell_offset = grid_cell_offset
         self.num_classes = num_classes
         self.ori_img_size = ori_img_size
-        
-        self.specific_shape=specific_shape
-        self.height=height
-        self.width=width
 
         self.warmup_epoch = warmup_epoch
         self.formal_assigner = TaskAlignedAssigner(topk=26, num_classes=self.num_classes, alpha=1.0, beta=6.0)
@@ -58,7 +51,9 @@ class ComputeLoss:
         outputs,
         targets,
         epoch_num,
-        step_num
+        step_num,
+        batch_height,
+        batch_width
     ):
 
         feats, pred_scores, pred_distri = outputs
@@ -66,10 +61,7 @@ class ComputeLoss:
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device, is_eval=False, mode='ab')
    
         assert pred_scores.type() == pred_distri.type()
-        if self.specific_shape:
-            gt_bboxes_scale = torch.tensor([self.width, self.height, self.width, self.height]).type_as(pred_scores)
-        else:
-            gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
         # targets

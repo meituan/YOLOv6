@@ -66,7 +66,9 @@ class ComputeLoss:
         epoch_num,
         max_epoch,
         temperature,
-        step_num
+        step_num,
+        batch_height,
+        batch_width
     ):
 
         feats, pred_scores, pred_distri = outputs
@@ -77,7 +79,7 @@ class ComputeLoss:
                generate_anchors(t_feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
 
         assert pred_scores.type() == pred_distri.type()
-        gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
         # targets

@@ -145,21 +145,26 @@ class Trainer:
 
         # forward
         with amp.autocast(enabled=self.device != 'cpu'):
+            _, _, batch_height, batch_width = images.shape
             preds, s_featmaps = self.model(images)
             if self.args.distill:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
                 temperature = self.args.temperature   
                 total_loss, loss_items = self.compute_loss_distill(preds, t_preds, s_featmaps, t_featmaps, targets, \
-                                                                epoch_num, self.max_epoch, temperature, step_num)
+                                                                  epoch_num, self.max_epoch, temperature, step_num,
+                                                                  batch_height, batch_width)
             
             elif self.args.fuse_ab:       
-                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num, step_num) # YOLOv6_af
-                total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num) # YOLOv6_ab
+                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num,
+                                                            step_num, batch_height, batch_width) # YOLOv6_af
+                total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num,
+                                                                     batch_height, batch_width) # YOLOv6_ab
                 total_loss += total_loss_ab
                 loss_items += loss_items_ab
             else:
-                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num) # YOLOv6_af
+                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num,
+                                                            batch_height, batch_width) # YOLOv6_af
             if self.rank != -1:
                 total_loss *= self.world_size
         # backward
@@ -276,9 +281,7 @@ class Trainer:
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
 										fpn_strides=self.cfg.model.head.strides,
-                                        specific_shape=self.specific_shape,
-                                        height=self.height,
-                                        width=self.width)
+                                        )
 
         if self.args.fuse_ab:
             self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],
@@ -288,9 +291,6 @@ class Trainer:
                                         reg_max=0,
                                         iou_type=self.cfg.model.head.iou_type,
                                         fpn_strides=self.cfg.model.head.strides,
-                                        specific_shape=self.specific_shape,
-                                        height=self.height,
-                                        width=self.width
                                         )
         if self.args.distill :
             if self.cfg.model.type in ['YOLOv6n','YOLOv6s']:
