@@ -232,11 +232,8 @@ class Trainer:
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
                             task='train',
-                            test_load_size=get_cfg_value(self.cfg.eval_params, "test_load_size", eval_img_size),
-                            letterbox_return_int=get_cfg_value(self.cfg.eval_params, "letterbox_return_int", False),
-                            force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad", False),
-                            not_infer_on_rect=get_cfg_value(self.cfg.eval_params, "not_infer_on_rect", False),
-                            scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact", False),
+                            shrink_size=get_cfg_value(self.cfg.eval_params, "shrink_size", eval_img_size),
+                            infer_on_rect=get_cfg_value(self.cfg.eval_params, "infer_on_rect", False),
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
                             do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
                             do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
@@ -268,7 +265,7 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
-										fpn_strides=self.cfg.model.head.strides)
+					                    fpn_strides=self.cfg.model.head.strides)
 
         if self.args.fuse_ab:
             self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],

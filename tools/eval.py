@@ -33,11 +33,8 @@ def get_args_parser(add_help=True):
     parser.add_argument('--half', default=False, action='store_true', help='whether to use fp16 infer')
     parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
     parser.add_argument('--name', type=str, default='exp', help='save evaluation results to save_dir/name')
-    parser.add_argument('--test_load_size', type=int, default=640, help='load img resize when test')
-    parser.add_argument('--letterbox_return_int', default=False, action='store_true', help='return int offset for letterbox')
-    parser.add_argument('--scale_exact', default=False, action='store_true', help='use exact scale size to scale coords')
-    parser.add_argument('--force_no_pad', default=False, action='store_true', help='for no extra pad in letterbox')
-    parser.add_argument('--not_infer_on_rect', default=False, action='store_true', help='default to use rect image size to boost infer')
+    parser.add_argument('--shrink_size', type=int, default=0, help='load img resize when test')
+    parser.add_argument('--infer_on_rect', default=True, type=boolean_string, help='default to run with rectangle image to boost speed.')
     parser.add_argument('--reproduce_640_eval', default=False, action='store_true', help='whether to reproduce 640 infer result, overwrite some config')
     parser.add_argument('--eval_config_file', type=str, default='./configs/experiment/eval_640_repro.py', help='config file for repro 640 infer result')
     parser.add_argument('--do_coco_metric', default=True, type=boolean_string, help='whether to use pycocotool to metric, set False to close')
@@ -73,11 +70,8 @@ def get_args_parser(add_help=True):
         eval_model_name = os.path.splitext(os.path.basename(args.weights))[0]
         if eval_model_name not in eval_params:
             eval_model_name = "default"
-        args.test_load_size = eval_params[eval_model_name]["test_load_size"]
-        args.letterbox_return_int = eval_params[eval_model_name]["letterbox_return_int"]
-        args.scale_exact = eval_params[eval_model_name]["scale_exact"]
-        args.force_no_pad = eval_params[eval_model_name]["force_no_pad"]
-        args.not_infer_on_rect = eval_params[eval_model_name]["not_infer_on_rect"]
+        args.shrink_size = eval_params[eval_model_name]["shrink_size"]
+        args.infer_on_rect = eval_params[eval_model_name]["infer_on_rect"]
         #force params
         #args.img_size = 640
         args.conf_thres = 0.03
@@ -103,11 +97,9 @@ def run(data,
         dataloader=None,
         save_dir='',
         name = '',
-        test_load_size=640,
+        shrink_size=640,
         letterbox_return_int=False,
-        force_no_pad=False,
-        not_infer_on_rect=False,
-        scale_exact=False,
+        infer_on_rect=False,
         reproduce_640_eval=False,
         eval_config_file='./configs/experiment/eval_640_repro.py',
         verbose=False,
@@ -143,7 +135,7 @@ def run(data,
     # init
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
-                test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect, scale_exact,
+                shrink_size, infer_on_rect,
                 verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)

@@ -102,8 +102,8 @@ class TrainValDataset(Dataset):
 
         else:
             # Load image
-            if self.hyp and "test_load_size" in self.hyp:
-                img, (h0, w0), (h, w) = self.load_image(index, self.hyp["test_load_size"])
+            if self.hyp and "shrink_size" in self.hyp:
+                img, (h0, w0), (h, w) = self.load_image(index, self.hyp["shrink_size"])
             else:
                 img, (h0, w0), (h, w) = self.load_image(index)
 
@@ -113,11 +113,8 @@ class TrainValDataset(Dataset):
                 if self.rect
                 else self.img_size
             )  # final letterboxed shape
-            if self.hyp and "letterbox_return_int" in self.hyp:
-                img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment, return_int=self.hyp["letterbox_return_int"])
-            else:
-                img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
 
+            img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
             shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
@@ -177,7 +174,7 @@ class TrainValDataset(Dataset):
 
         return torch.from_numpy(img), labels_out, self.img_paths[index], shapes
 
-    def load_image(self, index, force_load_size=None):
+    def load_image(self, index, shrink_size=None):
         """Load image.
         This function loads image by cv2, resize original image to target shape(img_size) with keeping ratio.
 
@@ -193,8 +190,8 @@ class TrainValDataset(Dataset):
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
 
         h0, w0 = im.shape[:2]  # origin shape
-        if force_load_size:
-            r = force_load_size / max(h0, w0)
+        if shrink_size:
+            r = (self.img_size - shrink_size) / max(h0, w0)
         else:
             r = self.img_size / max(h0, w0)
         if r != 1:

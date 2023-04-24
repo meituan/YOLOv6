@@ -11,7 +11,7 @@ from torch.nn.parameter import Parameter
 from yolov6.utils.general import download_ckpt
 
 
-activation_table = {'relu':nn.ReLU(), 
+activation_table = {'relu':nn.ReLU(),
                     'silu':nn.SiLU(),
                     'hardswish':nn.Hardswish()
                     }
@@ -21,6 +21,7 @@ class SiLU(nn.Module):
     @staticmethod
     def forward(x):
         return x * torch.sigmoid(x)
+
 
 class ConvModule(nn.Module):
     '''A combination of Conv + BN + Activation'''
@@ -52,6 +53,7 @@ class ConvModule(nn.Module):
             return self.conv(x)
         return self.act(self.conv(x))
 
+
 class ConvBNReLU(nn.Module):
     '''Conv and BN with ReLU activation'''
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=None, groups=1, bias=False):
@@ -70,7 +72,8 @@ class ConvBNSiLU(nn.Module):
 
     def forward(self, x):
         return self.block(x)
-    
+
+
 class ConvBN(nn.Module):
     '''Conv and BN without activation'''
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=None, groups=1, bias=False):
@@ -80,6 +83,7 @@ class ConvBN(nn.Module):
     def forward(self, x):
         return self.block(x)
 
+
 class ConvBNHS(nn.Module):
     '''Conv and BN with Hardswish activation'''
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=None, groups=1, bias=False):
@@ -88,6 +92,7 @@ class ConvBNHS(nn.Module):
 
     def forward(self, x):
         return self.block(x)
+
 
 class SPPFModule(nn.Module):
 
@@ -106,6 +111,7 @@ class SPPFModule(nn.Module):
             y2 = self.m(y1)
             return self.cv2(torch.cat([x, y1, y2, self.m(y2)], 1))
 
+
 class SimSPPF(nn.Module):
     '''Simplified SPPF with ReLU activation'''
     def __init__(self, in_channels, out_channels, kernel_size=5, block=ConvBNReLU):
@@ -114,6 +120,7 @@ class SimSPPF(nn.Module):
 
     def forward(self, x):
         return self.sppf(x)
+
 
 class SPPF(nn.Module):
     '''SPPF with SiLU activation'''
@@ -126,7 +133,6 @@ class SPPF(nn.Module):
 
 
 class CSPSPPFModule(nn.Module):
-    
     # CSP https://github.com/WongKinYiu/CrossStagePartialNetworks
     def __init__(self, in_channels, out_channels, kernel_size=5, e=0.5, block=ConvBNReLU):
         super().__init__()
@@ -186,7 +192,6 @@ class Transpose(nn.Module):
 
     def forward(self, x):
         return self.upsample_transpose(x)
-
 
 
 class RepVGGBlock(nn.Module):
@@ -602,6 +607,7 @@ class BottleRep(nn.Module):
         outputs = self.conv2(outputs)
         return outputs + self.alpha * x if self.shortcut else outputs
 
+
 class BottleRep3(nn.Module):
 
     def __init__(self, in_channels, out_channels, basic_block=RepVGGBlock, weight=False):
@@ -624,6 +630,7 @@ class BottleRep3(nn.Module):
         outputs = self.conv3(outputs)
         return outputs + self.alpha * x if self.shortcut else outputs
 
+
 class BepC3(nn.Module):
     '''CSPStackRep Block'''
     def __init__(self, in_channels, out_channels, n=1, e=0.5, block=RepVGGBlock):
@@ -642,6 +649,7 @@ class BepC3(nn.Module):
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), dim=1))
 
+
 class MBLABlock(nn.Module):
     ''' Multi Branch Layer Aggregation Block'''
     def __init__(self, in_channels, out_channels, n=1, e=0.5, block=RepVGGBlock):
@@ -649,7 +657,7 @@ class MBLABlock(nn.Module):
         n = n // 2
         if n <= 0:
             n = 1
-        
+
         # max add one branch
         if n == 1:
             n_list = [0, 1]
@@ -672,9 +680,9 @@ class MBLABlock(nn.Module):
         self.m = nn.ModuleList()
         for n_list_i in n_list[1:]:
             self.m.append(nn.Sequential(*(BottleRep3(self.c, self.c, basic_block=block, weight=True) for _ in range(n_list_i))))
-        
+
         self.split_num = tuple([self.c]*branch_num)
-        
+
     def forward(self, x):
         y = list(self.cv1(x).split(self.split_num, 1))
         all_y = [y[0]]
@@ -682,6 +690,7 @@ class MBLABlock(nn.Module):
             all_y.append(y[m_idx+1])
             all_y.extend(m(all_y[-1]) for m in m_i)
         return self.cv2(torch.cat(all_y, 1))
+
 
 class BiFusion(nn.Module):
     '''BiFusion Block in PAN'''
@@ -726,10 +735,10 @@ def get_block(mode):
         return ConvBNSiLU
     else:
         raise NotImplementedError("Undefied Repblock choice for mode {}".format(mode))
-    
+  
 
 class SEBlock(nn.Module):
-    
+
     def __init__(self, channel, reduction=4):
         super().__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -757,9 +766,9 @@ class SEBlock(nn.Module):
         x = self.hardsigmoid(x)
         out = identity * x
         return out
-    
+
+
 def channel_shuffle(x, groups):
-    
     batchsize, num_channels, height, width = x.data.size()
     channels_per_group = num_channels // groups
     # reshape
@@ -770,8 +779,9 @@ def channel_shuffle(x, groups):
 
     return x
 
+
 class Lite_EffiBlockS1(nn.Module):
-    
+
     def __init__(self,
                  in_channels,
                  mid_channels,
@@ -811,9 +821,10 @@ class Lite_EffiBlockS1(nn.Module):
         x3 = self.conv_1(x3)
         out = torch.cat([x1, x3], axis=1)
         return channel_shuffle(out, 2)
-    
+
+
 class Lite_EffiBlockS2(nn.Module):
-    
+
     def __init__(self,
                  in_channels,
                  mid_channels,
@@ -872,7 +883,7 @@ class Lite_EffiBlockS2(nn.Module):
             stride=1,
             padding=0,
             groups=1)
-        
+ 
     def forward(self, inputs):
         x1 = self.conv_dw_1(inputs)
         x1 = self.conv_1(x1)
@@ -884,7 +895,8 @@ class Lite_EffiBlockS2(nn.Module):
         out = self.conv_dw_3(out)
         out = self.conv_pw_3(out)
         return out
-    
+
+
 class DPBlock(nn.Module):
 
     def __init__(self,
@@ -921,6 +933,7 @@ class DPBlock(nn.Module):
         x = self.act_2(self.conv_pw_1(x))
         return x
 
+
 class DarknetBlock(nn.Module):
 
     def __init__(self,
@@ -946,7 +959,8 @@ class DarknetBlock(nn.Module):
         out = self.conv_1(x)
         out = self.conv_2(out)
         return out
-        
+
+
 class CSPBlock(nn.Module):
 
     def __init__(self,
@@ -965,7 +979,7 @@ class CSPBlock(nn.Module):
                                    1.0)
     def forward(self, x):
         x_1 = self.conv_1(x)
-        x_1 = self.blocks(x_1) 
+        x_1 = self.blocks(x_1)
         x_2 = self.conv_2(x)
         x = torch.cat((x_1, x_2), axis=1)
         x = self.conv_3(x)

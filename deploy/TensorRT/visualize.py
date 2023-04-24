@@ -10,7 +10,7 @@ import math
 
 import cv2
 import torch
-from Processor import Processor
+from tensorrt_processor import Processor
 from tqdm import tqdm
 
 
@@ -40,10 +40,7 @@ def parse_args():
     parser.add_argument(
         '--iou-thres', type=float, default=0.65,
         help='IOU threshold for NMS')
-    parser.add_argument('--test_load_size', type=int, default=634, help='load img resize when test')
-    parser.add_argument('--letterbox_return_int', type=bool, default=True, help='return int offset for letterbox')
-    parser.add_argument('--scale_exact', type=bool, default=True, help='use exact scale size to scale coords')
-    parser.add_argument('--force_no_pad', type=bool, default=True, help='for no extra pad in letterbox')
+    parser.add_argument('--shrink_size', type=int, default=6, help='load img with size (img_size - shrink_size), for better performace.')
     args = parser.parse_args()
     return args
 
@@ -58,7 +55,7 @@ def check_args(args):
 
 
 def generate_results(processor, imgs_dir, visual_dir, jpgs, conf_thres, iou_thres,
-                     batch_size=1, test_load_size=640):
+                     batch_size=1, img_size=[640,640], shrink_size=0):
     """Run detection on each jpg and write results to file."""
     results = []
     # pbar = tqdm(jpgs, desc="TRT-Model test in val datasets.")
@@ -76,7 +73,7 @@ def generate_results(processor, imgs_dir, visual_dir, jpgs, conf_thres, iou_thre
             img_src = img.copy()
             # shapes.append(img.shape)
             h0, w0 = img.shape[:2]
-            r = test_load_size / max(h0, w0)
+            r = (max(img_size) - shrink_size) / max(h0, w0)
             if r != 1:
                 img = cv2.resize(
                     img,
@@ -115,10 +112,10 @@ def main():
     assert args.model.endswith('.trt'), "Only support trt engine test"
 
     # setup processor
-    processor = Processor(model=args.model, scale_exact=args.scale_exact, return_int=args.letterbox_return_int, force_no_pad=args.force_no_pad)
+    processor = Processor(model=args.model)
     jpgs = [j for j in os.listdir(args.imgs_dir) if j.endswith('.jpg')]
     generate_results(processor, args.imgs_dir, args.visual_dir, jpgs, args.conf_thres, args.iou_thres,
-                    batch_size=args.batch_size, test_load_size=args.test_load_size)
+                    batch_size=args.batch_size, img_size = args.img_size, shrink_size=args.shrink_size)
 
 
 if __name__ == '__main__':
