@@ -180,6 +180,7 @@ class Trainer:
                     'updates': self.ema.updates,
                     'optimizer': self.optimizer.state_dict(),
                     'epoch': self.epoch,
+                    'results': self.evaluate_results,
                     }
 
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
@@ -257,6 +258,12 @@ class Trainer:
         self.best_ap, self.ap = 0.0, 0.0
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0) # AP50, AP50_95
+        # resume results
+        if hasattr(self, "ckpt"):
+            self.evaluate_results = self.ckpt['results']
+            self.best_ap = self.evaluate_results[1]
+            self.best_stop_strong_aug_ap = self.evaluate_results[1]
+            
         
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
