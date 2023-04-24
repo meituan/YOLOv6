@@ -13,8 +13,7 @@ Advantage:
 
 - Better performance comparing to yolov6 3.0 base.
 
-Shortcoming:
-- No Nano model with MBLABlock due to lower AP.
+
 
 ### Performance
 
