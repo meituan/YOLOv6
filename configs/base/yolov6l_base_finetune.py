@@ -9,9 +9,10 @@ model = dict(
         num_repeats=[1, 6, 12, 18, 6],
         out_channels=[64, 128, 256, 512, 1024],
         csp_e=float(1)/2,
+        fuse_P2=True,
         ),
     neck=dict(
-        type='CSPRepPANNeck',
+        type='CSPRepBiFPANNeck',
         num_repeats=[12, 12, 12, 12],
         out_channels=[256, 128, 128, 256, 256, 512],
         csp_e=float(1)/2,
