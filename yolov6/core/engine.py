@@ -266,6 +266,7 @@ class Trainer:
             self.evaluate_results = self.ckpt['results']
             self.best_ap = self.evaluate_results[1]
             self.best_stop_strong_aug_ap = self.evaluate_results[1]
+
         
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,

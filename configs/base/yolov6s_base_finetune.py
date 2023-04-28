@@ -13,7 +13,7 @@ model = dict(
         cspsppf=True,
         ),
     neck=dict(
-        type='CSPRepPANNeck',
+        type='CSPRepBiFPANNeck',
         num_repeats=[12, 12, 12, 12],
         out_channels=[256, 128, 128, 256, 256, 512],
         csp_e=float(1)/2,
