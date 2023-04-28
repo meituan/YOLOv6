@@ -2,6 +2,22 @@
 
 This guidence shows the training commands for reproducing our results on COCO Dataset.
 
+
+## For Mobile models
+
+#### YOLOv6Lite-S/M/L
+
+```shell
+python -m torch.distributed.launch --nproc_per_node 4 tools/train.py \
+									--batch 128 \
+									--img_size 416 \   # train with 416 and eval with 320
+									--conf configs/yolov6_lite/yolov6_lite_s.py \   # yolov6lite_m/l
+									--data data/coco.yaml \
+									--epoch 400 \
+									--device 0,1,2,3 \
+									--name yolov6_lite_s_coco
+```
+
 ## For P5 models
 
 #### YOLOv6-N
