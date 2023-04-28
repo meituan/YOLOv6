@@ -8,6 +8,7 @@ from yolov6.utils.general import dist2bbox
 
 
 class Detect(nn.Module):
+    export = False
     '''Efficient Decoupled Head for Cost-free Distillation.(FOR NANO/SMALL MODEL)
     '''
     def __init__(self, num_classes=80, num_layers=3, inplace=True, head_layers=None, use_dfl=True, reg_max=16):  # detection layer
@@ -70,7 +71,7 @@ class Detect(nn.Module):
             w = conv.weight
             w.data.fill_(0.)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
-        
+
         self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False)
         self.proj_conv.weight = nn.Parameter(self.proj.view([1, self.reg_max + 1, 1, 1]).clone().detach(),
                                                    requires_grad=False)
@@ -95,7 +96,7 @@ class Detect(nn.Module):
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
                 reg_lrtb_list.append(reg_output_lrtb.flatten(2).permute((0, 2, 1)))
-            
+
             cls_score_list = torch.cat(cls_score_list, axis=1)
             reg_distri_list = torch.cat(reg_distri_list, axis=1)
             reg_lrtb_list = torch.cat(reg_lrtb_list, axis=1)
@@ -104,8 +105,6 @@ class Detect(nn.Module):
         else:
             cls_score_list = []
             reg_lrtb_list = []
-            anchor_points, stride_tensor = generate_anchors(
-                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             for i in range(self.nl):
                 b, _, h, w = x[i].shape
@@ -117,13 +116,25 @@ class Detect(nn.Module):
                 cls_output = self.cls_preds[i](cls_feat)
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output_lrtb = self.reg_preds[i](reg_feat)
-                              
+
                 cls_output = torch.sigmoid(cls_output)
-                cls_score_list.append(cls_output.reshape([b, self.nc, l]))
-                reg_lrtb_list.append(reg_output_lrtb.reshape([b, 4, l]))
-            
+
+                if self.export:
+                    cls_score_list.append(cls_output)
+                    reg_lrtb_list.append(reg_output_lrtb)
+                else:
+                    cls_score_list.append(cls_output.reshape([b, self.nc, l]))
+                    reg_lrtb_list.append(reg_output_lrtb.reshape([b, 4, l]))
+
+            if self.export:
+                return tuple(torch.cat([cls, reg], 1) for cls, reg in zip(cls_score_list, reg_lrtb_list))
+
             cls_score_list = torch.cat(cls_score_list, axis=-1).permute(0, 2, 1)
             reg_lrtb_list = torch.cat(reg_lrtb_list, axis=-1).permute(0, 2, 1)
+
+
+            anchor_points, stride_tensor = generate_anchors(
+                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             pred_bboxes = dist2bbox(reg_lrtb_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor
