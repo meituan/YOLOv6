@@ -99,7 +99,7 @@ Implementation of paper:
 - From the perspective of model size and input image ratio, we have built a series of models on the mobile terminal to facilitate flexible applications in different scenarios. 
 - All checkpoints are trained with 400 epochs without distillation.
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset, and the input resolution is the Size in the table.
-- Speed is tested with MNN 2.3.0 AArch64. During the speed test, the arm82 acceleration is turned on, the inference warm-up is performed 10 times, and the cycle is performed 100 times.
+- Speed is tested on MNN 2.3.0 AArch64 with 2 threads by arm82 acceleration. The inference warm-up is performed 10 times, and the cycle is performed 100 times.
 - Qualcomm 888(sm8350), Dimensity 720(mt6853) and Qualcomm 660(sdm660) correspond to chips with different performances at the high, middle and low end respectively, which can be used as a reference for model capabilities under different chips.
 - Refer to [Test NCNN Speed](./docs/Test_NCNN_speed.md) tutorial to reproduce the NCNN speed results of YOLOv6Lite.
 
