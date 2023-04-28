@@ -42,6 +42,8 @@ if __name__ == '__main__':
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
+        elif isinstance(layer, nn.Upsample) and not hasattr(layer, 'recompute_scale_factor'):
+            layer.recompute_scale_factor = None  # torch 1.11.0 compatibility
 
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
@@ -51,8 +53,8 @@ if __name__ == '__main__':
         img, model = img.half(), model.half()  # to FP16
     model.eval()
     for k, m in model.named_modules():
-        if isinstance(m, Conv):  # assign export-friendly activations
-            if isinstance(m.act, nn.SiLU):
+        if isinstance(m, ConvModule):  # assign export-friendly activations
+            if hasattr(m, 'act') and isinstance(m.act, nn.SiLU):
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
