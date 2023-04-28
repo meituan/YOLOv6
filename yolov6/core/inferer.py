@@ -62,6 +62,8 @@ class Inferer:
         for layer in model.modules():
             if isinstance(layer, RepVGGBlock):
                 layer.switch_to_deploy()
+            elif isinstance(layer, torch.nn.Upsample) and not hasattr(layer, 'recompute_scale_factor'):
+                layer.recompute_scale_factor = None  # torch 1.11.0 compatibility
 
         LOGGER.info("Switch model to deploy modality.")
 
