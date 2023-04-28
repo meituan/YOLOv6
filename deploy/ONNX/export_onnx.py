@@ -62,7 +62,7 @@ if __name__ == '__main__':
     model.eval()
     for k, m in model.named_modules():
         if isinstance(m, ConvModule):  # assign export-friendly activations
-            if isinstance(m.act, nn.SiLU):
+            if hasattr(m, 'act') and isinstance(m.act, nn.SiLU):
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace

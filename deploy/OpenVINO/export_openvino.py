@@ -53,8 +53,8 @@ if __name__ == '__main__':
         img, model = img.half(), model.half()  # to FP16
     model.eval()
     for k, m in model.named_modules():
-        if isinstance(m, Conv):  # assign export-friendly activations
-            if isinstance(m.act, nn.SiLU):
+        if isinstance(m, ConvModule):  # assign export-friendly activations
+            if hasattr(m, 'act') and isinstance(m.act, nn.SiLU):
                 m.act = SiLU()
         elif isinstance(m, Detect):
             m.inplace = args.inplace
