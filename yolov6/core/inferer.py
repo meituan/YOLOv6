@@ -207,7 +207,7 @@ class Inferer:
         lmdks[:, [0, 2, 4, 6, 8]] -= padding[0]
         lmdks[:, [1, 3, 5, 7, 9]] -= padding[1]
         lmdks[:, :10] /= ratio
-        
+
         lmdks[:, 0].clamp_(0, target_shape[1])
         lmdks[:, 1].clamp_(0, target_shape[0])
         lmdks[:, 2].clamp_(0, target_shape[1])
@@ -218,9 +218,8 @@ class Inferer:
         lmdks[:, 7].clamp_(0, target_shape[0])
         lmdks[:, 8].clamp_(0, target_shape[1])
         lmdks[:, 9].clamp_(0, target_shape[0])
-        
-        return boxes.round(), lmdks.round()
 
+        return boxes.round(), lmdks.round()
 
     def check_img_size(self, img_size, s=32, floor=0):
         """Make sure image size is a multiple of stride s in each dimension, and return a new shape list of image."""

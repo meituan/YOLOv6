@@ -116,11 +116,10 @@ def non_max_suppression_face(prediction, conf_thres=0.25, iou_thres=0.45, classe
         agnostic: (bool), when it is set to True, we do class-independent nms, otherwise, different class would do nms respectively.
         multi_label: (bool), when it is set to True, one box can have multi labels, otherwise, one box only huave one label.
         max_det:(int), max number of output bboxes.
-
     Returns:
          list of detections, echo item is one tensor with shape (num_boxes, 16), 16 is for [xyxy, ldmks, conf, cls].
     """
-    
+
     num_classes = prediction.shape[2] - 15  # number of classes
     pred_candidates = torch.logical_and(prediction[..., 14] > conf_thres, torch.max(prediction[..., 15:], axis=-1)[0] > conf_thres)  # candidates
     # Check the parameters.
@@ -180,4 +179,3 @@ def non_max_suppression_face(prediction, conf_thres=0.25, iou_thres=0.45, classe
             break  # time limit exceeded
 
     return output
-

@@ -203,21 +203,21 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
     
     head_layers = nn.Sequential(
         # stem0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=3,
@@ -248,21 +248,21 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
             kernel_size=1
         ),
         # stem1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=3,
@@ -293,21 +293,21 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
             kernel_size=1
         ),
         # stem2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=3,
@@ -342,7 +342,7 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
     if num_layers == 4:
         head_layers.add_module('stem3',
             # stem3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=1,
@@ -351,7 +351,7 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
         )
         head_layers.add_module('cls_conv3',
             # cls_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=3,
@@ -360,7 +360,7 @@ def EffiDeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3
         )
         head_layers.add_module('reg_conv3',
             # reg_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=3,
@@ -409,21 +409,21 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
 
     head_layers = nn.Sequential(
         # stem0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[-2]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
@@ -454,21 +454,21 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
             kernel_size=1
         ),
         # stem1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[-2]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
@@ -499,21 +499,21 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
             kernel_size=1
         ),
         # stem2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[-2]],
             out_channels=channels_list[chx[-2]],
             kernel_size=3,
@@ -548,7 +548,7 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
     if num_layers == 4:
         head_layers.add_module('stem3',
             # stem3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[-2]],
                 kernel_size=1,
@@ -557,7 +557,7 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
         )
         head_layers.add_module('cls_conv3',
             # cls_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[-2]],
                 out_channels=channels_list[chx[-2]],
                 kernel_size=3,
@@ -566,7 +566,7 @@ def DeHead(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
         )
         head_layers.add_module('reg_conv3',
             # reg_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[-2]],
                 out_channels=channels_list[chx[-2]],
                 kernel_size=3,

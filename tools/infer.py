@@ -90,7 +90,6 @@ def run(weights=osp.join(ROOT, 'yolov6s_face.pt'),
         hide_conf: Hide confidences
         half: Use FP16 half-precision inference, e.g. False
     """
-   
     # create save dir
     if save_dir is None:
         save_dir = osp.join(project, name)
@@ -107,7 +106,7 @@ def run(weights=osp.join(ROOT, 'yolov6s_face.pt'),
             os.makedirs(save_txt_path)
 
     # Inference
-    inferer = Inferer(source, webcam, webcam_addr, weights, device, yaml, img_size, half)  
+    inferer = Inferer(source, webcam, webcam_addr, weights, device, yaml, img_size, half)
     inferer.infer(conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, not not_save_img, hide_labels, hide_conf, view_img, save_txt_widerface)
 
     if save_txt or not not_save_img:
