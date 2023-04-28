@@ -16,14 +16,10 @@
 
 
 ## 更新日志
-- [2023.04.30] 发布移动端版本 YOLOv6Lite. ⭐️ [移动端模型指标](#移动端模型指标)
+- [2023.04.28] 发布 移动端轻量级模型 [YOLOv6Lite](configs/yolov6_lite/README.md). ⭐️ [移动端模型指标](#移动端模型指标)
 - [2023.03.10] 发布 [YOLOv6-Face](https://github.com/meituan/YOLOv6/tree/yolov6-face). 🔥 [人脸检测模型指标](https://github.com/meituan/YOLOv6/blob/yolov6-face/README_cn.md#widerface-%E6%A8%A1%E5%9E%8B%E6%8C%87%E6%A0%87)
-- [2023.03.02] 更新 [基础版模型](configs/base/READM_cn.md) 到 3.0 版本
+- [2023.03.02] 更新 [基础版模型](configs/base/README_cn.md) 到 3.0 版本
 - [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级 ⭐️ [模型指标](#模型指标)
-    - 添加 BiC 模块 和 SimCSPSPPF 模块以增强检测网络颈部的表征能力。
-    - 提出一个锚点辅助训练 (AAT) 策略。
-    - 为 YOLOv6 小模型引入一个新的自蒸馏训练策略。
-    - 扩展 YOLOv6 并在 COCO 上取得了实时目标检测 SOTA 的精度和速度。
 - [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程
 - [2022.09.06] 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)
 - [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能  
@@ -100,7 +96,7 @@
 - 使用 MNN 2.3.0 AArch64 进行速度测试。测速时，开启arm82加速，推理预热10次，循环100次。
 - 高通888(sm8350)、天玑720(mt6853)和高通660(sdm660)分别对应高中低端不同性能的芯片，可以作为不同芯片下机型能力的参考。
 - [NCNN 速度测试](./docs/Test_NCNN_speed.md)教程可以帮助展示及复现 YOLOv6Lite 的 NCNN 速度结果。
-- YOLOv6Lite 的 Params 和 FLOPs 是使用在部署模型上计算得到的。
+
 </details>
 
 ## 快速开始

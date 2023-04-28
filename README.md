@@ -25,15 +25,10 @@ Implementation of paper:
 
 
 ## What's New
-- [2023.04.30] Release YOLOv6Lite models for mobile devices. ⭐️ [Mobile Benchmark](#Mobile-Benchmark)
+- [2023.04.28] Release [YOLOv6Lite](configs/yolov6_lite/README.md) models on mobile or CPU. ⭐️ [Mobile Benchmark](#Mobile-Benchmark)
 - [2023.03.10] Release [YOLOv6-Face](https://github.com/meituan/YOLOv6/tree/yolov6-face). 🔥 [Performance](https://github.com/meituan/YOLOv6/tree/yolov6-face#performance-on-widerface)
 - [2023.03.02] Update [base models](configs/base/README.md) to version 3.0.
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
-    - Renew the neck of the detector with a BiC module and SimCSPSPPF Block.
-    - Propose an anchor-aided training (AAT) strategy.
-    - Involve a new self-distillation strategy for small models of YOLOv6.
-    - Expand YOLOv6 and hit a new
-SOTA performance on the COCO dataset.
 - [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
 - [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 - [2022.09.05] Release M/L models and update N/T/S models with enhanced performance. 
@@ -107,7 +102,7 @@ SOTA performance on the COCO dataset.
 - Speed is tested with MNN 2.3.0 AArch64. During the speed test, the arm82 acceleration is turned on, the inference warm-up is performed 10 times, and the cycle is performed 100 times.
 - Qualcomm 888(sm8350), Dimensity 720(mt6853) and Qualcomm 660(sdm660) correspond to chips with different performances at the high, middle and low end respectively, which can be used as a reference for model capabilities under different chips.
 - Refer to [Test NCNN Speed](./docs/Test_NCNN_speed.md) tutorial to reproduce the NCNN speed results of YOLOv6Lite.
-- Params and FLOPs of YOLOv6Lite are estimated on deployed models.
+
 </details>
 
 ## Quick Start
