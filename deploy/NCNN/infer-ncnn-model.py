@@ -71,6 +71,9 @@ MASK_COLORS = np.array([(255, 56, 56), (255, 157, 151), (255, 112, 31),
                         (255, 149, 200), (255, 55, 199)],
                        dtype=np.uint8)
 
+CONF_THRES = 0.45
+IOU_THRES = 0.65
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -92,6 +95,7 @@ def parse_args() -> argparse.Namespace:
         default=64,
         help='Max stride of yolov6 model')
     args = parser.parse_args()
+    assert args.max_stride in (32, 64)
     return args
 
 
@@ -201,8 +205,8 @@ def main(args: argparse.Namespace):
         img, ncnn.Mat.PixelType.PIXEL_BGR2RGB, img_w, img_h, w, h
     )
 
-    wpad = (w + 63) // 64 * 64 - w
-    hpad = (h + 63) // 64 * 64 - h
+    wpad = (w + args.max_stride - 1) // args.max_stride * args.max_stride - w
+    hpad = (h + args.max_stride - 1) // args.max_stride * args.max_stride - h
 
     mat_in_pad = ncnn.copy_make_border(
         mat_in,
@@ -221,10 +225,14 @@ def main(args: argparse.Namespace):
     ret1, mat_out1 = ex.extract("out0")  # stride 8
     ret2, mat_out2 = ex.extract("out1")  # stride 16
     ret3, mat_out3 = ex.extract("out2")  # stride 32
-    ret4, mat_out4 = ex.extract("out3")  # stride 64
+    if args.max_stride == 64:
+        ret4, mat_out4 = ex.extract("out3")  # stride 64
 
-    outputs = [np.array(mat_out1), np.array(mat_out2), np.array(mat_out3), np.array(mat_out4)]
-    nmsd_boxes, nmsd_scores, nmsd_labels = yolov6_decode(outputs, 0.45, 0.65)
+    outputs = [np.array(mat_out1), np.array(mat_out2), np.array(mat_out3)]
+    if args.max_stride == 64:
+        outputs.append(np.array(mat_out4))
+
+    nmsd_boxes, nmsd_scores, nmsd_labels = yolov6_decode(outputs, CONF_THRES, IOU_THRES)
 
     for box, score, label in zip(nmsd_boxes, nmsd_scores, nmsd_labels):
         x0, y0, x1, y1 = box
