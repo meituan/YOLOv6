@@ -26,6 +26,10 @@ New Feature
 | [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6s_face.pt) | 640  | 96.2 | 94.7   | 85.1 | 339                                     | 484                                      | 12.41                | 32.45               |
 | [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6m_face.pt) | 640  | 97.0 | 95.3   | 86.3 | 188                                     | 240                                      | 24.85                | 70.59               |
 | [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.3.1/yolov6l_face.pt) | 640  | 97.2 | 95.9   | 87.5 | 102                                     | 121                                      | 56.77                | 159.24              |
+|                                                              |      |      |        |      |                                         |                                          |                      |                     |
+| [**YOLOv6Lite-S**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_s_face.pt) | 416  | 89.6 | 84.6   | 58.8 | /                                       | /                                        | 0.53                 | 0.90                |
+| [**YOLOv6Lite-M**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_m_face.pt) | 416  | 90.6 | 86.1   | 60.6 | /                                       | /                                        | 0.76                 | 1.07                |
+| [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l_face.pt) | 416  | 91.8 | 87.6   | 64.2 | /                                       | /                                        | 1.06                 | 1.40                |
 
 #### Table Notes
 
