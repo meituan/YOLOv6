@@ -8,6 +8,7 @@ from yolov6.utils.general import dist2bbox
 
 
 class Detect(nn.Module):
+    export = False
     '''Efficient Decoupled Head for fusing anchor-base branches.
     '''
     def __init__(self, num_classes=80, anchors=None, num_layers=3, inplace=True, head_layers=None, use_dfl=True, reg_max=16):  # detection layer
@@ -77,7 +78,7 @@ class Detect(nn.Module):
             w = conv.weight
             w.data.fill_(0.)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
-        
+
         for conv in self.reg_preds_ab:
             b = conv.bias.view(-1, )
             b.data.fill_(1.0)
@@ -85,7 +86,7 @@ class Detect(nn.Module):
             w = conv.weight
             w.data.fill_(0.)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
-        
+
         self.proj = nn.Parameter(torch.linspace(0, self.reg_max, self.reg_max + 1), requires_grad=False)
         self.proj_conv.weight = nn.Parameter(self.proj.view([1, self.reg_max + 1, 1, 1]).clone().detach(),
                                                    requires_grad=False)
@@ -128,13 +129,13 @@ class Detect(nn.Module):
                 cls_output_af = torch.sigmoid(cls_output_af)
                 cls_score_list_af.append(cls_output_af.flatten(2).permute((0, 2, 1)))
                 reg_dist_list_af.append(reg_output_af.flatten(2).permute((0, 2, 1)))
-                
-            
+
+
             cls_score_list_ab = torch.cat(cls_score_list_ab, axis=1)
             reg_dist_list_ab = torch.cat(reg_dist_list_ab, axis=1)
             cls_score_list_af = torch.cat(cls_score_list_af, axis=1)
             reg_dist_list_af = torch.cat(reg_dist_list_af, axis=1)
-            
+
             return x, cls_score_list_ab, reg_dist_list_ab, cls_score_list_af, reg_dist_list_af
 
         else:
@@ -162,12 +163,20 @@ class Detect(nn.Module):
                     reg_output_af = self.proj_conv(F.softmax(reg_output_af, dim=1))
 
                 cls_output_af = torch.sigmoid(cls_output_af)
-                cls_score_list_af.append(cls_output_af.reshape([b, self.nc, l]))
-                reg_dist_list_af.append(reg_output_af.reshape([b, 4, l]))
-                
+
+                if self.export:
+                    cls_score_list_af.append(cls_output_af)
+                    reg_dist_list_af.append(reg_output_af)
+                else:
+                    cls_score_list_af.append(cls_output_af.reshape([b, self.nc, l]))
+                    reg_dist_list_af.append(reg_output_af.reshape([b, 4, l]))
+
+            if self.export:
+                return tuple(torch.cat([cls, reg], 1) for cls, reg in zip(cls_score_list_af, reg_dist_list_af))
+
             cls_score_list_af = torch.cat(cls_score_list_af, axis=-1).permute(0, 2, 1)
             reg_dist_list_af = torch.cat(reg_dist_list_af, axis=-1).permute(0, 2, 1)
-            
+
 
             #anchor_free
             anchor_points_af, stride_tensor_af = generate_anchors(

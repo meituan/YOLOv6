@@ -8,6 +8,7 @@ from yolov6.utils.general import dist2bbox
 
 
 class Detect(nn.Module):
+    export = False
     '''Efficient Decoupled Head
     With hardware-aware degisn, the decoupled head is optimized with
     hybridchannels methods.
@@ -85,8 +86,6 @@ class Detect(nn.Module):
         else:
             cls_score_list = []
             reg_dist_list = []
-            anchor_points, stride_tensor = generate_anchors(
-                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             for i in range(self.nl):
                 b, _, h, w = x[i].shape
@@ -100,11 +99,24 @@ class Detect(nn.Module):
                 reg_output = self.reg_preds[i](reg_feat)
 
                 cls_output = torch.sigmoid(cls_output)
-                cls_score_list.append(cls_output.reshape([b, self.nc, l]))
-                reg_dist_list.append(reg_output.reshape([b, 4, l]))
+
+                if self.export:
+                    cls_score_list.append(cls_output)
+                    reg_dist_list.append(reg_output)
+                else:
+                    cls_score_list.append(cls_output.reshape([b, self.nc, l]))
+                    reg_dist_list.append(reg_output.reshape([b, 4, l]))
+
+
+            if self.export:
+                return tuple(torch.cat([cls, reg], 1) for cls, reg in zip(cls_score_list, reg_dist_list))
 
             cls_score_list = torch.cat(cls_score_list, axis=-1).permute(0, 2, 1)
             reg_dist_list = torch.cat(reg_dist_list, axis=-1).permute(0, 2, 1)
+
+
+            anchor_points, stride_tensor = generate_anchors(
+                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor

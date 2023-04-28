@@ -12,6 +12,7 @@ from yolov6.utils.events import LOGGER
 
 
 class Model(nn.Module):
+    export = False
     '''YOLOv6 model with backbone, neck and head.
     The default parts are EfficientRep Backbone, Rep-PAN and
     Efficient Decoupled Head.
@@ -30,10 +31,10 @@ class Model(nn.Module):
         initialize_weights(self)
 
     def forward(self, x):
-        export_mode = torch.onnx.is_in_onnx_export()
+        export_mode = torch.onnx.is_in_onnx_export() or self.export
         x = self.backbone(x)
         x = self.neck(x)
-        if export_mode == False:
+        if not export_mode:
             featmaps = []
             featmaps.extend(x)
         x = self.detect(x)
@@ -64,7 +65,7 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     reg_max = config.model.head.reg_max
     num_repeat = [(max(round(i * depth_mul), 1) if i > 1 else i) for i in (num_repeat_backbone + num_repeat_neck)]
     channels_list = [make_divisible(i * width_mul, 8) for i in (channels_list_backbone + channels_list_neck)]
-    
+
     block = get_block(config.training_mode)
     BACKBONE = eval(config.model.backbone.type)
     NECK = eval(config.model.neck.type)

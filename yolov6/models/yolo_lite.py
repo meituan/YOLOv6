@@ -12,6 +12,7 @@ from yolov6.utils.events import LOGGER
 from yolov6.models.heads.effidehead_lite import Detect, build_effidehead_layer
 
 class Model(nn.Module):
+    export = False
     '''YOLOv6 model with backbone, neck and head.
     The default parts are EfficientRep Backbone, Rep-PAN and
     Efficient Decoupled Head.
@@ -29,14 +30,14 @@ class Model(nn.Module):
         initialize_weights(self)
 
     def forward(self, x):
-        export_mode = torch.onnx.is_in_onnx_export()
+        export_mode = torch.onnx.is_in_onnx_export() or self.export
         x = self.backbone(x)
         x = self.neck(x)
-        if export_mode == False:
+        if not export_mode:
             featmaps = []
             featmaps.extend(x)
         x = self.detect(x)
-        return x if export_mode is True else [x, featmaps]
+        return x if export_mode or self.export is True else [x, featmaps]
 
     def _apply(self, fn):
         self = super()._apply(fn)
@@ -46,7 +47,7 @@ class Model(nn.Module):
 
 def build_network(config, in_channels, num_classes):
     width_mul = config.model.width_multiple
-    
+
     num_repeat_backbone = config.model.backbone.num_repeats
     out_channels_backbone = config.model.backbone.out_channels
     scale_size_backbone = config.model.backbone.scale_size
@@ -60,11 +61,11 @@ def build_network(config, in_channels, num_classes):
 
     out_channels_backbone = [make_divisible(i * width_mul)
                             for i in out_channels_backbone]
-    mid_channels_backbone = [make_divisible(int(i * scale_size_backbone), divisor=8) 
+    mid_channels_backbone = [make_divisible(int(i * scale_size_backbone), divisor=8)
                             for i in out_channels_backbone]
     in_channels_neck = [make_divisible(i * width_mul)
                        for i in in_channels_neck]
-    
+
     backbone = BACKBONE(in_channels,
                         mid_channels_backbone,
                         out_channels_backbone,
