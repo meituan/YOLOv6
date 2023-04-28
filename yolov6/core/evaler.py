@@ -87,7 +87,6 @@ class Evaler:
             eval_hyp = {
                 "shrink_size":self.shrink_size,
             }
-            pad = 0.0
             rect = self.infer_on_rect
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
                                            self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=pad, rect=rect,

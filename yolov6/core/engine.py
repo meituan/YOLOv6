@@ -19,6 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 import tools.eval as eval
 from yolov6.data.data_load import create_dataloader
 from yolov6.models.yolo import build_model
+from yolov6.models.yolo_lite import build_model as build_lite_model
 
 from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
@@ -265,7 +266,7 @@ class Trainer:
             self.evaluate_results = self.ckpt['results']
             self.best_ap = self.evaluate_results[1]
             self.best_stop_strong_aug_ap = self.evaluate_results[1]
-            
+
         
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
@@ -273,7 +274,7 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
-					fpn_strides=self.cfg.model.head.strides)
+					                    fpn_strides=self.cfg.model.head.strides)
 
         if self.args.fuse_ab:
             self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],
@@ -375,7 +376,7 @@ class Trainer:
         val_loader = None
         if args.rank in [-1, 0]:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
-                                           hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.,
+                                           hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
                                            workers=args.workers, check_images=args.check_images,
                                            check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
 
@@ -388,7 +389,12 @@ class Trainer:
         return images, targets
 
     def get_model(self, args, cfg, nc, device):
-        model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
+        if 'YOLOv6-lite' in cfg.model.type:
+            assert not self.args.fuse_ab, 'ERROR in: YOLOv6-lite models not support fuse_ab mode.'
+            assert not self.args.distill, 'ERROR in: YOLOv6-lite models not support distill mode.'
+            model = build_lite_model(cfg, nc, device)
+        else:
+            model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
         weights = cfg.model.pretrained
         if weights:  # finetune if pretrained model is set
             if not os.path.exists(weights):

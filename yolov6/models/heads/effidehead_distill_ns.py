@@ -32,8 +32,8 @@ class Detect(nn.Module):
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
         self.cls_preds = nn.ModuleList()
+        self.reg_preds_dist = nn.ModuleList()
         self.reg_preds = nn.ModuleList()
-        self.reg_preds_lrtb = nn.ModuleList()
 
         # Efficient decoupled head layers
         for i in range(num_layers):
@@ -42,8 +42,8 @@ class Detect(nn.Module):
             self.cls_convs.append(head_layers[idx+1])
             self.reg_convs.append(head_layers[idx+2])
             self.cls_preds.append(head_layers[idx+3])
-            self.reg_preds.append(head_layers[idx+4])
-            self.reg_preds_lrtb.append(head_layers[idx+5])
+            self.reg_preds_dist.append(head_layers[idx+4])
+            self.reg_preds.append(head_layers[idx+5])
 
     def initialize_biases(self):
 
@@ -55,7 +55,7 @@ class Detect(nn.Module):
             w.data.fill_(0.)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
 
-        for conv in self.reg_preds:
+        for conv in self.reg_preds_dist:
             b = conv.bias.view(-1, )
             b.data.fill_(1.0)
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
@@ -63,7 +63,7 @@ class Detect(nn.Module):
             w.data.fill_(0.)
             conv.weight = torch.nn.Parameter(w, requires_grad=True)
 
-        for conv in self.reg_preds_lrtb:
+        for conv in self.reg_preds:
             b = conv.bias.view(-1, )
             b.data.fill_(1.0)
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
@@ -88,8 +88,8 @@ class Detect(nn.Module):
                 cls_feat = self.cls_convs[i](cls_x)
                 cls_output = self.cls_preds[i](cls_feat)
                 reg_feat = self.reg_convs[i](reg_x)
-                reg_output = self.reg_preds[i](reg_feat)
-                reg_output_lrtb = self.reg_preds_lrtb[i](reg_feat)
+                reg_output = self.reg_preds_dist[i](reg_feat)
+                reg_output_lrtb = self.reg_preds[i](reg_feat)
 
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
@@ -116,7 +116,7 @@ class Detect(nn.Module):
                 cls_feat = self.cls_convs[i](cls_x)
                 cls_output = self.cls_preds[i](cls_feat)
                 reg_feat = self.reg_convs[i](reg_x)
-                reg_output_lrtb = self.reg_preds_lrtb[i](reg_feat)
+                reg_output_lrtb = self.reg_preds[i](reg_feat)
                               
                 cls_output = torch.sigmoid(cls_output)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
@@ -139,21 +139,21 @@ class Detect(nn.Module):
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16):
     head_layers = nn.Sequential(
         # stem0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=1,
             stride=1
         ),
         # cls_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=3,
             stride=1
         ),
         # reg_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=3,
@@ -178,21 +178,21 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16):
             kernel_size=1
         ),
         # stem1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=1,
             stride=1
         ),
         # cls_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=3,
             stride=1
         ),
         # reg_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=3,
@@ -217,21 +217,21 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16):
             kernel_size=1
         ),
         # stem2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[10],
             out_channels=channels_list[10],
             kernel_size=1,
             stride=1
         ),
         # cls_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[10],
             out_channels=channels_list[10],
             kernel_size=3,
             stride=1
         ),
         # reg_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[10],
             out_channels=channels_list[10],
             kernel_size=3,

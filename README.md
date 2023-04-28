@@ -25,14 +25,10 @@ Implementation of paper:
 
 
 ## What's New
+- [2023.04.28] Release [YOLOv6Lite](configs/yolov6_lite/README.md) models on mobile or CPU. ⭐️ [Mobile Benchmark](#Mobile-Benchmark)
 - [2023.03.10] Release [YOLOv6-Face](https://github.com/meituan/YOLOv6/tree/yolov6-face). 🔥 [Performance](https://github.com/meituan/YOLOv6/tree/yolov6-face#performance-on-widerface)
 - [2023.03.02] Update [base models](configs/base/README.md) to version 3.0.
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
-    - Renew the neck of the detector with a BiC module and SimCSPSPPF Block.
-    - Propose an anchor-aided training (AAT) strategy.
-    - Involve a new self-distillation strategy for small models of YOLOv6.
-    - Expand YOLOv6 and hit a new
-SOTA performance on the COCO dataset.
 - [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
 - [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
 - [2022.09.05] Release M/L models and update N/T/S models with enhanced performance. 
@@ -88,6 +84,26 @@ SOTA performance on the COCO dataset.
 
 </details>
 
+## Mobile Benchmark
+| Model | Size | mAP<sup>val<br/>0.5:0.95 | sm8350<br/><sup>(ms) | mt6853<br/><sup>(ms) | sdm660<br/><sup>(ms) |Params<br/><sup> (M) |   FLOPs<br/><sup> (G) |
+| :----------------------------------------------------------- | ---- | -------------------- | -------------------- | -------------------- | -------------------- | -------------------- | -------------------- |
+| [**YOLOv6Lite-S**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_s.pt) | 320*320 | 22.4                     | 7.99                     | 11.99                     | 41.86                     | 0.55                     | 0.56                     |
+| [**YOLOv6Lite-M**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_m.pt) | 320*320 | 25.1                     | 9.08                     | 13.27                     | 47.95                     | 0.79                     | 0.67                     |
+| [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 320*320 | 28.0                     | 11.37                     | 16.20                     | 61.40                     | 1.09                     | 0.87                     |
+| [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 320*192 | 25.0                     | 7.02                     | 9.66                     | 36.13                     | 1.09                     | 0.52                     |
+| [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 224*128 | 18.9                     | 3.63                     | 4.99                     | 17.76                     | 1.09                     | 0.24                     |
+
+<details>
+<summary>Table Notes</summary>
+
+- From the perspective of model size and input image ratio, we have built a series of models on the mobile terminal to facilitate flexible applications in different scenarios. 
+- All checkpoints are trained with 400 epochs without distillation.
+- Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset, and the input resolution is the Size in the table.
+- Speed is tested with MNN 2.3.0 AArch64. During the speed test, the arm82 acceleration is turned on, the inference warm-up is performed 10 times, and the cycle is performed 100 times.
+- Qualcomm 888(sm8350), Dimensity 720(mt6853) and Qualcomm 660(sdm660) correspond to chips with different performances at the high, middle and low end respectively, which can be used as a reference for model capabilities under different chips.
+- Refer to [Test NCNN Speed](./docs/Test_NCNN_speed.md) tutorial to reproduce the NCNN speed results of YOLOv6Lite.
+
+</details>
 
 ## Quick Start
 <details>

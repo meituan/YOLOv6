@@ -55,5 +55,25 @@ eval_params = dict(
         img_size=1280,
         shrink_size=41,
         infer_on_rect=False,
+    ),
+    yolov6s_mbla = dict(
+        img_size=640,
+        shrink_size=7,
+        infer_on_rect=False,
+    ),
+    yolov6m_mbla = dict(
+        img_size=640,
+        shrink_size=7,
+        infer_on_rect=False,
+    ),
+    yolov6l_mbla = dict(
+        img_size=640,
+        shrink_size=7,
+        infer_on_rect=False,
+    ),
+    yolov6x_mbla = dict(
+        img_size=640,
+        shrink_size=3,
+        infer_on_rect=False,
     )
 )
