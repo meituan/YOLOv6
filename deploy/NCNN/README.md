@@ -39,11 +39,12 @@ python ./deploy/NCNN/export_torchscript.py \
 ## Run inference with NCNN-Python
 
 ```shell
-python3 deploy/NCNN/infer-lite-model.py \
+python3 deploy/NCNN/infer-ncnn-model.py \
   data/images/image1.jpg \
   work_dir/yolov6lite_s.ncnn.param \
   work_dir/yolov6lite_s.ncnn.bin \
   --img-size 320 320 \
+  --max-stride 64 \
   --show
 ```
 
@@ -57,6 +58,10 @@ python3 deploy/NCNN/infer-lite-model.py \
 - `--img-size` : The image height and width for model input.
 - `--max-stride` : The yolov6 lite model max stride.
 
+***Notice!***
+
+If you want to try norm yolov6 model such as `yolov6n/s/m/l`, you should add `--max-stride 32` flags .
+
 
 ## Download
 
@@ -65,3 +70,7 @@ python3 deploy/NCNN/infer-lite-model.py \
 * [YOLOv6-lite-l]()
 * [YOLOv6-lite-l-320x192]()
 * [YOLOv6-lite-l-224x128]()
+* [YOLOv6-n]()
+* [YOLOv6-s]()
+* [YOLOv6-m]()
+* [YOLOv6-l]()
