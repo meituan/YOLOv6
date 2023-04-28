@@ -51,6 +51,8 @@ if __name__ == '__main__':
     for layer in model.modules():
         if isinstance(layer, RepVGGBlock):
             layer.switch_to_deploy()
+        elif isinstance(layer, nn.Upsample) and not hasattr(layer, 'recompute_scale_factor'):
+            layer.recompute_scale_factor = None  # torch 1.11.0 compatibility
     # Input
     img = torch.zeros(args.batch_size, 3, *args.img_size).to(device)  # image size(1,3,320,192) iDetection
 
