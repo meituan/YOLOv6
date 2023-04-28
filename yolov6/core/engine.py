@@ -80,6 +80,7 @@ class Trainer:
             model.load_state_dict(resume_state_dict, strict=True)  # load
             self.start_epoch = self.ckpt['epoch'] + 1
             self.optimizer.load_state_dict(self.ckpt['optimizer'])
+            self.scheduler.load_state_dict(self.ckpt['scheduler'])
             if self.main_process:
                 self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
                 self.ema.updates = self.ckpt['updates']
@@ -180,7 +181,9 @@ class Trainer:
                     'ema': deepcopy(self.ema.ema).half(),
                     'updates': self.ema.updates,
                     'optimizer': self.optimizer.state_dict(),
+                    'scheduler': self.scheduler.state_dict(),
                     'epoch': self.epoch,
+                    'results': self.evaluate_results,
                     }
 
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
@@ -258,6 +261,11 @@ class Trainer:
         self.best_ap, self.ap = 0.0, 0.0
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0) # AP50, AP50_95
+        # resume results
+        if hasattr(self, "ckpt"):
+            self.evaluate_results = self.ckpt['results']
+            self.best_ap = self.evaluate_results[1]
+            self.best_stop_strong_aug_ap = self.evaluate_results[1]
         
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
@@ -295,6 +303,9 @@ class Trainer:
     def prepare_for_steps(self):
         if self.epoch > self.start_epoch:
             self.scheduler.step()
+        elif  hasattr(self, "ckpt") and self.epoch == self.start_epoch: # resume first epoch, load lr
+            for k, param in enumerate(self.optimizer.param_groups):
+                param['lr'] = self.scheduler.get_lr()[k]
         #stop strong aug like mosaic and mixup from last n epoch by recreate dataloader
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
