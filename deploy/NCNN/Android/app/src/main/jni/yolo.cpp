@@ -214,8 +214,7 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
     int width = rgb.cols;
     int height = rgb.rows;
 
-//    __android_log_print(ANDROID_LOG_DEBUG, "!!!detect!!!", "width is %d, height is %d", width, height);
-    // pad to multiple of 32
+    // pad to multiple of 64
     int w = width;
     int h = height;
     float scale = 1.f;
@@ -238,10 +237,7 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
     int wpad = (w + 63) / 64 * 64 - w;
     int hpad = (h + 63) / 64 * 64 - h;
     ncnn::Mat in_pad;
-    ncnn::copy_make_border(in, in_pad, hpad / 2, hpad - hpad / 2, wpad / 2, wpad - wpad / 2, ncnn::BORDER_CONSTANT, 0.f);
-
-
-//    __android_log_print(ANDROID_LOG_DEBUG, "!!!detect!!!", "width is %d, height is %d", in_pad.w, in_pad.h);
+    ncnn::copy_make_border(in, in_pad, hpad / 2, hpad - hpad / 2, wpad / 2, wpad - wpad / 2, ncnn::BORDER_CONSTANT,  114.f);
 
     in_pad.substract_mean_normalize(mean_vals, norm_vals);
 
@@ -321,11 +317,6 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
         x1 = std::ceil(std::max(std::min(x1, (float)(width - 1)), 1.f));
         y1 = std::ceil(std::max(std::min(y1, (float)(height - 1)), 1.f));
 
-//        // clip
-//        x0 = std::max(std::min(x0, (float)(width - 1)), 1.f);
-//        y0 = std::max(std::min(y0, (float)(height - 1)), 1.f);
-//        x1 = std::max(std::min(x1, (float)(width - 1)), 1.f);
-//        y1 = std::max(std::min(y1, (float)(height - 1)), 1.f);
 
         obj.rect.x = x0;
         obj.rect.y = y0;
