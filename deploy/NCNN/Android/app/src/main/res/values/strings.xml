@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ncnn-yolov6</string>
+    <string name="app_name">ncnn-yolov6-by-tripleMu</string>
     <string-array name="model_array">
         <item>lite-s</item>
         <item>lite-m</item>
