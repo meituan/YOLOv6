@@ -322,7 +322,7 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
         obj.rect.y = y0;
         obj.rect.width = x1 - x0;
         obj.rect.height = y1 - y0;
-        if (obj.rect.width > 10.f || obj.rect.height > 10.f) {
+        if (obj.rect.width > 10.f && obj.rect.height > 10.f) {
             objects.push_back(obj);
         }
     }
