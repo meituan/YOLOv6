@@ -2,7 +2,6 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 24
-    buildToolsVersion "29.0.2"
 
     defaultConfig {
         applicationId "com.tencent.yolov6ncnn"
@@ -26,4 +25,5 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'com.tencent.yolov6ncnn'
 }
