@@ -237,6 +237,8 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-ad
 *  [OpenCV Python/C++](./deploy/ONNX/OpenCV)
 *  [OpenVINO](./deploy/OpenVINO)
 *  [TensorRT](./deploy/TensorRT)
+*  [NCNN](./deploy/NCNN)
+*  [Android](./deploy/NCNN/Android)
 </details>
 
 <details open>

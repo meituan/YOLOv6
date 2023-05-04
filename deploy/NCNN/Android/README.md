@@ -1,6 +1,7 @@
 # ncnn-android-yolov6
 
-The yolov6 object detection in `Android` .
+The YOLOv6 object detection demo of `Android`.
+You can directly download apk file from [Android Demo here](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6-android-demo.apk), many thanks to [triple Mu](https://github.com/triple-Mu).
 
 This is a sample ncnn android project, it depends on ncnn library and opencv
 
@@ -9,7 +10,7 @@ This is a sample ncnn android project, it depends on ncnn library and opencv
 - [opencv-mobile](https://github.com/nihui/opencv-mobile)
 
 
-## how to build and run
+## How to build and run
 ### step1
 
 * Download [ncnn-YYYYMMDD-android-vulkan.zip](https://github.com/Tencent/ncnn/releases) or build ncnn for android yourself
