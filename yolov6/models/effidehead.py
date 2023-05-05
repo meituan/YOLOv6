@@ -8,6 +8,7 @@ from yolov6.utils.general import dist2bbox
 
 
 class Detect(nn.Module):
+    export = False
     '''Efficient Decoupled Head
     With hardware-aware degisn, the decoupled head is optimized with
     hybridchannels methods.
@@ -92,8 +93,6 @@ class Detect(nn.Module):
         else:
             cls_score_list = []
             reg_dist_list = []
-            anchor_points, stride_tensor = generate_anchors(
-                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             for i in range(self.nl):
                 b, _, h, w = x[i].shape
@@ -111,12 +110,23 @@ class Detect(nn.Module):
                     reg_output = self.proj_conv(F.softmax(reg_output, dim=1))
 
                 cls_output = torch.sigmoid(cls_output)
-                cls_score_list.append(cls_output.reshape([b, self.nc, l]))
-                reg_dist_list.append(reg_output.reshape([b, 4, l]))
+
+                if self.export:
+                    cls_score_list.append(cls_output)
+                    reg_dist_list.append(reg_output)
+                else:
+                    cls_score_list.append(cls_output.reshape([b, self.nc, l]))
+                    reg_dist_list.append(reg_output.reshape([b, 4, l]))
+
+            if self.export:
+                return tuple(torch.cat([cls, reg], 1) for cls, reg in zip(cls_score_list, reg_dist_list))
 
             cls_score_list = torch.cat(cls_score_list, axis=-1).permute(0, 2, 1)
             reg_dist_list = torch.cat(reg_dist_list, axis=-1).permute(0, 2, 1)
 
+
+            anchor_points, stride_tensor = generate_anchors(
+                x, self.stride, self.grid_cell_size, self.grid_cell_offset, device=x[0].device, is_eval=True, mode='af')
 
             pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor
@@ -135,21 +145,21 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
 
     head_layers = nn.Sequential(
         # stem0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv0
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[0]],
             out_channels=channels_list[chx[0]],
             kernel_size=3,
@@ -168,21 +178,21 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             kernel_size=1
         ),
         # stem1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv1
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[1]],
             out_channels=channels_list[chx[1]],
             kernel_size=3,
@@ -201,21 +211,21 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             kernel_size=1
         ),
         # stem2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=1,
             stride=1
         ),
         # cls_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=3,
             stride=1
         ),
         # reg_conv2
-        Conv(
+        ConvBNSiLU(
             in_channels=channels_list[chx[2]],
             out_channels=channels_list[chx[2]],
             kernel_size=3,
@@ -238,7 +248,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
     if num_layers == 4:
         head_layers.add_module('stem3',
             # stem3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=1,
@@ -247,7 +257,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
         )
         head_layers.add_module('cls_conv3',
             # cls_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=3,
@@ -256,7 +266,7 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
         )
         head_layers.add_module('reg_conv3',
             # reg_conv3
-            Conv(
+            ConvBNSiLU(
                 in_channels=channels_list[chx[3]],
                 out_channels=channels_list[chx[3]],
                 kernel_size=3,

@@ -12,6 +12,7 @@ from yolov6.utils.events import LOGGER
 
 
 class Model(nn.Module):
+    export = False
     '''YOLOv6 model with backbone, neck and head.
     The default parts are EfficientRep Backbone, Rep-PAN and
     Efficient Decoupled Head.
@@ -30,10 +31,10 @@ class Model(nn.Module):
         initialize_weights(self)
 
     def forward(self, x):
-        export_mode = torch.onnx.is_in_onnx_export()
+        export_mode = torch.onnx.is_in_onnx_export() or self.export
         x = self.backbone(x)
         x = self.neck(x)
-        if export_mode == False:
+        if not export_mode:
             featmaps = []
             featmaps.extend(x)
         x = self.detect(x)
@@ -70,6 +71,12 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     NECK = eval(config.model.neck.type)
 
     if 'CSP' in config.model.backbone.type:
+
+        if "stage_block_type" in config.model.backbone:
+            stage_block_type = config.model.backbone.stage_block_type
+        else:
+            stage_block_type = "BepC3"  #default
+
         backbone = BACKBONE(
             in_channels=channels,
             channels_list=channels_list,
@@ -77,14 +84,16 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
             block=block,
             csp_e=config.model.backbone.csp_e,
             fuse_P2=fuse_P2,
-            cspsppf=cspsppf
+            cspsppf=cspsppf,
+            stage_block_type=stage_block_type
         )
 
         neck = NECK(
             channels_list=channels_list,
             num_repeats=num_repeat,
             block=block,
-            csp_e=config.model.neck.csp_e
+            csp_e=config.model.neck.csp_e,
+            stage_block_type=stage_block_type
         )
     else:
         backbone = BACKBONE(

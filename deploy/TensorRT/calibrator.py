@@ -62,7 +62,7 @@ class Calibrator(trt.IInt8MinMaxCalibrator):
 
 def process_image(img_src, img_size, stride):
     '''Process image before image inference.'''
-    image = letterbox(img_src, img_size, auto=False, return_int=True)[0]
+    image = letterbox(img_src, img_size, auto=False)[0]
     # Convert
     image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
     image = np.ascontiguousarray(image).astype(np.float32)
