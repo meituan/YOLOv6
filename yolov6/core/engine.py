@@ -40,6 +40,7 @@ class Trainer:
         self.args = args
         self.cfg = cfg
         self.device = device
+        self.max_epoch = args.epochs
 
         if args.resume:
             self.ckpt = torch.load(args.resume, map_location='cpu')
@@ -84,10 +85,14 @@ class Trainer:
             if self.main_process:
                 self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
                 self.ema.updates = self.ckpt['updates']
+            if self.start_epoch > (self.max_epoch - self.args.stop_aug_last_n_epoch):
+                self.cfg.data_aug.mosaic = 0.0
+                self.cfg.data_aug.mixup = 0.0
+                self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
+
         self.model = self.parallel_model(args, model, device)
         self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
 
-        self.max_epoch = args.epochs
         self.max_stepnum = len(self.train_loader)
         self.batch_size = args.batch_size
         self.img_size = args.img_size
@@ -106,9 +111,11 @@ class Trainer:
     # Training Process
     def train(self):
         try:
-            self.train_before_loop()
+            self.before_train_loop()
             for self.epoch in range(self.start_epoch, self.max_epoch):
-                self.train_in_loop(self.epoch)
+                self.before_epoch()
+                self.train_one_epoch(self.epoch)
+                self.after_epoch()
             self.strip_model()
 
         except Exception as _:
@@ -118,22 +125,16 @@ class Trainer:
             self.train_after_loop()
 
     # Training loop for each epoch
-    def train_in_loop(self, epoch_num):
+    def train_one_epoch(self, epoch_num):
         try:
-            self.prepare_for_steps()
             for self.step, self.batch_data in self.pbar:
                 self.train_in_steps(epoch_num, self.step)
                 self.print_details()
         except Exception as _:
             LOGGER.error('ERROR in training steps.')
             raise
-        try:
-            self.eval_and_save()
-        except Exception as _:
-            LOGGER.error('ERROR in evaluate and save model.')
-            raise
 
-    # Training loop for batchdata
+    # Training one batch data.
     def train_in_steps(self, epoch_num, step_num):
         images, targets = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
@@ -165,12 +166,15 @@ class Trainer:
         self.loss_items = loss_items
         self.update_optimizer()
 
-    def eval_and_save(self):
-        remaining_epochs = self.max_epoch - 1 - self.epoch # self.epoch is start from 0
-        eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else 3
-        is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
+    def after_epoch(self):
+        lrs_of_this_epoch = [x['lr'] for x in self.optimizer.param_groups]
+        self.scheduler.step() # update lr
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
+
+            remaining_epochs = self.max_epoch - 1 - self.epoch # self.epoch is start from 0
+            eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else 3
+            is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
             if is_val_epoch:
                 self.eval_model()
                 self.ap = self.evaluate_results[1]
@@ -198,12 +202,11 @@ class Trainer:
                     save_checkpoint(ckpt, False, save_ckpt_dir, model_name='best_stop_aug_ckpt')
 
             del ckpt
-            # log for learning rate
-            lr = [x['lr'] for x in self.optimizer.param_groups]
-            self.evaluate_results = list(self.evaluate_results) + lr
+
+            self.evaluate_results = list(self.evaluate_results)
 
             # log for tensorboard
-            write_tblog(self.tblogger, self.epoch, self.evaluate_results, self.mean_loss)
+            write_tblog(self.tblogger, self.epoch, self.evaluate_results, lrs_of_this_epoch, self.mean_loss)
             # save validation predictions to tensorboard
             write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
 
@@ -250,7 +253,7 @@ class Trainer:
         self.plot_val_pred(vis_outputs, vis_paths)
 
 
-    def train_before_loop(self):
+    def before_train_loop(self):
         LOGGER.info('Training start...')
         self.start_time = time.time()
         self.warmup_stepnum = max(round(self.cfg.solver.warmup_epochs * self.max_stepnum), 1000) if self.args.quant is False else 0
@@ -301,12 +304,7 @@ class Trainer:
                                                         distill_feat = self.args.distill_feat,
                                                         )
 
-    def prepare_for_steps(self):
-        if self.epoch > self.start_epoch:
-            self.scheduler.step()
-        elif  hasattr(self, "ckpt") and self.epoch == self.start_epoch: # resume first epoch, load lr
-            for k, param in enumerate(self.optimizer.param_groups):
-                param['lr'] = self.scheduler.get_lr()[k]
+    def before_epoch(self):
         #stop strong aug like mosaic and mixup from last n epoch by recreate dataloader
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
