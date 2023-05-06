@@ -167,13 +167,14 @@ class Trainer:
         self.update_optimizer()
 
     def after_epoch(self):
-        remaining_epochs = self.max_epoch - 1 - self.epoch # self.epoch is start from 0
-        eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else 3
-        is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
         lrs_of_this_epoch = [x['lr'] for x in self.optimizer.param_groups]
         self.scheduler.step() # update lr
         if self.main_process:
             self.ema.update_attr(self.model, include=['nc', 'names', 'stride']) # update attributes for ema model
+
+            remaining_epochs = self.max_epoch - 1 - self.epoch # self.epoch is start from 0
+            eval_interval = self.args.eval_interval if remaining_epochs >= self.args.heavy_eval_range else 3
+            is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
             if is_val_epoch:
                 self.eval_model()
                 self.ap = self.evaluate_results[1]
