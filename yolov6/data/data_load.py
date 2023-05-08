@@ -4,6 +4,7 @@
 # https://github.com/ultralytics/yolov5/blob/master/utils/dataloaders.py
 
 import os
+import torch.distributed as dist
 from torch.utils.data import dataloader, distributed
 
 from .datasets import TrainValDataset
@@ -27,6 +28,10 @@ def create_dataloader(
     shuffle=False,
     data_dict=None,
     task="Train",
+    specific_shape=False,
+    height=1088,
+    width=1920
+
 ):
     """Create general dataloader.
 
@@ -52,6 +57,9 @@ def create_dataloader(
             rank=rank,
             data_dict=data_dict,
             task=task,
+            specific_shape = specific_shape,
+            height=height,
+            width=width
         )
 
     batch_size = min(batch_size, len(dataset))
@@ -62,8 +70,13 @@ def create_dataloader(
             workers,
         ]
     )  # number of workers
+    # in DDP mode, if GPU number is greater than 1, and set rect=True,
+    # DistributedSampler will sample from start if the last samples cannot be assigned equally to each
+    # GPU process, this might cause shape difference in one batch, such as (384,640,3) and (416,640,3)
+    # will cause exception in collate function of torch.stack.
+    drop_last = rect and dist.is_initialized() and dist.get_world_size() > 1
     sampler = (
-        None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
+        None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle, drop_last=drop_last)
     )
     return (
         TrainValDataLoader(

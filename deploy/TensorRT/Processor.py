@@ -170,7 +170,7 @@ class Processor():
 
             if self.grid[i].shape[2:4] != y.shape[2:4]:
                 d = self.stride.device
-                yv, xv = torch.meshgrid([torch.arange(ny).to(d), torch.arange(nx).to(d)])
+                yv, xv = torch.meshgrid([torch.arange(ny).to(d), torch.arange(nx).to(d)], indexing='ij')
                 self.grid[i] = torch.stack((xv, yv), 2).view(1, self.na, ny, nx, 2).float()
             if self.inplace:
                 y[..., 0:2] = (y[..., 0:2] + self.grid[i]) * self.stride[i]  # xy

@@ -26,8 +26,8 @@ class ComputeLoss:
                  loss_weight={
                      'class': 1.0,
                      'iou': 2.5,
-                     'dfl': 0.5}
-                 ):
+                     'dfl': 0.5},
+                ):
 
         self.fpn_strides = fpn_strides
         self.grid_cell_size = grid_cell_size
@@ -51,7 +51,9 @@ class ComputeLoss:
         outputs,
         targets,
         epoch_num,
-        step_num
+        step_num,
+        batch_height,
+        batch_width
     ):
 
         feats, pred_scores, pred_distri = outputs
@@ -59,7 +61,7 @@ class ComputeLoss:
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device, is_eval=False, mode='ab')
    
         assert pred_scores.type() == pred_distri.type()
-        gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
         # targets

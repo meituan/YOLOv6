@@ -156,6 +156,8 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128
 │   │   ├── val2017
 ```
 
+YOLOv6 支持不同的输入分辨率模式，详情请参见 [如何设置输入大小](./docs/About_training_size_cn.md).
+
 </details>
 
 <details>

@@ -9,6 +9,7 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 import sys
+import datetime
 
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
@@ -18,7 +19,7 @@ from yolov6.core.engine import Trainer
 from yolov6.utils.config import Config
 from yolov6.utils.events import LOGGER, save_yaml
 from yolov6.utils.envs import get_envs, select_device, set_random_seed
-from yolov6.utils.general import increment_name, find_latest_checkpoint
+from yolov6.utils.general import increment_name, find_latest_checkpoint, check_img_size
 
 
 def get_args_parser(add_help=True):
@@ -26,6 +27,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--data-path', default='./data/coco.yaml', type=str, help='path of dataset')
     parser.add_argument('--conf-file', default='./configs/yolov6n.py', type=str, help='experiments description file')
     parser.add_argument('--img-size', default=640, type=int, help='train, val image size (pixels)')
+    parser.add_argument('--rect', action='store_true', help='whether to use rectangular training, default is False')
     parser.add_argument('--batch-size', default=32, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=400, type=int, help='number of total epochs to run')
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
@@ -53,6 +55,9 @@ def get_args_parser(add_help=True):
     parser.add_argument('--temperature', type=int, default=20, help='distill temperature')
     parser.add_argument('--fuse_ab', action='store_true', help='fuse ab branch in training process or not')
     parser.add_argument('--bs_per_gpu', default=32, type=int, help='batch size per GPU for auto-rescale learning rate, set to 16 for P6 models')
+    parser.add_argument('--specific-shape', action='store_true', help='rectangular training')
+    parser.add_argument('--height', type=int, default=None, help='image height of model input')
+    parser.add_argument('--width', type=int, default=None, help='image width of model input')
     return parser
 
 
@@ -79,6 +84,15 @@ def check_and_init(args):
         args.save_dir = str(increment_name(osp.join(args.output_dir, args.name)))
         if master_process:
             os.makedirs(args.save_dir)
+
+    # check specific shape 
+    if args.specific_shape:
+        if args.rect:
+            LOGGER.warning('You set specific shape, and rect to True is needless. YOLOv6 will use the specific shape to train.')
+        args.height = check_img_size(args.height, 32, floor=256)  # verify imgsz is gs-multiple
+        args.width = check_img_size(args.width, 32, floor=256)
+    else:
+        args.img_size = check_img_size(args.img_size, 32, floor=256)
 
     cfg = Config.fromfile(args.conf_file)
     if not hasattr(cfg, 'training_mode'):
@@ -107,7 +121,7 @@ def main(args):
         device = torch.device('cuda', args.local_rank)
         LOGGER.info('Initializing process group... ')
         dist.init_process_group(backend="nccl" if dist.is_nccl_available() else "gloo", \
-                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size)
+                init_method=args.dist_url, rank=args.local_rank, world_size=args.world_size,timeout=datetime.timedelta(seconds=7200))
 
     # Start
     trainer = Trainer(args, cfg, device)

@@ -26,7 +26,7 @@ class ComputeLoss:
                  loss_weight={
                      'class': 1.0,
                      'iou': 2.5,
-                     'dfl': 0.5}
+                     'dfl': 0.5},
                  ):
         
         self.fpn_strides = fpn_strides
@@ -34,7 +34,7 @@ class ComputeLoss:
         self.grid_cell_offset = grid_cell_offset
         self.num_classes = num_classes
         self.ori_img_size = ori_img_size
-        
+
         self.warmup_epoch = warmup_epoch
         self.warmup_assigner = ATSSAssigner(9, num_classes=self.num_classes)
         self.formal_assigner = TaskAlignedAssigner(topk=13, num_classes=self.num_classes, alpha=1.0, beta=6.0)
@@ -52,7 +52,9 @@ class ComputeLoss:
         outputs,
         targets,
         epoch_num,
-        step_num
+        step_num,
+        batch_height,
+        batch_width
     ):
         
         feats, pred_scores, pred_distri = outputs
@@ -60,7 +62,7 @@ class ComputeLoss:
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
    
         assert pred_scores.type() == pred_distri.type()
-        gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
         # targets
@@ -156,9 +158,9 @@ class ComputeLoss:
         target_scores_sum = target_scores.sum()
 		# avoid devide zero error, devide by zero will cause loss to be inf or nan.
         # if target_scores_sum is 0, loss_cls equals to 0 alson 
-        if target_scores_sum > 0:
-        	loss_cls /= target_scores_sum
-        
+        if target_scores_sum > 1:
+            loss_cls /= target_scores_sum
+
         # bbox loss
         loss_iou, loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, anchor_points_s, target_bboxes,
                                             target_scores, target_scores_sum, fg_mask)
@@ -226,10 +228,10 @@ class BboxLoss(nn.Module):
                 target_scores.sum(-1), fg_mask).unsqueeze(-1)
             loss_iou = self.iou_loss(pred_bboxes_pos,
                                      target_bboxes_pos) * bbox_weight
-            if target_scores_sum == 0:
-                loss_iou = loss_iou.sum()
-            else:
+            if target_scores_sum > 1:
                 loss_iou = loss_iou.sum() / target_scores_sum
+            else:
+                loss_iou = loss_iou.sum()
                
             # dfl loss
             if self.use_dfl:
@@ -242,10 +244,10 @@ class BboxLoss(nn.Module):
                     target_ltrb, bbox_mask).reshape([-1, 4])
                 loss_dfl = self._df_loss(pred_dist_pos,
                                         target_ltrb_pos) * bbox_weight
-                if target_scores_sum == 0:
-                    loss_dfl = loss_dfl.sum()
-                else:
+                if target_scores_sum > 1:
                     loss_dfl = loss_dfl.sum() / target_scores_sum
+                else:
+                    loss_dfl = loss_dfl.sum() 
             else:
                 loss_dfl = pred_dist.sum() * 0.
 
