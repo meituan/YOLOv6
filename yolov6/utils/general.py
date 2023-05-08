@@ -91,7 +91,7 @@ def download_ckpt(path):
     os.makedirs(dir, exist_ok=True)
     LOGGER.info(f"checkpoint {basename} not exist, try to downloaded it from github.")
     # need to update the link with every release
-    url = f"https://github.com/meituan/YOLOv6/releases/download/0.3.0/{basename}"
+    url = f"https://github.com/meituan/YOLOv6/releases/download/0.4.0/{basename}"
     r = requests.get(url, allow_redirects=True)
     assert r.status_code == 200, "Unable to download checkpoints, manually download it"
     open(path, 'wb').write(r.content)
