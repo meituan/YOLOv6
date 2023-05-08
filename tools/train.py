@@ -87,8 +87,12 @@ def check_and_init(args):
 
     # check specific shape 
     if args.specific_shape:
-        args.height = check_img_size(args.height, 32, floor= 128)  # verify imgsz is gs-multiple
-        args.width = check_img_size(args.width, 32, floor= 128)  # verify imgsz is gs-multiple
+        if args.rect:
+            LOGGER.warning('You set specific shape, and rect to True is needless. YOLOv6 will use the specific shape to train.')
+        args.height = check_img_size(args.height, 32, floor=256)  # verify imgsz is gs-multiple
+        args.width = check_img_size(args.width, 32, floor=256)  # verify imgsz is gs-multiple
+    else:
+        args.img_size = check_img_size(args.img_size, 32, floor=256)
 
     cfg = Config.fromfile(args.conf_file)
     if not hasattr(cfg, 'training_mode'):

@@ -15,10 +15,12 @@ from multiprocessing.pool import Pool
 
 import cv2
 import numpy as np
-import torch
-from PIL import ExifTags, Image, ImageOps
-from torch.utils.data import Dataset
 from tqdm import tqdm
+from PIL import ExifTags, Image, ImageOps
+
+import torch
+from torch.utils.data import Dataset
+import torch.distributed as dist
 
 from .data_augment import (
     augment_hsv,
@@ -82,12 +84,20 @@ class TrainValDataset(Dataset):
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
+            if dist.is_initialized():
+                # in DDP mode, we need to make sure all images within batch_size * gpu_num
+                # will resized and padded to same shape.
+                sample_batch_size = self.batch_size * dist.get_world_size()
+            else:
+                sample_batch_size = self.batch_size
             self.batch_indices = np.floor(
-                np.arange(len(shapes)) / self.batch_size
+                np.arange(len(shapes)) / sample_batch_size
             ).astype(
                 np.int_
             )  # batch indices of each image
+
             self.sort_files_shapes()
+
         t2 = time.time()
         if self.main_process:
             LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
