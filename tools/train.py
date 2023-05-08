@@ -90,7 +90,7 @@ def check_and_init(args):
         if args.rect:
             LOGGER.warning('You set specific shape, and rect to True is needless. YOLOv6 will use the specific shape to train.')
         args.height = check_img_size(args.height, 32, floor=256)  # verify imgsz is gs-multiple
-        args.width = check_img_size(args.width, 32, floor=256)  # verify imgsz is gs-multiple
+        args.width = check_img_size(args.width, 32, floor=256)
     else:
         args.img_size = check_img_size(args.img_size, 32, floor=256)
 

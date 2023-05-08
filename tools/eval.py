@@ -138,10 +138,12 @@ def run(data,
     half = device.type != 'cpu' and half
     data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
 
-    # init
+    # # verify imgsz is gs-multiple
     if specific_shape:
-        height = check_img_size(height, 32, floor= 128)  # verify imgsz is gs-multiple
-        width = check_img_size(width, 32, floor= 128)  # verify imgsz is gs-multiple
+        height = check_img_size(height, 32, floor=256)
+        width = check_img_size(width, 32, floor=256)
+    else:
+        img_size = check_img_size(img_size, 32, floor=256)
     val = Evaler(data, batch_size, img_size, conf_thres, \
                 iou_thres, device, half, save_dir, \
                 shrink_size, infer_on_rect,
