@@ -18,16 +18,6 @@ from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
 
-'''
-python tools/eval.py --task 'train'/'val'/'speed'
-'''
-
-def vis_tensor(img):
-    import cv2
-    img = img.cpu().numpy()
-    img = img[0]
-    img = img.transpose(1,2,0)
-    cv2.imwrite('vis.jpg', img)
 
 class Evaler:
     def __init__(self,

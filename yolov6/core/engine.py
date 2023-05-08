@@ -32,7 +32,7 @@ from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_opti
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
 from yolov6.utils.RepOptimizer import extract_scales, RepVGGOptimizer
 from yolov6.utils.nms import xywh2xyxy
-from yolov6.utils.general import download_ckpt    
+from yolov6.utils.general import download_ckpt
 
 
 class Trainer:
@@ -53,7 +53,6 @@ class Trainer:
         # get data loader
         self.data_dict = load_yaml(args.data_path)
         self.num_classes = self.data_dict['nc']
-        self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
         self.distill_ns = True if self.args.distill and self.cfg.model.type in ['YOLOv6n','YOLOv6s'] else False
         model = self.get_model(args, cfg, self.num_classes, device)
@@ -88,7 +87,8 @@ class Trainer:
             if self.start_epoch > (self.max_epoch - self.args.stop_aug_last_n_epoch):
                 self.cfg.data_aug.mosaic = 0.0
                 self.cfg.data_aug.mixup = 0.0
-                self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
+
+        self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
 
         self.model = self.parallel_model(args, model, device)
         self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
