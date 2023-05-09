@@ -98,7 +98,7 @@ def download_ckpt(path):
     open(path, 'wb').write(r.content)
     LOGGER.info(f"checkpoint {basename} downloaded and saved")
 
-    
+
 def make_divisible(x, divisor):
     # Returns x evenly divisible by divisor
     return math.ceil(x / divisor) * divisor

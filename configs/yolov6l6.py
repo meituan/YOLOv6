@@ -59,4 +59,4 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.2,
 )
-training_mode = "conv_silu" 
+training_mode = "conv_silu"

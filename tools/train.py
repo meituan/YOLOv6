@@ -85,7 +85,7 @@ def check_and_init(args):
         if master_process:
             os.makedirs(args.save_dir)
 
-    # check specific shape 
+    # check specific shape
     if args.specific_shape:
         if args.rect:
             LOGGER.warning('You set specific shape, and rect to True is needless. YOLOv6 will use the specific shape to train.')

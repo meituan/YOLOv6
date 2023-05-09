@@ -9,17 +9,17 @@ INPUT_HEIGHT = 640
 SCORE_THRESHOLD = 0.5
 NMS_THRESHOLD = 0.45
 CONFIDENCE_THRESHOLD = 0.2
- 
+
 # Text parameters.
 FONT_FACE = cv2.FONT_HERSHEY_SIMPLEX
 FONT_SCALE = 0.7
 THICKNESS = 1
- 
+
 # Colors.
 BLACK  = (0,0,0)
 BLUE   = (255,178,50)
 YELLOW = (0,255,255)
-	
+
 def draw_label(im, label, x, y):
     """Draw text onto image at location."""
 
@@ -37,7 +37,7 @@ def pre_process(input_image, net):
 
       # Sets the input to the network.
       net.setInput(blob)
- 
+
       # Run the forward pass to get output of the output layers.
       outputs = net.forward(net.getUnconnectedOutLayersNames())
       return outputs
@@ -81,19 +81,19 @@ def post_process(input_image, outputs):
                 left = box[0]
                 top = box[1]
                 width = box[2]
-                height = box[3]             
-                # Draw bounding box.             
+                height = box[3]
+                # Draw bounding box.
                 cv2.rectangle(input_image, (left, top), (left + width, top + height), BLUE, 3*THICKNESS)
-                # Class label.                      
-                label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])             
-                # Draw label.             
+                # Class label.
+                label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
+                # Draw label.
                 draw_label(input_image, label, left, top)
         return input_image
 
 
 def video():
     while True :
-    
+
         # get frame from the video
         ret, frame = cap.read()
         net = cv2.dnn.readNet(modelWeights)
@@ -101,7 +101,7 @@ def video():
         detections = pre_process(frame, net)
         img = post_process(frame.copy(), detections)
         """
-        Put efficiency information. The function getPerfProfile returns the overall time for inference(t) 
+        Put efficiency information. The function getPerfProfile returns the overall time for inference(t)
         and the timings for each of the layers(in layersTimes).
         """
         t, _ = net.getPerfProfile()
@@ -126,6 +126,5 @@ if __name__ == '__main__':
     classes = None
     with open(classesFile, 'rt') as f:
         classes = f.read().rstrip('\n').split('\n')
-    
-    video()
 
+    video()

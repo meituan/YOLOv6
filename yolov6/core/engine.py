@@ -153,12 +153,12 @@ class Trainer:
             if self.args.distill:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
-                temperature = self.args.temperature   
+                temperature = self.args.temperature
                 total_loss, loss_items = self.compute_loss_distill(preds, t_preds, s_featmaps, t_featmaps, targets, \
                                                                   epoch_num, self.max_epoch, temperature, step_num,
                                                                   batch_height, batch_width)
-            
-            elif self.args.fuse_ab:       
+
+            elif self.args.fuse_ab:
                 total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num,
                                                             step_num, batch_height, batch_width) # YOLOv6_af
                 total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num,
@@ -286,7 +286,7 @@ class Trainer:
             self.best_ap = self.evaluate_results[1]
             self.best_stop_strong_aug_ap = self.evaluate_results[1]
 
-        
+
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
                                         warmup_epoch=self.cfg.model.head.atss_warmup_epoch,

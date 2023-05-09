@@ -219,10 +219,10 @@ class TrainValDataset(Dataset):
 
         elif shrink_size:
             ratio = (self.img_size - shrink_size) / max(h0, w0)
-    
+
         else:
             ratio = self.img_size / max(h0, w0)
-    
+
         if ratio != 1:
                 im = cv2.resize(
                     im,
@@ -654,11 +654,11 @@ class LoadData:
             self.count += 1
             img = cv2.imread(path)  # BGR
         return img, path, self.cap
-        
+
     def add_video(self, path):
         self.frame = 0
         self.cap = cv2.VideoCapture(path)
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
+
     def __len__(self):
         return self.nf  # number of files

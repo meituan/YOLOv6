@@ -132,9 +132,9 @@ class RepPANNeck(nn.Module):
 class RepBiFPANNeck(nn.Module):
     """RepBiFPANNeck Module
     """
-    # [64, 128, 256, 512, 1024] 
+    # [64, 128, 256, 512, 1024]
     # [256, 128, 128, 256, 256, 512]
-    
+
     def __init__(
         self,
         channels_list=None,
@@ -144,7 +144,7 @@ class RepBiFPANNeck(nn.Module):
         super().__init__()
 
         assert channels_list is not None
-        assert num_repeats is not None  
+        assert num_repeats is not None
 
         self.reduce_layer0 = ConvBNReLU(
             in_channels=channels_list[4], # 1024
@@ -175,7 +175,7 @@ class RepBiFPANNeck(nn.Module):
             in_channels=[channels_list[2], channels_list[1]], # 256, 128
             out_channels=channels_list[6], # 128
         )
-      
+
         self.Rep_p3 = RepBlock(
             in_channels=channels_list[6], # 128
             out_channels=channels_list[6], # 128
@@ -210,7 +210,7 @@ class RepBiFPANNeck(nn.Module):
             n=num_repeats[8],
             block=block
         )
-        
+
 
     def forward(self, input):
 
@@ -242,7 +242,7 @@ class RepPANNeck6(nn.Module):
     EfficientRep is the default backbone of this model.
     RepPANNeck has the balance of feature fusion ability and hardware efficiency.
     """
-    # [64, 128, 256, 512, 768, 1024]   
+    # [64, 128, 256, 512, 768, 1024]
     # [512, 256, 128, 256, 512, 1024]
     def __init__(
         self,
@@ -353,7 +353,7 @@ class RepPANNeck6(nn.Module):
             n=num_repeats[11],
             block=block
         )
-        
+
 
     def forward(self, input):
 
@@ -394,7 +394,7 @@ class RepPANNeck6(nn.Module):
 class RepBiFPANNeck6(nn.Module):
     """RepBiFPANNeck_P6 Module
     """
-    # [64, 128, 256, 512, 768, 1024]   
+    # [64, 128, 256, 512, 768, 1024]
     # [512, 256, 128, 256, 512, 1024]
 
     def __init__(
@@ -506,7 +506,7 @@ class RepBiFPANNeck6(nn.Module):
             n=num_repeats[11],
             block=block
         )
-        
+
 
     def forward(self, input):
 
@@ -655,9 +655,9 @@ class CSPRepPANNeck(nn.Module):
         return outputs
 
 
-class CSPRepBiFPANNeck(nn.Module): 
+class CSPRepBiFPANNeck(nn.Module):
     """
-    CSPRepBiFPANNeck module. 
+    CSPRepBiFPANNeck module.
     """
 
     def __init__(
@@ -672,7 +672,7 @@ class CSPRepBiFPANNeck(nn.Module):
 
         assert channels_list is not None
         assert num_repeats is not None
-        
+
         if stage_block_type == "BepC3":
             stage_block = BepC3
         elif stage_block_type == "MBLABlock":
@@ -681,8 +681,8 @@ class CSPRepBiFPANNeck(nn.Module):
             raise NotImplementedError
 
         self.reduce_layer0 = ConvBNReLU(
-            in_channels=channels_list[4], # 1024 
-            out_channels=channels_list[5], # 256 
+            in_channels=channels_list[4], # 1024
+            out_channels=channels_list[5], # 256
             kernel_size=1,
             stride=1
         )
@@ -702,7 +702,7 @@ class CSPRepBiFPANNeck(nn.Module):
 
         self.reduce_layer1 = ConvBNReLU(
             in_channels=channels_list[5], # 256
-            out_channels=channels_list[6], # 128 
+            out_channels=channels_list[6], # 128
             kernel_size=1,
             stride=1
         )
@@ -714,21 +714,21 @@ class CSPRepBiFPANNeck(nn.Module):
 
         self.Rep_p3 = stage_block(
             in_channels=channels_list[6], # 128
-            out_channels=channels_list[6], # 128 
+            out_channels=channels_list[6], # 128
             n=num_repeats[6],
             e=csp_e,
             block=block
         )
 
         self.downsample2 = ConvBNReLU(
-            in_channels=channels_list[6], # 128 
-            out_channels=channels_list[7], # 128 
+            in_channels=channels_list[6], # 128
+            out_channels=channels_list[7], # 128
             kernel_size=3,
             stride=2
         )
 
         self.Rep_n3 = stage_block(
-            in_channels=channels_list[6] + channels_list[7], # 128 + 128 
+            in_channels=channels_list[6] + channels_list[7], # 128 + 128
             out_channels=channels_list[8], # 256
             n=num_repeats[7],
             e=csp_e,
@@ -736,22 +736,22 @@ class CSPRepBiFPANNeck(nn.Module):
         )
 
         self.downsample1 = ConvBNReLU(
-            in_channels=channels_list[8], # 256 
-            out_channels=channels_list[9], # 256 
+            in_channels=channels_list[8], # 256
+            out_channels=channels_list[9], # 256
             kernel_size=3,
             stride=2
         )
 
 
         self.Rep_n4 = stage_block(
-            in_channels=channels_list[5] + channels_list[9], # 256 + 256 
-            out_channels=channels_list[10], # 512 
+            in_channels=channels_list[5] + channels_list[9], # 256 + 256
+            out_channels=channels_list[10], # 512
             n=num_repeats[8],
             e=csp_e,
             block=block
         )
- 
-        
+
+
     def forward(self, input):
 
         (x3, x2, x1, x0) = input
@@ -780,7 +780,7 @@ class CSPRepBiFPANNeck(nn.Module):
 class CSPRepPANNeck_P6(nn.Module):
     """CSPRepPANNeck_P6 Module
     """
-    # [64, 128, 256, 512, 768, 1024]   
+    # [64, 128, 256, 512, 768, 1024]
     # [512, 256, 128, 256, 512, 1024]
     def __init__(
         self,
@@ -898,7 +898,7 @@ class CSPRepPANNeck_P6(nn.Module):
             e=csp_e,
             block=block
         )
-        
+
 
     def forward(self, input):
 
@@ -939,7 +939,7 @@ class CSPRepPANNeck_P6(nn.Module):
 class CSPRepBiFPANNeck_P6(nn.Module):
     """CSPRepBiFPANNeck_P6 Module
     """
-    # [64, 128, 256, 512, 768, 1024]   
+    # [64, 128, 256, 512, 768, 1024]
     # [512, 256, 128, 256, 512, 1024]
     def __init__(
         self,
@@ -1057,7 +1057,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             e=csp_e,
             block=block
         )
-        
+
 
     def forward(self, input):
 
@@ -1121,9 +1121,9 @@ class Lite_EffiNeck(nn.Module):
             padding=0
         )
         self.upsample0 = nn.Upsample(scale_factor=2, mode='nearest')
-          
+
         self.upsample1 = nn.Upsample(scale_factor=2, mode='nearest')
-        
+
         self.Csp_p4 = CSPBlock(
             in_channels=unified_channels*2,
             out_channels=unified_channels,
@@ -1176,7 +1176,7 @@ class Lite_EffiNeck(nn.Module):
         fpn_out0 = self.reduce_layer0(x0) #c5
         x1 = self.reduce_layer1(x1)       #c4
         x2 = self.reduce_layer2(x2)       #c3
-        
+
         upsample_feat0 = self.upsample0(fpn_out0)
         f_concat_layer0 = torch.cat([upsample_feat0, x1], 1)
         f_out1 = self.Csp_p4(f_concat_layer0)
@@ -1193,7 +1193,7 @@ class Lite_EffiNeck(nn.Module):
         p_concat_layer2 = torch.cat([down_feat0, fpn_out0], 1)
         pan_out1 = self.Csp_n4(p_concat_layer2)  #p5
 
-        top_features = self.p6_conv_1(fpn_out0)    
+        top_features = self.p6_conv_1(fpn_out0)
         pan_out0 = top_features + self.p6_conv_2(pan_out1)  #p6
 
 

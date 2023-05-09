@@ -243,7 +243,7 @@ class ComputeLoss:
                            log_target=True) * (temperature * temperature)/ (N*C)
         # print(loss_cw)
         return loss_cw
-        
+
     def preprocess(self, targets, batch_size, scale_tensor):
         targets_list = np.zeros((batch_size, 1, 5)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):

@@ -6,7 +6,7 @@
 
 ## YOLOv6
 
-官方论文: 
+官方论文:
 - [YOLOv6 v3.0: A Full-Scale Reloading](https://arxiv.org/abs/2301.05586) 🔥
 - [YOLOv6: A Single-Stage Object Detection Framework for Industrial Applications](https://arxiv.org/abs/2209.02976)
 
@@ -22,7 +22,7 @@
 - [2023.01.06] 发布大分辨率 P6 模型以及对 P5 模型做了全面的升级 ⭐️ [模型指标](#模型指标)
 - [2022.11.04] 发布 [基础版模型](configs/base/README_cn.md) 简化训练部署流程
 - [2022.09.06] 定制化的模型量化加速方法 🚀 [量化教程](./tools/qat/README.md)
-- [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能  
+- [2022.09.05] 发布 M/L 模型，并且进一步提高了 N/T/S 模型的性能
 - [2022.06.23] 发布 N/T/S v1.0 版本模型
 
 ## 模型指标
@@ -41,7 +41,7 @@
 <details>
 <summary>表格笔记</summary>
 
-- 除了 YOLOv6-N6/S6 模型是训练了300轮的结果，其余模型均为自蒸馏训练之后的结果；  
+- 除了 YOLOv6-N6/S6 模型是训练了300轮的结果，其余模型均为自蒸馏训练之后的结果；
 - mAP 和速度指标是在 [COCO val2017](https://cocodataset.org/#download)  数据集上评估的，P5模型输入分辨率为 640×640，P6模型输入分辨率为 1280×1280；
 - 速度是在 T4 上测试的，TensorRT 版本为 7.2；
 - 复现 YOLOv6 的速度指标，请查看 [速度测试](./docs/Test_speed.md) 教程；
@@ -238,7 +238,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-ad
 <details open>
 <summary> 教程 </summary>
 
-*  [用户手册（中文版）](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
+*  [用户手册（中文版）](https://yolov6-docs.readthedocs.io/zh_CN/latest/)
 *  [训练 COCO 数据集](./docs/Train_coco_data.md)
 *  [训练自定义数据集](./docs/Train_custom_data.md)
 *  [测速](./docs/Test_speed.md)

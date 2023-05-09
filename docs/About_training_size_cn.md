@@ -12,5 +12,5 @@ YOLOv6支持三种训练尺寸模式。
 在矩形尺寸训练模式下，训练过程可能有不同的训练尺寸，例如（1080, 1920, 3）和（1200, 1600, 3）。如果您想指定一个尺寸，可以使用 `--specific-shape` 命令，并使用 `--height` 和 `--width` 指定您的训练尺寸，例如：
 ```
 python tools/train.py --data data/dataset.yaml --conf configs/yolov6n.py --specific-shape --width 1920 --height 1080
-``` 
+```
 那么，无论数据集中图片的形状是什么，训练数据的分辨率将都是 (1080, 1920, 3)。

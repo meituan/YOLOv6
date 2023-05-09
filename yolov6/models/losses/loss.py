@@ -13,7 +13,7 @@ from yolov6.assigners.tal_assigner import TaskAlignedAssigner
 
 class ComputeLoss:
     '''Loss computation func.'''
-    def __init__(self, 
+    def __init__(self,
                  fpn_strides=[8, 16, 32],
                  grid_cell_size=5.0,
                  grid_cell_offset=0.5,
@@ -28,7 +28,7 @@ class ComputeLoss:
                      'iou': 2.5,
                      'dfl': 0.5},
                  ):
-        
+
         self.fpn_strides = fpn_strides
         self.grid_cell_size = grid_cell_size
         self.grid_cell_offset = grid_cell_offset
@@ -45,8 +45,8 @@ class ComputeLoss:
         self.iou_type = iou_type
         self.varifocal_loss = VarifocalLoss().cuda()
         self.bbox_loss = BboxLoss(self.num_classes, self.reg_max, self.use_dfl, self.iou_type).cuda()
-        self.loss_weight = loss_weight       
-        
+        self.loss_weight = loss_weight
+
     def __call__(
         self,
         outputs,
@@ -56,11 +56,11 @@ class ComputeLoss:
         batch_height,
         batch_width
     ):
-        
+
         feats, pred_scores, pred_distri = outputs
         anchors, anchor_points, n_anchors_list, stride_tensor = \
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
-   
+
         assert pred_scores.type() == pred_distri.type()
         gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
@@ -70,7 +70,7 @@ class ComputeLoss:
         gt_labels = targets[:, :, :1]
         gt_bboxes = targets[:, :, 1:] #xyxy
         mask_gt = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
-        
+
         # pboxes
         anchor_points_s = anchor_points / stride_tensor
         pred_bboxes = self.bbox_decode(anchor_points_s, pred_distri) #xyxy
@@ -154,26 +154,26 @@ class ComputeLoss:
         target_labels = torch.where(fg_mask > 0, target_labels, torch.full_like(target_labels, self.num_classes))
         one_hot_label = F.one_hot(target_labels.long(), self.num_classes + 1)[..., :-1]
         loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
-            
+
         target_scores_sum = target_scores.sum()
 		# avoid devide zero error, devide by zero will cause loss to be inf or nan.
-        # if target_scores_sum is 0, loss_cls equals to 0 alson 
+        # if target_scores_sum is 0, loss_cls equals to 0 alson
         if target_scores_sum > 1:
             loss_cls /= target_scores_sum
 
         # bbox loss
         loss_iou, loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, anchor_points_s, target_bboxes,
                                             target_scores, target_scores_sum, fg_mask)
-        
+
         loss = self.loss_weight['class'] * loss_cls + \
                self.loss_weight['iou'] * loss_iou + \
                self.loss_weight['dfl'] * loss_dfl
-       
+
         return loss, \
-            torch.cat(((self.loss_weight['iou'] * loss_iou).unsqueeze(0), 
+            torch.cat(((self.loss_weight['iou'] * loss_iou).unsqueeze(0),
                          (self.loss_weight['dfl'] * loss_dfl).unsqueeze(0),
                          (self.loss_weight['class'] * loss_cls).unsqueeze(0))).detach()
-     
+
     def preprocess(self, targets, batch_size, scale_tensor):
         targets_list = np.zeros((batch_size, 1, 5)).tolist()
         for i, item in enumerate(targets.cpu().numpy().tolist()):
@@ -232,7 +232,7 @@ class BboxLoss(nn.Module):
                 loss_iou = loss_iou.sum() / target_scores_sum
             else:
                 loss_iou = loss_iou.sum()
-               
+
             # dfl loss
             if self.use_dfl:
                 dist_mask = fg_mask.unsqueeze(-1).repeat(
@@ -247,7 +247,7 @@ class BboxLoss(nn.Module):
                 if target_scores_sum > 1:
                     loss_dfl = loss_dfl.sum() / target_scores_sum
                 else:
-                    loss_dfl = loss_dfl.sum() 
+                    loss_dfl = loss_dfl.sum()
             else:
                 loss_dfl = pred_dist.sum() * 0.
 

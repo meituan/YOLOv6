@@ -90,22 +90,22 @@ def check_args(args):
 
 
 def generate_results(data_class,
-                      model_names, 
-                      do_pr_metric, 
-                      plot_confusion_matrix, 
-                      processor, 
-                      imgs_dir, 
-                      labels_dir, 
-                      valid_images, 
-                      results_file, 
-                      conf_thres, 
-                      iou_thres, 
-                      is_coco, 
+                      model_names,
+                      do_pr_metric,
+                      plot_confusion_matrix,
+                      processor,
+                      imgs_dir,
+                      labels_dir,
+                      valid_images,
+                      results_file,
+                      conf_thres,
+                      iou_thres,
+                      is_coco,
                       batch_size=1,
-                      img_size=[640, 640], 
-                      shrink_size=0, 
-                      visualize=False, 
-                      num_imgs_to_visualize=0, 
+                      img_size=[640, 640],
+                      shrink_size=0,
+                      visualize=False,
+                      num_imgs_to_visualize=0,
                       imgname2id={}):
     """Run detection on each jpg and write results to file."""
     results = []
@@ -252,11 +252,11 @@ def main():
                      'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter',
                      'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra',
                      'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
-                     'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 
-                     'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 
-                     'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 
-                     'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 
-                     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 
+                     'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard',
+                     'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon',
+                     'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+                     'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv',
+                     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
                      'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
     else:
         data_class = list(range(0, args.class_num))
@@ -268,7 +268,7 @@ def main():
     # Eliminate data with missing labels.
     with open(args.annotations) as f:
         coco_format_annotation = json.load(f)
-    # Get image names from coco format annotations. 
+    # Get image names from coco format annotations.
     coco_format_imgs = [x['file_name'] for x in coco_format_annotation['images']]
     # make a projection of image names and ids.
     imgname2id = {}
@@ -284,23 +284,23 @@ def main():
             continue
     assert len(valid_images) > 0, 'No valid images are found. Please check you image format or whether annotation file is match.'
     #targets=[j for j in os.listdir(args.labels_dir) if j.endswith('.txt')]
-    stats, seen = generate_results(data_class, 
+    stats, seen = generate_results(data_class,
                                     model_names,
                                     args.do_pr_metric,
                                     args.plot_confusion_matrix,
-                                    processor, 
-                                    args.imgs_dir, 
-                                    args.labels_dir, 
-                                    valid_images, 
-                                    results_file,  
-                                    args.conf_thres, 
-                                    args.iou_thres, 
-                                    args.is_coco, 
+                                    processor,
+                                    args.imgs_dir,
+                                    args.labels_dir,
+                                    valid_images,
+                                    results_file,
+                                    args.conf_thres,
+                                    args.iou_thres,
+                                    args.is_coco,
                                     batch_size=args.batch_size,
-                                    img_size = args.img_size, 
+                                    img_size = args.img_size,
                                     shrink_size=args.shrink_size,
                                     visualize=args.visualize,
-                                    num_imgs_to_visualize=args.num_imgs_to_visualize, 
+                                    num_imgs_to_visualize=args.num_imgs_to_visualize,
                                     imgname2id=imgname2id)
 
     # Run COCO mAP evaluation

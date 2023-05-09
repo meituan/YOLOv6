@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6m',
     pretrained='weights/yolov6m.pt',
-    depth_multiple=0.60,  
+    depth_multiple=0.60,
     width_multiple=0.75,
     backbone=dict(
         type='CSPBepBackbone',
@@ -23,8 +23,8 @@ model = dict(
         num_layers=3,
         begin_indices=24,
         anchors=3,
-        anchors_init=[[10,13, 19,19, 33,23], 
-                      [30,61, 59,59, 59,119], 
+        anchors_init=[[10,13, 19,19, 33,23],
+                      [30,61, 59,59, 59,119],
                       [116,90, 185,185, 373,326]],
         out_indices=[17, 20, 23],
         strides=[8, 16, 32],

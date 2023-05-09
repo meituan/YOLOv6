@@ -2,7 +2,7 @@
 model = dict(
     type='YOLOv6l',
     pretrained='weights/yolov6l.pt',
-    depth_multiple=1.0,  
+    depth_multiple=1.0,
     width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',
@@ -23,8 +23,8 @@ model = dict(
         num_layers=3,
         begin_indices=24,
         anchors=3,
-        anchors_init=[[10,13, 19,19, 33,23], 
-                      [30,61, 59,59, 59,119], 
+        anchors_init=[[10,13, 19,19, 33,23],
+                      [30,61, 59,59, 59,119],
                       [116,90, 185,185, 373,326]],
         out_indices=[17, 20, 23],
         strides=[8, 16, 32],
@@ -64,5 +64,5 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.243,
 )
-training_mode = "conv_silu" 
+training_mode = "conv_silu"
 # use normal conv to speed up training and further improve accuracy.

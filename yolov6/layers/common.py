@@ -141,7 +141,7 @@ class CSPSPPFModule(nn.Module):
         self.cv2 = block(in_channels, c_, 1, 1)
         self.cv3 = block(c_, c_, 3, 1)
         self.cv4 = block(c_, c_, 1, 1)
-        
+
         self.m = nn.MaxPool2d(kernel_size=kernel_size, stride=1, padding=kernel_size // 2)
         self.cv5 = block(4 * c_, c_, 1, 1)
         self.cv6 = block(c_, c_, 3, 1)
@@ -268,7 +268,7 @@ class RepVGGBlock(nn.Module):
         k = torch.zeros((channels, input_dim, kernel_size, kernel_size))
         k[np.arange(channels), np.tile(np.arange(input_dim), groups), :, :] = 1.0 / kernel_size ** 2
         return k
-    
+
     def _pad_1x1_to_3x3_tensor(self, kernel1x1):
         if kernel1x1 is None:
             return 0
@@ -699,7 +699,7 @@ class BiFusion(nn.Module):
         self.cv1 = ConvBNReLU(in_channels[0], out_channels, 1, 1)
         self.cv2 = ConvBNReLU(in_channels[1], out_channels, 1, 1)
         self.cv3 = ConvBNReLU(out_channels * 3, out_channels, 1, 1)
-        
+
         self.upsample = Transpose(
             in_channels=out_channels,
             out_channels=out_channels,
@@ -735,7 +735,7 @@ def get_block(mode):
         return ConvBNSiLU
     else:
         raise NotImplementedError("Undefied Repblock choice for mode {}".format(mode))
-  
+
 
 class SEBlock(nn.Module):
 
@@ -883,7 +883,7 @@ class Lite_EffiBlockS2(nn.Module):
             stride=1,
             padding=0,
             groups=1)
- 
+
     def forward(self, inputs):
         x1 = self.conv_dw_1(inputs)
         x1 = self.conv_1(x1)

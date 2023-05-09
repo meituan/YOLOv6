@@ -48,11 +48,11 @@ from ppq import TensorQuantizationConfig as TQC
 
 MyTQC = TQC(
     policy = QuantizationPolicy(
-        QuantizationProperty.SYMMETRICAL + 
+        QuantizationProperty.SYMMETRICAL +
         QuantizationProperty.LINEAR +
         QuantizationProperty.PER_TENSOR),
     rounding=RoundingPolicy.ROUND_HALF_EVEN,
-    num_of_bits=8, quant_min=-128, quant_max=127, 
+    num_of_bits=8, quant_min=-128, quant_max=127,
     exponent_bits=0, channel_axis=None,
     observer_algorithm='minmax'
 )
@@ -119,9 +119,9 @@ executor.load_graph(graph=graph)
 from ppq.api import register_operation_handler
 def nms_forward_function(op: Operation, values: List[torch.Tensor], **kwards) -> List[torch.Tensor]:
     return (
-        torch.zeros([1, 1], dtype=torch.int32).cuda(), 
-        torch.zeros([1, 100, 4],dtype=torch.float32).cuda(), 
-        torch.zeros([1, 100],dtype=torch.float32).cuda(), 
+        torch.zeros([1, 1], dtype=torch.int32).cuda(),
+        torch.zeros([1, 100, 4],dtype=torch.float32).cuda(),
+        torch.zeros([1, 100],dtype=torch.float32).cuda(),
         torch.zeros([1, 100], dtype=torch.int32).cuda()
     )
 register_operation_handler(nms_forward_function, 'EfficientNMS_TRT', platform=TargetPlatform.FP32)
@@ -153,7 +153,7 @@ pipeline = PFL.Pipeline([
     RuntimeCalibrationPass(),
     QuantAlignmentPass(force_overlap=True),
     LearnedStepSizePass(
-         steps=1000, is_scale_trainable=True, 
+         steps=1000, is_scale_trainable=True,
         lr=1e-5, block_size=4, collecting_device='cuda'),
     ParameterBakingPass()
 ])
@@ -161,12 +161,12 @@ pipeline = PFL.Pipeline([
 with ENABLE_CUDA_KERNEL():
     # 调用管线完成量化
     pipeline.optimize(
-        graph=graph, dataloader=dataset, verbose=True, 
+        graph=graph, dataloader=dataset, verbose=True,
         calib_steps=32, collate_fn=collate_fn, executor=executor)
 
     # 执行量化误差分析
     graphwise_error_analyse(
-        graph=graph, running_device='cuda', 
+        graph=graph, running_device='cuda',
         dataloader=dataset, collate_fn=collate_fn)
 
 # ------------------------------------------------------------

@@ -37,6 +37,6 @@ into `app/src/`.
 * Most small models run slower on GPU than on CPU, this is common
 * FPS may be lower in dark environment because of longer camera exposure time
 
-## Reference：  
+## Reference：
 - [ncnn-android-nanodet](https://github.com/nihui/ncnn-android-nanodet)
 - [ncnn](https://github.com/Tencent/ncnn)
