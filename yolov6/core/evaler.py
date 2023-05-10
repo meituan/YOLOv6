@@ -33,7 +33,7 @@ class Evaler:
                  infer_on_rect=False,
                  verbose=False,
                  do_coco_metric=True,
-                 do_pr_metric=False,
+                 do_pr_metric=True,
                  plot_curve=True,
                  plot_confusion_matrix=False,
                  specific_shape=False,
