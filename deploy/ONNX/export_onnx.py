@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
+    parser.add_argument('--opset', type=int, default=13, help='ONNX opset version')
     parser.add_argument('--ort', action='store_true', help='export onnx for onnxruntime')
     parser.add_argument('--with-preprocess', action='store_true', help='export bgr2rgb and normalize')
     parser.add_argument('--topk-all', type=int, default=100, help='topk objects for every images')
@@ -103,7 +104,7 @@ if __name__ == '__main__':
         LOGGER.info('\nStarting to export ONNX...')
         export_file = args.weights.replace('.pt', '.onnx')  # filename
         with BytesIO() as f:
-            torch.onnx.export(model, img, f, verbose=False, opset_version=13,
+            torch.onnx.export(model, img, f, verbose=False, opset_version=args.opset,
                               training=torch.onnx.TrainingMode.EVAL,
                               do_constant_folding=True,
                               input_names=['images'],
