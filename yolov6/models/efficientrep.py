@@ -387,11 +387,20 @@ class CSPBepBackbone_P6(nn.Module):
         block=RepVGGBlock,
         csp_e=float(1)/2,
         fuse_P2=False,
-        cspsppf=False
+        cspsppf=False,
+        stage_block_type="BepC3"
     ):
         super().__init__()
         assert channels_list is not None
         assert num_repeats is not None
+
+        if stage_block_type == "BepC3":
+            stage_block = BepC3
+        elif stage_block_type == "MBLABlock":
+            stage_block = MBLABlock
+        else:
+            raise NotImplementedError
+        
         self.fuse_P2 = fuse_P2
 
         self.stem = block(
@@ -408,7 +417,7 @@ class CSPBepBackbone_P6(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[1],
                 out_channels=channels_list[1],
                 n=num_repeats[1],
@@ -424,7 +433,7 @@ class CSPBepBackbone_P6(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[2],
                 out_channels=channels_list[2],
                 n=num_repeats[2],
@@ -440,7 +449,7 @@ class CSPBepBackbone_P6(nn.Module):
                 kernel_size=3,
                 stride=2
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[3],
                 out_channels=channels_list[3],
                 n=num_repeats[3],
@@ -460,7 +469,7 @@ class CSPBepBackbone_P6(nn.Module):
                 kernel_size=3,
                 stride=2,
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[4],
                 out_channels=channels_list[4],
                 n=num_repeats[4],
@@ -475,7 +484,7 @@ class CSPBepBackbone_P6(nn.Module):
                 kernel_size=3,
                 stride=2,
             ),
-            BepC3(
+            stage_block(
                 in_channels=channels_list[5],
                 out_channels=channels_list[5],
                 n=num_repeats[5],
