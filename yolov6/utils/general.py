@@ -5,6 +5,7 @@ import glob
 import math
 import torch
 import requests
+import pkg_resources as pkg
 from pathlib import Path
 from yolov6.utils.events import LOGGER
 
@@ -114,3 +115,13 @@ def check_img_size(imgsz, s=32, floor=0):
     if new_size != imgsz:
         LOGGER.warning(f'--img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
     return new_size
+
+
+def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=False, hard=False, verbose=False):
+    # Check whether the package's version is match the required version.
+    current, minimum = (pkg.parse_version(x) for x in (current, minimum))
+    result = (current == minimum) if pinned else (current >= minimum)  # bool
+    if hard:
+        info = f'⚠️ {name}{minimum} is required by YOLOv6, but {name}{current} is currently installed'
+        assert result, info  # assert minimum version requirement
+    return result

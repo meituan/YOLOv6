@@ -1,5 +1,7 @@
 import torch
+from yolov6.utils.general import check_version
 
+torch_1_10_plus = check_version(torch.__version__, minimum='1.10.0')
 
 def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.5,  device='cpu', is_eval=False, mode='af'):
     '''Generate anchors from features.'''
@@ -13,7 +15,7 @@ def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.
             _, _, h, w = feats[i].shape
             shift_x = torch.arange(end=w, device=device) + grid_cell_offset
             shift_y = torch.arange(end=h, device=device) + grid_cell_offset
-            shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
+            shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij') if torch_1_10_plus else torch.meshgrid(shift_y, shift_x)
             anchor_point = torch.stack(
                     [shift_x, shift_y], axis=-1).to(torch.float)
             if mode == 'af': # anchor-free
@@ -35,7 +37,7 @@ def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.
             cell_half_size = grid_cell_size * stride * 0.5
             shift_x = (torch.arange(end=w, device=device) + grid_cell_offset) * stride
             shift_y = (torch.arange(end=h, device=device) + grid_cell_offset) * stride
-            shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
+            shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij') if torch_1_10_plus else torch.meshgrid(shift_y, shift_x)
             anchor = torch.stack(
                 [
                     shift_x - cell_half_size, shift_y - cell_half_size,
