@@ -87,11 +87,11 @@ class Evaler:
         self.is_coco = self.data.get("is_coco", False)
         self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
         if task != 'train':
-            pad = 0.0
             eval_hyp = {
                 "shrink_size":self.shrink_size,
             }
             rect = self.infer_on_rect
+            pad = 0.5 if rect else 0.0
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
                                            self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=pad, rect=rect,
                                            data_dict=self.data, task=task, specific_shape=self.specific_shape, height=self.height, width=self.width)[0]
