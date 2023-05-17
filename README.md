@@ -31,7 +31,7 @@ Implementation of paper:
 - [2023.01.06] Release P6 models and enhance the performance of P5 models. ⭐️ [Benchmark](#Benchmark)
 - [2022.11.04] Release [base models](configs/base/README.md) to simplify the training and deployment process.
 - [2022.09.06] Customized quantization methods. 🚀 [Quantization Tutorial](./tools/qat/README.md)
-- [2022.09.05] Release M/L models and update N/T/S models with enhanced performance. 
+- [2022.09.05] Release M/L models and update N/T/S models with enhanced performance.
 - [2022.06.23] Release N/T/S models with excellent performance.
 
 ## Benchmark
@@ -49,7 +49,7 @@ Implementation of paper:
 <details>
 <summary>Table Notes</summary>
 
-- All checkpoints are trained with self-distillation except for YOLOv6-N6/S6 models trained to 300 epochs without distillation.  
+- All checkpoints are trained with self-distillation except for YOLOv6-N6/S6 models trained to 300 epochs without distillation.
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset with the input resolution of 640×640 for P5 models and 1280x1280 for P6 models.
 - Speed is tested with TensorRT 7.2 on T4.
 - Refer to [Test speed](./docs/Test_speed.md) tutorial to reproduce the speed results of YOLOv6.
@@ -96,7 +96,7 @@ Implementation of paper:
 <details>
 <summary>Table Notes</summary>
 
-- From the perspective of model size and input image ratio, we have built a series of models on the mobile terminal to facilitate flexible applications in different scenarios. 
+- From the perspective of model size and input image ratio, we have built a series of models on the mobile terminal to facilitate flexible applications in different scenarios.
 - All checkpoints are trained with 400 epochs without distillation.
 - Results of the mAP and speed are evaluated on [COCO val2017](https://cocodataset.org/#download) dataset, and the input resolution is the Size in the table.
 - Speed is tested on MNN 2.3.0 AArch64 with 2 threads by arm82 acceleration. The inference warm-up is performed 10 times, and the cycle is performed 100 times.
@@ -165,6 +165,8 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 128
 │   ├── README.txt
 ```
 
+YOLOv6 supports different input resolution modes. For details, see [How to Set the Input Size](./docs/About_training_size.md).
+
 </details>
 
 <details>
@@ -178,7 +180,7 @@ python tools/train.py --resume
 # multi GPU training.
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --resume
 ```
-Above command will automatically find the latest checkpoint in YOLOv6 directory, then resume the training process. 
+Above command will automatically find the latest checkpoint in YOLOv6 directory, then resume the training process.
 
 Your can also specify a checkpoint path to `--resume` parameter by
 ```
@@ -237,12 +239,14 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-ad
 *  [OpenCV Python/C++](./deploy/ONNX/OpenCV)
 *  [OpenVINO](./deploy/OpenVINO)
 *  [TensorRT](./deploy/TensorRT)
+*  [NCNN](./deploy/NCNN)
+*  [Android](./deploy/NCNN/Android)
 </details>
 
 <details open>
 <summary> Tutorials</summary>
 
-*  [User Guide(zh_CN)](https://yolov6-docs.readthedocs.io/zh_CN/latest/) 
+*  [User Guide(zh_CN)](https://yolov6-docs.readthedocs.io/zh_CN/latest/)
 *  [Train COCO Dataset](./docs/Train_coco_data.md)
 *  [Train custom data](./docs/Train_custom_data.md)
 *  [Test speed](./docs/Test_speed.md)
@@ -262,7 +266,7 @@ python tools/infer.py --weights yolov6s6.pt --img 1280 1280 --webcam --webcam-ad
 
  * [YOLOv6 web demo](https://huggingface.co/spaces/nateraw/yolov6) on [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/nateraw/yolov6)
 
- * [Interactive demo](https://yolov6.dagshubusercontent.com/) on [DagsHub](https://dagshub.com) with [Streamlit](https://github.com/streamlit/streamlit) 
+ * [Interactive demo](https://yolov6.dagshubusercontent.com/) on [DagsHub](https://dagshub.com) with [Streamlit](https://github.com/streamlit/streamlit)
 
  * Tutorial: [How to train YOLOv6 on a custom dataset](https://blog.roboflow.com/how-to-train-yolov6-on-a-custom-dataset/) <a href="https://colab.research.google.com/drive/1YnbqOinBZV-c9I7fk_UL6acgnnmkXDMM"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
 

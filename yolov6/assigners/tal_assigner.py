@@ -8,7 +8,7 @@ class TaskAlignedAssigner(nn.Module):
                  topk=13,
                  num_classes=80,
                  alpha=1.0,
-                 beta=6.0, 
+                 beta=6.0,
                  eps=1e-9):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk

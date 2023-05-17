@@ -22,14 +22,14 @@ model = dict(
         num_layers=3,
         begin_indices=24,
         anchors=3,
-        anchors_init=[[10,13, 19,19, 33,23], 
-                      [30,61, 59,59, 59,119], 
+        anchors_init=[[10,13, 19,19, 33,23],
+                      [30,61, 59,59, 59,119],
                       [116,90, 185,185, 373,326]],
         out_indices=[17, 20, 23],
         strides=[8, 16, 32],
         atss_warmup_epoch=0,
         iou_type='giou',
-        use_dfl=False, # set to True if you want to further train with distillation 
+        use_dfl=False, # set to True if you want to further train with distillation
         reg_max=0, # set to 16 if you want to further train with distillation
         distill_weight={
             'class': 1.0,

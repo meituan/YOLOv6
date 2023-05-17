@@ -1,28 +1,33 @@
 # ncnn-android-yolov6
 
-The yolov6 object detection in `Android` .
+The YOLOv6 object detection demo of `Android`.
+You can directly download apk file from [Android Demo here](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6-android-demo.apk), many thanks to [triple Mu](https://github.com/triple-Mu).
 
 This is a sample ncnn android project, it depends on ncnn library and opencv
 
-https://github.com/Tencent/ncnn
+- [ncnn](https://github.com/Tencent/ncnn)
 
-https://github.com/nihui/opencv-mobile
+- [opencv-mobile](https://github.com/nihui/opencv-mobile)
 
 
-## how to build and run
+## How to build and run
 ### step1
-https://github.com/Tencent/ncnn/releases
 
-* Download ncnn-YYYYMMDD-android-vulkan.zip or build ncnn for android yourself
-* Extract ncnn-YYYYMMDD-android-vulkan.zip into **app/src/main/jni** and change the **ncnn_DIR** path to yours in **app/src/main/jni/CMakeLists.txt**
+* Download [ncnn-YYYYMMDD-android-vulkan.zip](https://github.com/Tencent/ncnn/releases) or build ncnn for android yourself
+* Extract `ncnn-YYYYMMDD-android-vulkan.zip` into `app/src/main/jni` and change the `ncnn_DIR` path to yours in `app/src/main/jni/CMakeLists.txt`
 
 ### step2
-https://github.com/nihui/opencv-mobile
 
-* Download opencv-mobile-XYZ-android.zip
-* Extract opencv-mobile-XYZ-android.zip into **app/src/main/jni** and change the **OpenCV_DIR** path to yours in **app/src/main/jni/CMakeLists.txt**
+* Download [opencv-mobile-XYZ-android.zip](https://github.com/nihui/opencv-mobile)
+* Extract `opencv-mobile-XYZ-android.zip` into `app/src/main/jni` and change the `OpenCV_DIR` path to yours in `app/src/main/jni/CMakeLists.txt`
 
 ### step3
+* download [AndroidAssets.zip
+](https://github.com/meituan/YOLOv6/releases/download/0.4.0/AndroidAssets.zip)
+* Unzip `AndroidAssets.zip`, you will get a directory named as `assets`, move it
+into `app/src/`.
+
+### step4
 * Open this project with Android Studio, build it and enjoy!
 
 ## some notes
@@ -32,6 +37,6 @@ https://github.com/nihui/opencv-mobile
 * Most small models run slower on GPU than on CPU, this is common
 * FPS may be lower in dark environment because of longer camera exposure time
 
-## Reference：  
-https://github.com/nihui/ncnn-android-nanodet  
-https://github.com/Tencent/ncnn
+## Reference：
+- [ncnn-android-nanodet](https://github.com/nihui/ncnn-android-nanodet)
+- [ncnn](https://github.com/Tencent/ncnn)

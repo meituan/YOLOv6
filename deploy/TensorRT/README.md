@@ -30,7 +30,7 @@ python3 onnx_to_tensorrt.py --model ${ONNX_MODEL} \
         --preprocess_func=${PREPROCESS_FUNC} \
         --explicit-batch \
         --verbose
-        
+
 ```
 
 ## Step 3: build the demo
@@ -95,7 +95,7 @@ python deploy/TensorRT/eval_yolo_trt.py \
  --labels_dir /workdir/datasets/coco/labels/val2017\
  --annotations /workdir/datasets/coco/annotations/instances_val2017.json \
  --batch 1 \
- --img_size 640 \ 
+ --img_size 640 \
  --model weights/yolov6n.trt \
  --do_pr_metric --is_coco
 

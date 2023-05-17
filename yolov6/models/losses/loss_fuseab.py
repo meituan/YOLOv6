@@ -26,8 +26,8 @@ class ComputeLoss:
                  loss_weight={
                      'class': 1.0,
                      'iou': 2.5,
-                     'dfl': 0.5}
-                 ):
+                     'dfl': 0.5},
+                ):
 
         self.fpn_strides = fpn_strides
         self.grid_cell_size = grid_cell_size
@@ -51,15 +51,17 @@ class ComputeLoss:
         outputs,
         targets,
         epoch_num,
-        step_num
+        step_num,
+        batch_height,
+        batch_width
     ):
 
         feats, pred_scores, pred_distri = outputs
         anchors, anchor_points, n_anchors_list, stride_tensor = \
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device, is_eval=False, mode='ab')
-   
+
         assert pred_scores.type() == pred_distri.type()
-        gt_bboxes_scale = torch.full((1,4), self.ori_img_size).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
         batch_size = pred_scores.shape[0]
 
         # targets
@@ -91,7 +93,7 @@ class ComputeLoss:
             )
             torch.cuda.empty_cache()
             print("------------CPU Mode for This Batch-------------")
-            
+
             _pred_scores = pred_scores.detach().cpu().float()
             _pred_bboxes = pred_bboxes.detach().cpu().float()
             _anchor_points = anchor_points.cpu().float()
@@ -127,7 +129,7 @@ class ComputeLoss:
 
         target_scores_sum = target_scores.sum()
         # avoid devide zero error, devide by zero will cause loss to be inf or nan.
-        # if target_scores_sum is 0, loss_cls equals to 0 alson 
+        # if target_scores_sum is 0, loss_cls equals to 0 alson
         if target_scores_sum > 0:
             loss_cls /= target_scores_sum
 
@@ -202,7 +204,7 @@ class BboxLoss(nn.Module):
                 loss_iou = loss_iou.sum()
             else:
                 loss_iou = loss_iou.sum() / target_scores_sum
-               
+
             # dfl loss
             if self.use_dfl:
                 dist_mask = fg_mask.unsqueeze(-1).repeat(

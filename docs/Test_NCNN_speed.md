@@ -638,7 +638,7 @@ This modification means that some operations in the head need to be added to the
     extractor.extract("180", temp2);
     const float* ptr = temp.channel(0);
     const float* ptr2 = temp2.channel(0);
-    
+
     std::cout << temp.dims << "\n";
 
     const unsigned int num_anchors = outputs.h;
@@ -652,7 +652,7 @@ This modification means that some operations in the head need to be added to the
     int dw_ = scale_params.dw;
     int dh_ = scale_params.dh;
 
-    
+
 
     bbox_collection.clear();
     unsigned int count = 0;
@@ -690,7 +690,7 @@ This modification means that some operations in the head need to be added to the
         float cy = dy * stride;
         float w = dw * stride;
         float h = dh * stride;
-        
+
         float x1 = ((cx - w / 2.f) - (float) dw_) / r_;
         float y1 = ((cy - h / 2.f) - (float) dh_) / r_;
         float x2 = ((cx + w / 2.f) - (float) dw_) / r_;
@@ -768,7 +768,7 @@ This modification means that some operations in the head need to be added to the
 <details>
     <summary>Show/Hide Commands</summary>
 
-    cd ./path/to/lite.ai.Toolkit/build/lite.ai.toolkit/bin 
+    cd ./path/to/lite.ai.Toolkit/build/lite.ai.toolkit/bin
     ./lite_yolov6 yolov6s.onnx yolov6s.param yolov6s.bin
 </details>
 <br>
@@ -779,9 +779,9 @@ This modification means that some operations in the head need to be added to the
   <img src="../assets/yolov6lite_l_ncnn.jpg" align="middle" width = "500" />
 </p>
 
-  
+
 | Model                                                         | Size | Speed<sup>NCNN<br/>average <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
-| :----------------------------------------------------------- | :-------------------------------- | -------------------------------------- | --------------------------------------- | -------------------- | 
+| :----------------------------------------------------------- | :-------------------------------- | -------------------------------------- | --------------------------------------- | -------------------- |
 |  [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 320*320      | 39.88                                    | 1.09                                    | 0.87                  |
 |  [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 320*192      | 64.51                                    | 1.09                                     | 0.52                 |
 |  [**YOLOv6Lite-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.0/yolov6lite_l.pt) | 224*128      | 130.05                                    | 1.09                                     | 0.24                 |

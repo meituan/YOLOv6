@@ -48,14 +48,14 @@ def setDynamicRange(network, json_file):
 def build_engine(onnx_file, json_file, engine_file):
     builder = trt.Builder(TRT_LOGGER)
     network = builder.create_network(EXPLICIT_BATCH)
-    
+
     config = builder.create_builder_config()
 
     # If it is a dynamic onnx model , you need to add the following.
     # profile = builder.create_optimization_profile()
-    # profile.set_shape("input_name", (batch, channels, min_h, min_w), (batch, channels, opt_h, opt_w), (batch, channels, max_h, max_w)) 
+    # profile.set_shape("input_name", (batch, channels, min_h, min_w), (batch, channels, opt_h, opt_w), (batch, channels, max_h, max_w))
     # config.add_optimization_profile(profile)
-    
+
 
     parser = trt.OnnxParser(network, TRT_LOGGER)
     config.max_workspace_size = GiB(1)
@@ -71,14 +71,14 @@ def build_engine(onnx_file, json_file, engine_file):
             return None
 
     config.set_flag(trt.BuilderFlag.INT8)
-    
+
     setDynamicRange(network, json_file)
 
     engine = builder.build_engine(network, config)
 
     with open(engine_file, "wb") as f:
         f.write(engine.serialize())
-        
+
 
 if __name__ == '__main__':
     # Add plugins if needed
@@ -92,5 +92,3 @@ if __name__ == '__main__':
 
     build_engine(arg.onnx, arg.qparam_json, arg.engine)
     print("\033[1;32mgenerate %s\033[0m" % arg.engine)
-
-

@@ -109,7 +109,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 # Step 2: Self-distillation training
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
-									--batch 128 \ 
+									--batch 128 \
 									--conf configs/yolov6l6.py \ # yolov6m6
 									--data data/coco.yaml \
 									--epoch 300 \
