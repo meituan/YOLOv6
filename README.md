@@ -212,7 +212,7 @@ python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s6.pt --ta
 <details>
 <summary>Inference</summary>
 
-First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.3.0) or use your trained model to do inference.
+First, download a pretrained model from the YOLOv6 [release](https://github.com/meituan/YOLOv6/releases/tag/0.4.0) or use your trained model to do inference.
 
 Second, run inference with `tools/infer.py`
 
