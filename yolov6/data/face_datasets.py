@@ -413,7 +413,7 @@ class TrainValDataset(Dataset):
                         img_path,
                         np.array(info["labels"], dtype=np.float32)
                         if info["labels"]
-                        else np.zeros((0, 5), dtype=np.float32),
+                        else np.zeros((0, 15), dtype=np.float32),
                     )
                     for img_path, info in img_info.items()
                 ]
