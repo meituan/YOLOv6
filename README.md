@@ -70,7 +70,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 ```
 - fuse_ab: Anchor Aided Training Mode
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on WIDER FACE or your custom dataset.
-- data: prepare dataset and specify dataset paths in data.yaml ( [WIDERFACE](http://shuoyang1213.me/WIDERFACE/), [YOLO format widerface labels](https://github.com/meituan/YOLOv6/releases/download/0.3.1/widerface_yololabels.zip) )
+- data: prepare dataset and specify dataset paths in data.yaml ( [WIDERFACE](http://shuoyang1213.me/WIDERFACE/), [YOLO format widerface labels](https://github.com/meituan/YOLOv6/releases/download/0.3.1/widerface_label_yoloformat.tar.gz) )
 - make sure your dataset structure as follows:
 ```
 ├── widerface
