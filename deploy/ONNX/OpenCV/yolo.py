@@ -68,18 +68,18 @@ def post_process(input_image, outputs):
 	# Iterate through 25200 detections.
 	for r in range(rows):
 		row = outputs[0][0][r]
-		confidence = row[4]
+		classes_scores = row[5:]
+		max_score = np.amax(classes_scores)
 
 		# Discard bad detections and continue.
-		if confidence >= CONFIDENCE_THRESHOLD:
-			classes_scores = row[5:]
-
+		if max_score >= CONFIDENCE_THRESHOLD:
+			
 			# Get the index of max class score.
 			class_id = np.argmax(classes_scores)
 
 			#  Continue if the class score is above threshold.
 			if (classes_scores[class_id] > SCORE_THRESHOLD):
-				confidences.append(confidence)
+				confidences.append(max_score)
 				class_ids.append(class_id)
 
 				cx, cy, w, h = row[0], row[1], row[2], row[3]
@@ -91,6 +91,7 @@ def post_process(input_image, outputs):
 
 				box = np.array([left, top, width, height])
 				boxes.append(box)
+
 
 	# Perform non maximum suppression to eliminate redundant overlapping boxes with
 	# lower confidences.
