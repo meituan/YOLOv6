@@ -36,6 +36,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--name yolov6n_coco
 
 # Step 2: Self-distillation training
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16)
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 128 \
 									--conf configs/yolov6n.py \
@@ -64,6 +65,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--name yolov6s_coco # yolov6m_coco/yolov6l_coco
 
 # Step 2: Self-distillation training
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16)
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 256 \ # 128 for distillation of yolov6l
 									--conf configs/yolov6s.py \ # yolov6m/yolov6l
@@ -98,6 +100,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 
 ```shell
 # Step 1: Training a base model
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16)
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 128 \
 									--conf configs/yolov6l6.py \ # yolov6m6
@@ -108,6 +111,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--name yolov6l6_coco # yolov6m6_coco
 
 # Step 2: Self-distillation training
+# Be sure to open use_dfl mode in config file (use_dfl=True, reg_max=16)
 python -m torch.distributed.launch --nproc_per_node 8 tools/train.py \
 									--batch 128 \
 									--conf configs/yolov6l6.py \ # yolov6m6
