@@ -1,7 +1,7 @@
 # YOLOv6-lite-s model
 model = dict(
     type='YOLOv6-lite-s',
-    pretrained='weights/yolov6_lite_s.pt',
+    pretrained='weights/yolov6lite_s.pt',
     width_multiple=0.7,
     backbone=dict(
         type='Lite_EffiBackbone',
