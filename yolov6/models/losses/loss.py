@@ -30,6 +30,8 @@ class ComputeLoss:
                  ):
 
         self.fpn_strides = fpn_strides
+        self.cached_feat_sizes = [torch.Size([0, 0]) for _ in fpn_strides]
+        self.cached_anchors = None
         self.grid_cell_size = grid_cell_size
         self.grid_cell_offset = grid_cell_offset
         self.num_classes = num_classes
@@ -58,8 +60,13 @@ class ComputeLoss:
     ):
 
         feats, pred_scores, pred_distri = outputs
-        anchors, anchor_points, n_anchors_list, stride_tensor = \
-               generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
+        if all(feat.shape[2:] == cfsize for feat, cfsize in zip(feats, self.cached_feat_sizes)):
+            anchors, anchor_points, n_anchors_list, stride_tensor = self.cached_anchors
+        else:
+            self.cached_feat_sizes = [feat.shape[2:] for feat in feats]
+            anchors, anchor_points, n_anchors_list, stride_tensor = \
+                   generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
+            self.cached_anchors = anchors, anchor_points, n_anchors_list, stride_tensor
 
         assert pred_scores.type() == pred_distri.type()
         gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
