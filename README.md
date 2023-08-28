@@ -12,7 +12,7 @@ English | [简体中文](README_cn.md)
      <a href="https://www.kaggle.com/code/housanduo/yolov6"><img src="https://kaggle.com/static/images/open-in-kaggle.svg" alt="Open In Kaggle"></a>
   </div>
  <br>
-
+cp
 ## YOLOv6
 
 Implementation of paper:

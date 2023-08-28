@@ -13,11 +13,13 @@ from pathlib import Path
 from PIL import ImageFont
 from collections import deque
 
+import torch.nn.functional as F
+
 from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets import LoadData
-from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.nms import non_max_suppression_seg, non_max_suppression_seg_solo
 from yolov6.utils.torch_utils import get_model_info
 
 class Inferer:
@@ -67,10 +69,13 @@ class Inferer:
 
         LOGGER.info("Switch model to deploy modality.")
 
-    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True):
+    def infer(self, conf_thres, iou_thres, classes, agnostic_nms, max_det, save_dir, save_txt, save_img, hide_labels, hide_conf, view_img=True, issolo=True, weight_nums=66, bias_nums=1, dyconv_channels=66):
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
+        print(issolo)
         fps_calculator = CalcFPS()
+        weight_nums = [weight_nums]
+        bias_nums = [bias_nums]
         for img_src, img_path, vid_cap in tqdm(self.files):
             img, img_src = self.process_image(img_src, self.img_size, self.stride, self.half)
             img = img.to(self.device)
@@ -79,15 +84,31 @@ class Inferer:
                 # expand for batch dim
             t1 = time.time()
             pred_results = self.model(img)
-            det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
+            if not issolo:
+                loutputs = non_max_suppression_seg(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
+            else:
+                loutputs = non_max_suppression_seg_solo(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
+            protos = pred_results[1][0]
+            segments = []
+            print(len(loutputs))
+            segconf = [loutputs[li][..., 0:] for li in range(len(loutputs))]
+            det = [loutputs[li][..., :6] for li in range(len(loutputs))][0]
+            if not issolo:
+                segments = [self.handle_proto_test([protos[li].reshape(1, *(protos[li].shape[-3:]))], segconf[li], img.shape[-2:]) for li in range(len(loutputs))][0]
+            else:
+                segments = [self.handle_proto_solo([protos[li].reshape(1, *(protos[li].shape[-3:]))], segconf[li], img.shape[-2:], weight_sums=weight_nums, bias_sums=bias_nums, dyconv=dyconv_channels) for li in range(len(loutputs))][0]
             t2 = time.time()
+
+            
 
             if self.webcam:
                 save_path = osp.join(save_dir, self.webcam_addr)
                 txt_path = osp.join(save_dir, self.webcam_addr)
             else:
                 # Create output files in nested dirs that mirrors the structure of the images' dirs
-                rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
+                print(osp.dirname(img_path))
+                print(osp.dirname(self.source))
+                rel_path = "test"
                 save_path = osp.join(save_dir, rel_path, osp.basename(img_path))  # im.jpg
                 txt_path = osp.join(save_dir, rel_path, 'labels', osp.splitext(osp.basename(img_path))[0])
                 os.makedirs(osp.join(save_dir, rel_path), exist_ok=True)
@@ -98,9 +119,14 @@ class Inferer:
             # check image and font
             assert img_ori.data.contiguous, 'Image needs to be contiguous. Please apply to input images with np.ascontiguousarray(im).'
             self.font_check()
-
             if len(det):
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
+                
+                
+                ii = 0
+                segments = self.rescale_mask(img.shape[2:], segments.cpu().numpy(), img_src.shape)
+                print(segments.shape)
+                segments = segments.transpose(2, 0, 1)
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -109,12 +135,15 @@ class Inferer:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     if save_img:
+                        print(cls)
                         class_num = int(cls)  # integer class
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
-                        self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True))
+                        img_ori = self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True), segment=segments[ii])
+                    ii += 1
 
                 img_src = np.asarray(img_ori)
+
 
             # FPS counter
             fps_calculator.update(1.0 / (t2 - t1))
@@ -187,6 +216,21 @@ class Inferer:
 
         return boxes
 
+    @staticmethod
+    def rescale_mask(ori_shape, masks, target_shape):
+        '''Rescale the output to the original image shape'''
+        ratio = min(ori_shape[0] / target_shape[0], ori_shape[1] / target_shape[1])
+        padding = int((ori_shape[1] - target_shape[1] * ratio) / 2), int((ori_shape[0] - target_shape[0] * ratio) / 2)
+
+
+        masks = masks[:, padding[1]: ori_shape[0]- padding[1], padding[0]: ori_shape[1] - padding[0]]
+        masks = masks.transpose(1, 2, 0)
+        masks = cv2.resize(masks, target_shape[:2][::-1])
+        if len(masks.shape) == 2:
+            masks = masks.reshape(*masks.shape, 1)
+
+        return masks
+
     def check_img_size(self, img_size, s=32, floor=0):
         """Make sure image size is a multiple of stride s in each dimension, and return a new shape list of image."""
         if isinstance(img_size, int):  # integer i.e. img_size=640
@@ -203,6 +247,200 @@ class Inferer:
     def make_divisible(self, x, divisor):
         # Upward revision the value x to make it evenly divisible by the divisor.
         return math.ceil(x / divisor) * divisor
+
+    @staticmethod
+    def handle_proto(proto_list, oconfs, imgshape, det):
+        '''
+        proto_list: [(bs, 32, w, h), ...]
+        conf: (bs, l, 33) -> which_proto, 32
+        '''
+        def crop_mask(masks, boxes):
+            """
+            "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+            Vectorized by Chong (thanks Chong).
+
+            Args:
+                - masks should be a size [n, h, w] tensor of masks
+                - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+            """
+
+            n, h, w = masks.shape
+            x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+            r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+            c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+            return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+        conf = oconfs[..., 6:]
+        
+        xyxy = oconfs[..., :4]
+        which_proto = conf[..., 0]
+        confs = conf[..., 1:]
+        res = []
+        protos = proto_list[0]
+        for i, proto in enumerate([protos, protos, protos]):
+            s = proto.shape[-2:]
+            tconfs = confs[which_proto[..., 0] == i]
+            if tconfs.shape[0] == 0:
+                continue
+            tseg = ((tconfs@proto.reshape(proto.shape[0], proto.shape[1], -1)).reshape(proto.shape[0], tconfs.shape[1], *s))
+            print("a:")
+            print(which_proto[..., 0] == i)
+            tseg=tseg.sigmoid()
+            masks = F.interpolate(tseg, imgshape, mode='nearest')[0]
+            #return masks
+            print(xyxy[which_proto[..., 0] == i][0].shape)
+            masks = crop_mask(masks, xyxy[which_proto[..., 0] == i][0])[0]
+            res.append(masks.gt_(0.5))
+        return torch.cat(res, dim = 0), xyxy[which_proto[..., 0] == i][0]
+    
+
+    @staticmethod
+    def handle_proto_test(proto_list, oconfs, imgshape, img_orishape=None):
+        '''
+        proto_list: [(bs, 32, w, h), ...]
+        conf: (bs, l, 33) -> which_proto, 32
+        '''
+        def crop_mask(masks, boxes):
+            """
+            "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+            Vectorized by Chong (thanks Chong).
+
+            Args:
+                - masks should be a size [n, h, w] tensor of masks
+                - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+            """
+
+            n, h, w = masks.shape
+            x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+            r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+            c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+            return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+        conf = oconfs[..., 6:]
+        if conf.shape[0] == 0:
+            return None
+        
+        xyxy = oconfs[..., :4]
+        confs = conf[..., 1:]
+        proto = proto_list[0]
+        s = proto.shape[-2:]
+        seg = ((confs@proto.reshape(proto.shape[0], proto.shape[1], -1)).reshape(proto.shape[0], confs.shape[0], *s))
+        seg = seg.sigmoid()
+        masks = F.interpolate(seg, imgshape, mode='bilinear', align_corners=False)[0]
+        if img_orishape:
+            masks_ori = F.interpolate(seg, img_orishape, mode='nearest')[0]
+        else:
+            masks_ori = None
+        masks = crop_mask(masks, xyxy).gt_(0.5)
+        return masks
+    
+    # def handle_proto_solo(self, proto_list, oconfs, imgshape, weight_sums=66, bias_sums=66, dyconv=66, img_orishape=None):
+    #     '''
+    #     proto_list: [(bs, 32, w, h), ...]
+    #     conf: (bs, l, 33) -> which_proto, 32
+    #     '''
+    #     def crop_mask(masks, boxes):
+    #         """
+    #         "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+    #         Vectorized by Chong (thanks Chong).
+
+    #         Args:
+    #             - masks should be a size [n, h, w] tensor of masks
+    #             - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+    #         """
+
+    #         n, h, w = masks.shape
+    #         x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+    #         r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+    #         c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+    #         return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+    #     conf = oconfs[..., 6:]
+    #     if conf.shape[0] == 0:
+    #         return None
+        
+    #     xyxy = oconfs[..., :4]
+    #     confs = conf[..., 1:]
+    #     proto = proto_list[0]
+    #     s = proto.shape[-2:]
+    #     num_inst = confs.shape[0]
+    #     proto = proto.reshape(1, -1, *proto.shape[-2:])
+    #     proto = proto.repeat(num_inst, 1, 1, 1)
+    #     weights, biases = self.parse_dynamic_params(confs, weight_nums=weight_sums, bias_nums=bias_sums, dyconv_channels=dyconv)
+    #     n_layers = len(weights)
+    #     for i, (weight, bias) in enumerate(zip(weights, biases)):
+    #         x = F.conv2d(
+    #             proto, weight, bias=bias, stride=1, padding=0, groups=num_inst)
+    #         if i < n_layers - 1:
+    #             x = F.relu(x)
+    #     x = x.reshape(num_inst, *proto.shape[-2:])
+    #     seg = x.sigmoid()
+    #     masks = F.interpolate(seg, imgshape, mode='bilinear', align_corners=False)[0]
+    #     if img_orishape:
+    #         masks_ori = F.interpolate(seg, img_orishape, mode='nearest')[0]
+    #     else:
+    #         masks_ori = None
+    #     masks = crop_mask(masks, xyxy).gt_(0.5)
+    #     return masks
+    def handle_proto_solo(self, proto_list, oconfs, imgshape, weight_sums=66, bias_sums=1, dyconv=66, img_orishape=None):
+        '''
+        proto_list: [(bs, 32, w, h), ...]
+        conf: (bs, l, 33) -> which_proto, 32
+        '''
+        def handle_proto_coord(proto):
+            _ = proto.shape[-2:]
+            x = torch.arange(0, 1, step = 1 / _[1]).unsqueeze(0).unsqueeze(0).repeat(1, _[0], 1).to(proto.dtype).to(proto.device)
+            y = torch.arange(0, 1, step = 1 / _[0]).unsqueeze(0).T.unsqueeze(0).repeat(1, 1, _[1]).to(proto.dtype).to(proto.device)
+            return torch.cat([proto, x, y]).reshape(1, -1, *_)
+        
+        def crop_mask(masks, boxes):
+            """
+            "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+            Vectorized by Chong (thanks Chong).
+
+            Args:
+                - masks should be a size [n, h, w] tensor of masks
+                - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+            """
+
+            n, h, w = masks.shape
+            x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+            r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+            c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+            return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+        conf = oconfs[..., 6:]
+        if conf.shape[0] == 0:
+            return None
+        
+        xyxy = oconfs[..., :4]
+        confs = conf[..., 1:]
+        proto = proto_list[0][0]
+        proto = handle_proto_coord(proto)
+        s = proto.shape[-2:]
+        num_inst = confs.shape[0]
+        proto = proto.reshape(1, -1, *proto.shape[-2:])
+        weights, biases = self.parse_dynamic_params(confs, weight_nums=weight_sums, bias_nums=bias_sums, dyconv_channels=dyconv)
+        n_layers = len(weights)
+        for i, (weight, bias) in enumerate(zip(weights, biases)):
+            x = F.conv2d(
+                proto, weight, bias=bias, stride=1, padding=0, groups=1)
+            if i < n_layers - 1:
+                x = F.relu(x)
+        x = x.reshape(num_inst, *proto.shape[-2:]).unsqueeze(0)
+        seg = x.sigmoid()
+        masks = F.interpolate(seg, imgshape, mode='bilinear', align_corners=False)[0]
+        if img_orishape:
+            masks_ori = F.interpolate(seg, img_orishape, mode='nearest')[0]
+        else:
+            masks_ori = None
+        masks = crop_mask(masks, xyxy).gt_(0.5)
+        masks = masks.gt_(0.5)
+        return masks
+            
+            
+
+
 
     @staticmethod
     def draw_text(
@@ -237,9 +475,10 @@ class Inferer:
         return text_size
 
     @staticmethod
-    def plot_box_and_label(image, lw, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX):
+    def plot_box_and_label(image, lw, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255), font=cv2.FONT_HERSHEY_COMPLEX, segment=None):
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+        common_color = [[128,0,0], [255,0,0],[255,0,255],[255,102,0],[51,51,0],[0,51,0],[51,204,204],[0,128,128],[0,204,255]]
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
         if label:
             tf = max(lw - 1, 1)  # font thickness
@@ -249,6 +488,13 @@ class Inferer:
             cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
+        if segment is not None:
+            import random
+            ii=random.randint(0, len(common_color)-1)
+            colr = np.asarray(common_color[ii])
+            colr = colr.reshape(1,3).repeat((image.shape[0] * image.shape[1]), axis = 0).reshape(image.shape[0], image.shape[1], 3)
+            image = cv2.addWeighted(image, 1, (colr * segment.reshape(*segment.shape[:2], 1)).astype(image.dtype), 0.8, 1)
+        return image
 
     @staticmethod
     def font_check(font='./yolov6/utils/Arial.ttf', size=10):
@@ -280,6 +526,27 @@ class Inferer:
         num = len(palette)
         color = palette[int(i) % num]
         return (color[2], color[1], color[0]) if bgr else color
+    
+    def parse_dynamic_params(self, flatten_kernels, weight_nums, bias_nums, dyconv_channels):
+        """split kernel head prediction to conv weight and bias."""
+        n_inst = flatten_kernels.size(0)
+        n_layers = len(weight_nums)
+        params_splits = list(
+            torch.split_with_sizes(
+                flatten_kernels, weight_nums + bias_nums, dim=1))
+        weight_splits = params_splits[:n_layers]
+        bias_splits = params_splits[n_layers:]
+        for i in range(n_layers):
+            if i < n_layers - 1:
+                weight_splits[i] = weight_splits[i].reshape(
+                    n_inst * dyconv_channels, -1, 1, 1)
+                bias_splits[i] = bias_splits[i].reshape(n_inst *
+                                                        dyconv_channels)
+            else:
+                weight_splits[i] = weight_splits[i].reshape(n_inst, -1, 1, 1)
+                bias_splits[i] = bias_splits[i].reshape(n_inst)
+
+        return weight_splits, bias_splits
 
 class CalcFPS:
     def __init__(self, nsamples: int = 50):

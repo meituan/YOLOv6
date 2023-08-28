@@ -52,10 +52,13 @@ class TaskAlignedAssigner(nn.Module):
                    torch.zeros_like(pd_bboxes).to(device), \
                    torch.zeros_like(pd_scores).to(device), \
                    torch.zeros_like(pd_scores[..., 0]).to(device), \
-                   torch.zeros(*pd_bboxes.shape[:2], 40, 40)
+                   []
+                   #torch.zeros(*pd_bboxes.shape[:2]).to(device)
+                   
 
-        cycle, step, self.bs = (1, self.bs, self.bs) if self.n_max_boxes <= 100 else (self.bs, 1, 1)
-        target_labels_lst, target_bboxes_lst, target_scores_lst, fg_mask_lst, target_segmasks_lst = [], [], [], [], []
+        # cycle, step, self.bs = (1, self.bs, self.bs) if self.n_max_boxes <= 100 else (self.bs, 1, 1)
+        cycle, step, self.bs = (1, self.bs, self.bs)
+        target_labels_lst, target_bboxes_lst, target_scores_lst, fg_mask_lst, idx_lst = [], [], [], [], []
         # loop batch dim in case of numerous object box
         for i in range(cycle):
             start, end = i*step, (i+1)*step
@@ -64,7 +67,7 @@ class TaskAlignedAssigner(nn.Module):
             gt_labels_ = gt_labels[start:end, ...]
             gt_bboxes_ = gt_bboxes[start:end, ...]
             mask_gt_   = mask_gt[start:end, ...]
-            gt_segmasks_ = gt_segmasks[start:end, ...]
+            # gt_segmasks_ = gt_segmasks[start:end, ...]
 
             mask_pos, align_metric, overlaps = self.get_pos_mask(
                 pd_scores_, pd_bboxes_, gt_labels_, gt_bboxes_, anc_points, mask_gt_)
@@ -73,8 +76,8 @@ class TaskAlignedAssigner(nn.Module):
                 mask_pos, overlaps, self.n_max_boxes)
 
             # assigned target
-            target_labels, target_bboxes, target_scores, target_segmasks = self.get_targets(
-                gt_labels_, gt_bboxes_, target_gt_idx, fg_mask, gt_segmasks_)
+            target_labels, target_bboxes, target_scores, idx = self.get_targets(
+                gt_labels_, gt_bboxes_, target_gt_idx, fg_mask)
 
             # normalize
             align_metric *= mask_pos
@@ -85,19 +88,20 @@ class TaskAlignedAssigner(nn.Module):
 
             # append
             target_labels_lst.append(target_labels)
+            idx_lst.append(idx)
             target_bboxes_lst.append(target_bboxes)
             target_scores_lst.append(target_scores)
             fg_mask_lst.append(fg_mask)
-            target_segmasks_lst.append(target_segmasks)
+            # target_segmasks_lst.append(target_segmasks)
 
         # concat
         target_labels = torch.cat(target_labels_lst, 0)
         target_bboxes = torch.cat(target_bboxes_lst, 0)
         target_scores = torch.cat(target_scores_lst, 0)
         fg_mask = torch.cat(fg_mask_lst, 0)
-        target_segmasks = torch.cat(target_segmasks_lst, 0)
+        # target_segmasks = torch.cat(target_segmasks_lst, 0)
 
-        return target_labels, target_bboxes, target_scores, fg_mask.bool(), target_segmasks
+        return target_labels, target_bboxes, target_scores, fg_mask.bool(), idx_lst
 
     def get_pos_mask(self,
                      pd_scores,
@@ -158,8 +162,7 @@ class TaskAlignedAssigner(nn.Module):
                     gt_labels,
                     gt_bboxes,
                     target_gt_idx,
-                    fg_mask,
-                    gt_segmasks):
+                    fg_mask):
 
         # assigned target labels
         batch_ind = torch.arange(end=self.bs, dtype=torch.int64, device=gt_labels.device)[...,None]
@@ -175,8 +178,8 @@ class TaskAlignedAssigner(nn.Module):
         fg_scores_mask  = fg_mask[:, :, None].repeat(1, 1, self.num_classes)
         target_scores = torch.where(fg_scores_mask > 0, target_scores,
                                         torch.full_like(target_scores, 0))
-        m_shape = gt_segmasks.shape[-2:]
-        target_segmasks = gt_segmasks.reshape([-1, m_shape[0], m_shape[1]])[target_gt_idx]
+        # m_shape = gt_segmasks.shape[-2:]
+        # target_segmasks = gt_segmasks.reshape([-1, m_shape[0], m_shape[1]])[target_gt_idx]
 
 
-        return target_labels, target_bboxes, target_scores, target_segmasks
+        return target_labels, target_bboxes, target_scores, target_gt_idx

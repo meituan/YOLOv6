@@ -7,13 +7,19 @@ import json
 import torch
 import yaml
 from pathlib import Path
+import cv2
+from multiprocessing.pool import ThreadPool
+
+
 
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
+import torch.nn.functional as F
+
 from yolov6.data.data_load import create_dataloader
 from yolov6.utils.events import LOGGER, NCOLS
-from yolov6.utils.nms import non_max_suppression
+from yolov6.utils.nms import non_max_suppression_seg, non_max_suppression_seg_solo
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
@@ -87,24 +93,25 @@ class Evaler:
         self.is_coco = self.data.get("is_coco", False)
         self.ids = self.coco80_to_coco91_class() if self.is_coco else list(range(1000))
         if task != 'train':
+            pad = 0.0
             eval_hyp = {
                 "shrink_size":self.shrink_size,
             }
             rect = self.infer_on_rect
-            pad = 0.5 if rect else 0.0
             dataloader = create_dataloader(self.data[task if task in ('train', 'val', 'test') else 'val'],
-                                           self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=pad, rect=rect,
+                                           self.img_size, self.batch_size, self.stride, hyp=eval_hyp, check_labels=True, pad=0.5, rect=True,
                                            data_dict=self.data, task=task, specific_shape=self.specific_shape, height=self.height, width=self.width)[0]
         return dataloader
 
-    def predict_model(self, model, dataloader, task):
+    def predict_model(self, model, dataloader, task, issolo=False, weight_nums=66, bias_nums=1, dyconv_channels=66):
         '''Model prediction
         Predicts the whole dataset and gets the prediced results and inference time.
         '''
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.", ncols=NCOLS)
-
+        weight_nums = [weight_nums]
+        bias_nums = [bias_nums]
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
             stats, ap = [], []
@@ -115,7 +122,7 @@ class Evaler:
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
-        for i, (imgs, targets, paths, shapes) in enumerate(pbar):
+        for i, (imgs, targets, paths, shapes, masks) in enumerate(pbar):
             # pre-process
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
@@ -125,12 +132,23 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
-            outputs, _ = model(imgs)
+            toutputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 
             # post-process
             t3 = time_sync()
-            outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
+            if not issolo:
+                loutputs = non_max_suppression_seg(toutputs, self.conf_thres, self.iou_thres, multi_label=True)
+            else:
+                loutputs = non_max_suppression_seg_solo(toutputs, self.conf_thres, self.iou_thres, multi_label=True)
+            protos = toutputs[1][0]
+            segments = []
+            segconf = [loutputs[li][..., 0:] for li in range(len(loutputs))]
+            outputs = [loutputs[li][..., :6] for li in range(len(loutputs))]
+            if not issolo:
+                segments = [self.handle_proto_test([protos[li].reshape(1, *(protos[li].shape[-3:]))], segconf[li], imgs.shape[-2:]) for li in range(len(loutputs))]
+            else:
+                segments = [self.handle_proto_solo([protos[li].reshape(1, *(protos[li].shape[-3:]))], segconf[li], imgs.shape[-2:], weight_sums=weight_nums, bias_sums=bias_nums, dyconv=dyconv_channels) for li in range(len(loutputs))]
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
 
@@ -139,7 +157,7 @@ class Evaler:
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            # pred_results.extend(self.convert_to_coco_format_seg(outputs, imgs, paths, shapes, self.ids, segments))
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
@@ -153,25 +171,29 @@ class Evaler:
             # Statistics per image
             # This code is based on
             # https://github.com/ultralytics/yolov5/blob/master/val.py
-            for si, pred in enumerate(eval_outputs):
+            for si, (pred, pred_masks) in enumerate(zip(eval_outputs, segments)):
                 labels = targets[targets[:, 0] == si, 1:]
                 nl = len(labels)
                 tcls = labels[:, 0].tolist() if nl else []  # target class
                 seen += 1
+                correct_masks = torch.zeros(len(pred), niou, dtype=torch.bool)  # init
+                correct = torch.zeros(len(pred), niou, dtype=torch.bool)  # init
 
                 if len(pred) == 0:
                     if nl:
-                        stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
+                        stats.append((correct_masks, correct, torch.Tensor(), torch.Tensor(), tcls))
                     continue
 
+                # Masks
+                midx = targets[:, 0] == si
+                gt_masks = masks[midx]
                 # Predictions
                 predn = pred.clone()
                 self.scale_coords(imgs[si].shape[1:], predn[:, :4], shapes[si][0], shapes[si][1])  # native-space pred
 
                 # Assign all predictions as incorrect
-                correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool)
+                
                 if nl:
-
                     from yolov6.utils.nms import xywh2xyxy
 
                     # target boxes
@@ -183,49 +205,122 @@ class Evaler:
 
                     labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
 
-                    from yolov6.utils.metrics import process_batch
+                    from yolov6.utils.metrics import process_batch    
 
                     correct = process_batch(predn, labelsn, iouv)
+                    correct_masks = process_batch(predn, labelsn, iouv, pred_masks, gt_masks, overlap=False, masks=True)
                     if self.plot_confusion_matrix:
                         confusion_matrix.process_batch(predn, labelsn)
 
                 # Append statistics (correct, conf, pcls, tcls)
-                stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+
+
+                stats.append((correct_masks.cpu(), correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
         if self.do_pr_metric:
             # Compute statistics
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
-
-                from yolov6.utils.metrics import ap_per_class
-                p, r, ap, f1, ap_class = ap_per_class(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
-                AP50_F1_max_idx = len(f1.mean(0)) - f1.mean(0)[::-1].argmax() -1
-                LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
-                ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
-                mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
-                nt = np.bincount(stats[3].astype(np.int64), minlength=model.nc)  # number of targets per class
+                from yolov6.utils.metrics import ap_per_class_box_and_mask, Metrics
+                metrics = Metrics()
+                # v5 method
+                results = ap_per_class_box_and_mask(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
+                metrics.update(results)
+                nt = np.bincount(stats[4].astype(np.int64), minlength=model.nc)  # number of targets per class
 
                 # Print results
-                s = ('%-16s' + '%12s' * 7) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
+                s = ('%22s' + '%15s' * 10) % ('Class', 'Images', 'Instances', 'Box(P', 'R', 'mAP50', 'mAP50-95)', 'Mask(P', 'R',
+                                  'mAP50', 'mAP50-95)')
                 LOGGER.info(s)
-                pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
-                LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, f1.mean(0)[AP50_F1_max_idx], map50, map))
-
-                self.pr_metric_result = (map50, map)
-
-                # Print results per class
-                if self.verbose and model.nc > 1:
-                    for i, c in enumerate(ap_class):
-                        LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx],
-                                           f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
+                pf = '%22s' + '%15i' * 2 + '%11.5g' * 8  # print format
+                mr = metrics.mean_results()
+                LOGGER.info(pf % ('all', seen, nt.sum(), *mr))
+                return [mr[2], mr[3], mr[6], mr[7]], [], []
 
                 if self.plot_confusion_matrix:
                     confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
             else:
-                LOGGER.info("Calculate metric failed, might check dataset.")
-                self.pr_metric_result = (0.0, 0.0)
+                return [0, 0, 0, 0], [], []
 
-        return pred_results, vis_outputs, vis_paths
+        return pred_results
+
+    def parse_dynamic_params(self, flatten_kernels, weight_nums, bias_nums, dyconv_channels):
+        """split kernel head prediction to conv weight and bias."""
+        n_inst = flatten_kernels.size(0)
+        n_layers = len(weight_nums)
+        params_splits = list(
+            torch.split_with_sizes(
+                flatten_kernels, weight_nums + bias_nums, dim=1))
+        weight_splits = params_splits[:n_layers]
+        bias_splits = params_splits[n_layers:]
+        for i in range(n_layers):
+            if i < n_layers - 1:
+                weight_splits[i] = weight_splits[i].reshape(
+                    n_inst * dyconv_channels, -1, 1, 1)
+                bias_splits[i] = bias_splits[i].reshape(n_inst *
+                                                        dyconv_channels)
+            else:
+                weight_splits[i] = weight_splits[i].reshape(n_inst, -1, 1, 1)
+                bias_splits[i] = bias_splits[i].reshape(n_inst)
+
+        return weight_splits, bias_splits
+
+    def handle_proto_solo(self, proto_list, oconfs, imgshape, weight_sums=66, bias_sums=1, dyconv=66, img_orishape=None):
+        '''
+        proto_list: [(bs, 32, w, h), ...]
+        conf: (bs, l, 33) -> which_proto, 32
+        '''
+        def handle_proto_coord(proto):
+            _ = proto.shape[-2:]
+            x = torch.arange(0, 1, step = 1 / _[1]).unsqueeze(0).unsqueeze(0).repeat(1, _[0], 1).to(proto.dtype).to(proto.device)
+            y = torch.arange(0, 1, step = 1 / _[0]).unsqueeze(0).T.unsqueeze(0).repeat(1, 1, _[1]).to(proto.dtype).to(proto.device)
+            return torch.cat([proto, x, y]).reshape(1, -1, *_)
+        
+        def crop_mask(masks, boxes):
+            """
+            "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+            Vectorized by Chong (thanks Chong).
+
+            Args:
+                - masks should be a size [n, h, w] tensor of masks
+                - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+            """
+
+            n, h, w = masks.shape
+            x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+            r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+            c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+            return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+        conf = oconfs[..., 6:]
+        if conf.shape[0] == 0:
+            return None
+        
+        xyxy = oconfs[..., :4]
+        confs = conf[..., 1:]
+        proto = proto_list[0][0]
+        proto = handle_proto_coord(proto)
+        s = proto.shape[-2:]
+        num_inst = confs.shape[0]
+        proto = proto.reshape(1, -1, *proto.shape[-2:])
+        weights, biases = self.parse_dynamic_params(confs, weight_nums=weight_sums, bias_nums=bias_sums, dyconv_channels=dyconv)
+        n_layers = len(weights)
+        for i, (weight, bias) in enumerate(zip(weights, biases)):
+            x = F.conv2d(
+                proto, weight, bias=bias, stride=1, padding=0, groups=1)
+            if i < n_layers - 1:
+                x = F.relu(x)
+        x = x.reshape(num_inst, *proto.shape[-2:]).unsqueeze(0)
+        seg = x.sigmoid()
+        masks = F.interpolate(seg, imgshape, mode='bilinear', align_corners=False)[0]
+        if img_orishape:
+            masks_ori = F.interpolate(seg, img_orishape, mode='nearest')[0]
+        else:
+            masks_ori = None
+        masks = crop_mask(masks, xyxy).gt_(0.5)
+        masks = masks.gt_(0.5)
+        return masks
+            
 
 
     def eval_model(self, pred_results, model, dataloader, task):
@@ -282,7 +377,8 @@ class Evaler:
                     label_count_dicts[nc_i]["images"].add(ann_i["image_id"])
                     label_count_dicts[nc_i]["anns"] += 1
 
-                s = ('%-16s' + '%12s' * 7) % ('Class', 'Labeled_images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
+                s = ('%22s' + '%11s' * 10) % ('Class', 'Images', 'Instances', 'Box(P', 'R', 'mAP50', 'mAP50-95)', 'Mask(P', 'R',
+                                  'mAP50', 'mAP50-95)')
                 LOGGER.info(s)
                 #IOU , all p, all cats, all gt, maxdet 100
                 coco_p = cocoEval.eval['precision']
@@ -381,6 +477,51 @@ class Evaler:
                     "score": score
                 }
                 pred_results.append(pred_data)
+        return pred_results
+
+    def convert_to_coco_format_seg(self, outputs, imgs, paths, shapes, ids, masks):
+        
+        from pycocotools.mask import encode
+        import time
+
+        def single_encode(x):
+            rle = encode(np.asarray(x[:, :, None], order='F', dtype='uint8'))[0]
+            rle['counts'] = rle['counts'].decode('utf-8')
+            return rle
+            
+        
+        pred_results = []
+        for i, pred in enumerate(outputs):
+            if len(pred) == 0:
+                continue
+            pred_masks = masks[i].cpu().numpy()
+            pred_masks = np.transpose(pred_masks, (2, 0, 1))
+            a = time.time()
+            with ThreadPool(64) as pool:
+                rles = pool.map(single_encode, pred_masks)
+            print("rle time")
+            b = time.time()
+            path, shape = Path(paths[i]), shapes[i][0]
+            self.scale_coords(imgs[i].shape[1:], pred[:, :4], shape, shapes[i][1])
+            image_id = int(path.stem) if self.is_coco else path.stem
+            bboxes = self.box_convert(pred[:, 0:4])
+            bboxes[:, :2] -= bboxes[:, 2:] / 2
+            cls = pred[:, 5]
+            scores = pred[:, 4]
+            for ind in range(pred.shape[0]):
+                category_id = ids[int(cls[ind])]
+                bbox = [round(x, 3) for x in bboxes[ind].tolist()]
+                score = round(scores[ind].item(), 5)
+                pred_data = {
+                    "image_id": image_id,
+                    "category_id": category_id,
+                    "bbox": bbox,
+                    "score": score,
+                    'segmentation': rles[i]
+                }
+                pred_results.append(pred_data)
+            c = time.time()
+            print(b-a, c-b)
         return pred_results
 
     @staticmethod
@@ -543,3 +684,48 @@ class Evaler:
             pred_results.extend(convert_to_coco_format_trt(nums, boxes, scores, classes, paths, shapes, self.ids))
             self.speed_result[0] += self.batch_size
         return dataloader, pred_results
+
+    
+
+    @staticmethod
+    def handle_proto_test(proto_list, oconfs, imgshape, img_orishape=None):
+        '''
+        proto_list: [(bs, 32, w, h), ...]
+        conf: (bs, l, 33) -> which_proto, 32
+        '''
+        
+    
+        def crop_mask(masks, boxes):
+            """
+            "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+            Vectorized by Chong (thanks Chong).
+
+            Args:
+                - masks should be a size [n, h, w] tensor of masks
+                - boxes should be a size [n, 4] tensor of bbox coords in relative point form
+            """
+
+            n, h, w = masks.shape
+            x1, y1, x2, y2 = torch.chunk(boxes[:, :, None], 4, 1)  # x1 shape(1,1,n)
+            r = torch.arange(w, device=masks.device, dtype=x1.dtype)[None, None, :]  # rows shape(1,w,1)
+            c = torch.arange(h, device=masks.device, dtype=x1.dtype)[None, :, None]  # cols shape(h,1,1)
+            return masks * ((r >= x1) * (r < x2) * (c >= y1) * (c < y2))
+
+        conf = oconfs[..., 6:]
+        if conf.shape[0] == 0:
+            return None
+        
+        xyxy = oconfs[..., :4]
+        confs = conf[..., 1:]
+        proto = proto_list[0]
+        
+        s = proto.shape[-2:]
+        seg = ((confs@proto.reshape(proto.shape[0], proto.shape[1], -1)).reshape(proto.shape[0], confs.shape[0], *s))
+        seg = seg.sigmoid()
+        masks = F.interpolate(seg, imgshape, mode='bilinear', align_corners=False)[0]
+        if img_orishape:
+            masks_ori = F.interpolate(seg, img_orishape, mode='nearest')[0]
+        else:
+            masks_ori = None
+        masks = crop_mask(masks, xyxy).gt_(0.5)
+        return masks

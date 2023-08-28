@@ -1,13 +1,11 @@
 # COCO 2017 dataset http://cocodataset.org
-train: ../coco/images/train2017 # 118287 images
-val: ../coco/images/val2017  # 5000 images
-test: ../coco/images/test2017
-anno_path: ../coco/annotations/instances_val2017.json
+train: ./data/coco/images/train2017 # 118287 images
+val: ./data/coco/images/val2017  # 5000 images
+# test: ./data/coco/images/val2017
 
 # number of classes
 nc: 80
-# whether it is coco dataset, only coco dataset should be set to True.
-is_coco: True
+
 
 # class names
 names: [ 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',

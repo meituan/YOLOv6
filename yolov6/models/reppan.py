@@ -551,22 +551,14 @@ class CSPRepPANNeck(nn.Module):
         channels_list=None,
         num_repeats=None,
         block=BottleRep,
-        csp_e=float(1)/2,
-        stage_block_type="BepC3"
+        csp_e=float(1)/2
     ):
         super().__init__()
-
-        if stage_block_type == "BepC3":
-            stage_block = BepC3
-        elif stage_block_type == "MBLABlock":
-            stage_block = MBLABlock
-        else:
-            raise NotImplementedError
 
         assert channels_list is not None
         assert num_repeats is not None
 
-        self.Rep_p4 = stage_block(
+        self.Rep_p4 = BepC3(
             in_channels=channels_list[3] + channels_list[5], # 512 + 256
             out_channels=channels_list[5], # 256
             n=num_repeats[5],
@@ -574,7 +566,7 @@ class CSPRepPANNeck(nn.Module):
             block=block
         )
 
-        self.Rep_p3 = stage_block(
+        self.Rep_p3 = BepC3(
             in_channels=channels_list[2] + channels_list[6], # 256 + 128
             out_channels=channels_list[6], # 128
             n=num_repeats[6],
@@ -582,7 +574,7 @@ class CSPRepPANNeck(nn.Module):
             block=block
         )
 
-        self.Rep_n3 = stage_block(
+        self.Rep_n3 = BepC3(
             in_channels=channels_list[6] + channels_list[7], # 128 + 128
             out_channels=channels_list[8], # 256
             n=num_repeats[7],
@@ -590,7 +582,7 @@ class CSPRepPANNeck(nn.Module):
             block=block
         )
 
-        self.Rep_n4 = stage_block(
+        self.Rep_n4 = BepC3(
             in_channels=channels_list[5] + channels_list[9], # 256 + 256
             out_channels=channels_list[10], # 512
             n=num_repeats[8],
@@ -795,20 +787,12 @@ class CSPRepPANNeck_P6(nn.Module):
         channels_list=None,
         num_repeats=None,
         block=BottleRep,
-        csp_e=float(1)/2,
-        stage_block_type="BepC3"
+        csp_e=float(1)/2
     ):
         super().__init__()
 
         assert channels_list is not None
         assert num_repeats is not None
-
-        if stage_block_type == "BepC3":
-            stage_block = BepC3
-        elif stage_block_type == "MBLABlock":
-            stage_block = MBLABlock
-        else:
-            raise NotImplementedError
 
         self.reduce_layer0 = ConvBNReLU(
             in_channels=channels_list[5], # 1024
@@ -822,7 +806,7 @@ class CSPRepPANNeck_P6(nn.Module):
             out_channels=channels_list[6], # 512
         )
 
-        self.Rep_p5 = stage_block(
+        self.Rep_p5 = BepC3(
             in_channels=channels_list[4] + channels_list[6], # 768 + 512
             out_channels=channels_list[6], # 512
             n=num_repeats[6],
@@ -842,7 +826,7 @@ class CSPRepPANNeck_P6(nn.Module):
             out_channels=channels_list[7] # 256
         )
 
-        self.Rep_p4 = stage_block(
+        self.Rep_p4 = BepC3(
             in_channels=channels_list[3] + channels_list[7], # 512 + 256
             out_channels=channels_list[7], # 256
             n=num_repeats[7],
@@ -862,7 +846,7 @@ class CSPRepPANNeck_P6(nn.Module):
             out_channels=channels_list[8] # 128
         )
 
-        self.Rep_p3 = stage_block(
+        self.Rep_p3 = BepC3(
             in_channels=channels_list[2] + channels_list[8], # 256 + 128
             out_channels=channels_list[8], # 128
             n=num_repeats[8],
@@ -877,7 +861,7 @@ class CSPRepPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n4 = stage_block(
+        self.Rep_n4 = BepC3(
             in_channels=channels_list[8] + channels_list[8], # 128 + 128
             out_channels=channels_list[9], # 256
             n=num_repeats[9],
@@ -892,7 +876,7 @@ class CSPRepPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n5 = stage_block(
+        self.Rep_n5 = BepC3(
             in_channels=channels_list[7] + channels_list[9], # 256 + 256
             out_channels=channels_list[10], # 512
             n=num_repeats[10],
@@ -907,7 +891,7 @@ class CSPRepPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n6 = stage_block(
+        self.Rep_n6 = BepC3(
             in_channels=channels_list[6] + channels_list[10], # 512 + 512
             out_channels=channels_list[11], # 1024
             n=num_repeats[11],
@@ -962,20 +946,12 @@ class CSPRepBiFPANNeck_P6(nn.Module):
         channels_list=None,
         num_repeats=None,
         block=BottleRep,
-        csp_e=float(1)/2,
-        stage_block_type="BepC3"
+        csp_e=float(1)/2
     ):
         super().__init__()
 
         assert channels_list is not None
         assert num_repeats is not None
-
-        if stage_block_type == "BepC3":
-            stage_block = BepC3
-        elif stage_block_type == "MBLABlock":
-            stage_block = MBLABlock
-        else:
-            raise NotImplementedError
 
         self.reduce_layer0 = ConvBNReLU(
             in_channels=channels_list[5], # 1024
@@ -989,7 +965,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             out_channels=channels_list[6], # 512
         )
 
-        self.Rep_p5 = stage_block(
+        self.Rep_p5 = BepC3(
             in_channels=channels_list[6], # 512
             out_channels=channels_list[6], # 512
             n=num_repeats[6],
@@ -1009,7 +985,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             out_channels=channels_list[7], # 256
         )
 
-        self.Rep_p4 = stage_block(
+        self.Rep_p4 = BepC3(
             in_channels=channels_list[7], # 256
             out_channels=channels_list[7], # 256
             n=num_repeats[7],
@@ -1029,7 +1005,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             out_channels=channels_list[8], # 128
         )
 
-        self.Rep_p3 = stage_block(
+        self.Rep_p3 = BepC3(
             in_channels=channels_list[8], # 128
             out_channels=channels_list[8], # 128
             n=num_repeats[8],
@@ -1044,7 +1020,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n4 = stage_block(
+        self.Rep_n4 = BepC3(
             in_channels=channels_list[8] + channels_list[8], # 128 + 128
             out_channels=channels_list[9], # 256
             n=num_repeats[9],
@@ -1059,7 +1035,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n5 = stage_block(
+        self.Rep_n5 = BepC3(
             in_channels=channels_list[7] + channels_list[9], # 256 + 256
             out_channels=channels_list[10], # 512
             n=num_repeats[10],
@@ -1074,7 +1050,7 @@ class CSPRepBiFPANNeck_P6(nn.Module):
             stride=2
         )
 
-        self.Rep_n6 = stage_block(
+        self.Rep_n6 = BepC3(
             in_channels=channels_list[6] + channels_list[10], # 512 + 512
             out_channels=channels_list[11], # 1024
             n=num_repeats[11],

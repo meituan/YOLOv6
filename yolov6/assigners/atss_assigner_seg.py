@@ -48,8 +48,7 @@ class ATSSAssigner(nn.Module):
             return torch.full( [self.bs, self.n_anchors], self.bg_idx).to(device), \
                    torch.zeros([self.bs, self.n_anchors, 4]).to(device), \
                    torch.zeros([self.bs, self.n_anchors, self.num_classes]).to(device), \
-                   torch.zeros([self.bs, self.n_anchors]).to(device), \
-                   torch.zeros(*pd_bboxes.shape[:2], 40, 40)
+                   torch.zeros([self.bs, self.n_anchors]).to(device)
 
 
         overlaps = iou2d_calculator(gt_bboxes.reshape([-1, 4]), anc_bboxes)
@@ -77,7 +76,7 @@ class ATSSAssigner(nn.Module):
 
         # assigned target
         target_labels, target_bboxes, target_scores, target_segmasks = self.get_targets(
-            gt_labels, gt_bboxes, target_gt_idx, fg_mask)
+            gt_labels, gt_bboxes, target_gt_idx, fg_mask, gt_segmasks)
 
         # soft label with iou
         if pd_bboxes is not None:

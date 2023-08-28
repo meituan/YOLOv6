@@ -177,6 +177,7 @@ class TaskAlignedAssigner(nn.Module):
                                         torch.full_like(target_scores, 0))
         m_shape = gt_segmasks.shape[-2:]
         target_segmasks = gt_segmasks.reshape([-1, m_shape[0], m_shape[1]])[target_gt_idx]
+        print(target_gt_idx.shape, fg_mask.shape)
 
 
         return target_labels, target_bboxes, target_scores, target_segmasks

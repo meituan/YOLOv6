@@ -21,7 +21,6 @@ from yolov6.data.data_load import create_dataloader
 from yolov6.models.yolo import build_model
 from yolov6.models.yolo_lite import build_model as build_lite_model
 
-from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
@@ -35,12 +34,16 @@ from yolov6.utils.nms import xywh2xyxy
 from yolov6.utils.general import download_ckpt
 
 
+
+
 class Trainer:
     def __init__(self, args, cfg, device):
         self.args = args
         self.cfg = cfg
         self.device = device
         self.max_epoch = args.epochs
+
+        
 
         if args.resume:
             self.ckpt = torch.load(args.resume, map_location='cpu')
@@ -105,8 +108,8 @@ class Trainer:
         self.height = args.height
         self.width = args.width
 
-        self.loss_num = 3
-        self.loss_info = ['Epoch', 'lr', 'iou_loss', 'dfl_loss', 'cls_loss']
+        self.loss_num = 4
+        self.loss_info = ['Epoch', 'lr', 'iou_loss', 'dfl_loss', 'cls_loss', "seg_loss"]
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ['cwd_loss']
@@ -140,7 +143,9 @@ class Trainer:
 
     # Training one batch data.
     def train_in_steps(self, epoch_num, step_num):
-        images, targets = self.prepro_data(self.batch_data, self.device)
+        # torch.cuda.synchronize()
+        # qq1 = time.time()
+        images, targets, segmasks = self.prepro_data(self.batch_data, self.device)
         # plot train_batch and save to tensorboard once an epoch
         if self.write_trainbatch_tb and self.main_process and self.step == 0:
             self.plot_train_batch(images, targets)
@@ -149,7 +154,11 @@ class Trainer:
         # forward
         with amp.autocast(enabled=self.device != 'cpu'):
             _, _, batch_height, batch_width = images.shape
+            # torch.cuda.synchronize()
+            # qq2 = time.time()
             preds, s_featmaps = self.model(images)
+            # torch.cuda.synchronize()
+            # qq3 = time.time()
             if self.args.distill:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
@@ -159,18 +168,21 @@ class Trainer:
                                                                   batch_height, batch_width)
 
             elif self.args.fuse_ab:
-                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num,
-                                                            step_num, batch_height, batch_width) # YOLOv6_af
-                total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num,
-                                                                     batch_height, batch_width) # YOLOv6_ab
+                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4], preds[5]), targets, epoch_num,
+                                                            step_num, batch_height, batch_width, segmasks) # YOLOv6_af
+                total_loss_ab, loss_items_ab = self.compute_loss_ab((preds[0],preds[1],preds[2], preds[6]), targets, epoch_num, step_num,
+                                                                     batch_height, batch_width, segmasks) # YOLOv6_ab
                 total_loss += total_loss_ab
                 loss_items += loss_items_ab
             else:
-                total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num,
-                                                            batch_height, batch_width) # YOLOv6_af
+                total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4], preds[5]), targets, epoch_num, step_num,
+                                                            batch_height, batch_width, segmasks, img=images) # YOLOv6_af
             if self.rank != -1:
                 total_loss *= self.world_size
+            # torch.cuda.synchronize()
+            # qq4 = time.time()
         # backward
+        # print("prepare : {}s | model : {}s | loss : {}s".format(qq2 - qq1, qq3 - qq2, qq4 - qq3))
         self.scaler.scale(total_loss).backward()
         self.loss_items = loss_items
         self.update_optimizer()
@@ -186,12 +198,12 @@ class Trainer:
             is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
             if is_val_epoch:
                 self.eval_model()
-                self.ap = self.evaluate_results[1]
+                self.ap = self.evaluate_results[3]
                 self.best_ap = max(self.ap, self.best_ap)
             # save ckpt
             ckpt = {
-                    'model': deepcopy(de_parallel(self.model)).half(),
-                    'ema': deepcopy(self.ema.ema).half(),
+                    'model': deepcopy(de_parallel(self.model)),
+                    'ema': deepcopy(self.ema.ema),
                     'updates': self.ema.updates,
                     'optimizer': self.optimizer.state_dict(),
                     'scheduler': self.scheduler.state_dict(),
@@ -231,7 +243,10 @@ class Trainer:
                             task='train',
                             specific_shape=self.specific_shape,
                             height=self.height,
-                            width=self.width
+                            width=self.width,
+                            do_pr_metric=True,
+                            do_coco_metric=False,
+                            issolo=self.cfg.model.head.issolo
                             )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
@@ -263,10 +278,10 @@ class Trainer:
                             width=self.width
                             )
 
-        LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
-        self.evaluate_results = results[:2]
+        LOGGER.info(f"Epoch: {self.epoch} | box_mAP@0.5: {results[0]} | box_mAP@0.50:0.95: {results[1]} | mask_mAP@0.5: {results[2]} | mask_mAP@0.50:0.95: {results[3]}")
+        self.evaluate_results = [results[1], results[3]]
         # plot validation predictions
-        self.plot_val_pred(vis_outputs, vis_paths)
+        # self.plot_val_pred(vis_outputs, vis_paths)
 
 
     def before_train_loop(self):
@@ -286,6 +301,10 @@ class Trainer:
             self.best_ap = self.evaluate_results[1]
             self.best_stop_strong_aug_ap = self.evaluate_results[1]
 
+        if self.cfg.model.head.issolo:
+            from yolov6.models.losses.seg_loss_solo_main import ComputeLoss as ComputeLoss
+        else:
+            from yolov6.models.losses.seg_loss import ComputeLoss as ComputeLoss
 
         self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
@@ -293,6 +312,7 @@ class Trainer:
                                         use_dfl=self.cfg.model.head.use_dfl,
                                         reg_max=self.cfg.model.head.reg_max,
                                         iou_type=self.cfg.model.head.iou_type,
+                                        nm=self.cfg.model.head.nm,
 					                    fpn_strides=self.cfg.model.head.strides)
 
         if self.args.fuse_ab:
@@ -305,7 +325,7 @@ class Trainer:
                                         fpn_strides=self.cfg.model.head.strides,
                                         )
         if self.args.distill :
-            if self.cfg.model.type in ['YOLOv6n','YOLOv6s']:
+            if self.cfg.model.type in ['YOLOv6n','YOLOv6s']:    
                 Loss_distill_func = ComputeLoss_distill_ns
             else:
                 Loss_distill_func = ComputeLoss_distill
@@ -404,7 +424,8 @@ class Trainer:
     def prepro_data(batch_data, device):
         images = batch_data[0].to(device, non_blocking=True).float() / 255
         targets = batch_data[1].to(device)
-        return images, targets
+        segmask = batch_data[4].to(device)
+        return images, targets, segmask
 
     def get_model(self, args, cfg, nc, device):
         if 'YOLOv6-lite' in cfg.model.type:
