@@ -51,13 +51,13 @@ pip install -r requirements.txt
 Single GPU
 
 ```shell
-python tools/train.py --batch 8 --conf configs/yolov6s_finetune.py --data data/coco.yaml --device 0
+python tools/train.py --batch 8 --conf configs/yolov6s_seg_finetune.py --data data/coco.yaml --device 0
 ```
 
 Multi GPUs (DDP mode recommended)
 
 ```shell
-python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 --conf configs/yolov6s_finetune.py --data data/coco.yaml --device 0,1,2,3,4,5,6,7
+python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 --conf configs/yolov6s_seg_finetune.py --data data/coco.yaml --device 0,1,2,3,4,5,6,7
 ```
 - fuse_ab: Not supported in current version
 - conf: select config file to specify network/optimizer/hyperparameters. We recommend to apply yolov6n/s/m/l_finetune.py when training on your custom dataset.
@@ -88,7 +88,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 Reproduce mAP on COCO val2017 dataset with 640×640 resolution
 
 ```shell
-python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s.pt --task val
+python tools/eval.py --data data/coco.yaml --batch 32 --weights yolov6s_seg.pt --task val
 ```
 
 </details>
@@ -102,11 +102,11 @@ First, download a pretrained model from the YOLOv6 [release](https://github.com/
 Second, run inference with `tools/infer.py`
 
 ```shell
-python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4
+python tools/infer.py --weights yolov6s_seg.pt --source img.jpg / imgdir / video.mp4
 ```
 If you want to inference on local camera or  web camera, you can run:
 ```shell
-python tools/infer.py --weights yolov6s.pt --webcam --webcam-addr 0
+python tools/infer.py --weights yolov6s_seg.pt --webcam --webcam-addr 0
 ```
 `webcam-addr` can be local camera number id or rtsp address.
 Maybe you want to eval a solo-head model, remember to add the *--issolo* parameter.

@@ -1,9 +1,9 @@
-# YOLOv6x-seg model
+# YOLOv6l-seg model
 model = dict(
-    type='YOLOv6x',
-    pretrained=None,
-    depth_multiple=1.33,
-    width_multiple=1.25,
+    type='YOLOv6l',
+    pretrained='weights/yolov6l_seg.pt',
+    depth_multiple=1.0,
+    width_multiple=1.0,
     backbone=dict(
         type='CSPBepBackbone',
         num_repeats=[1, 6, 12, 18, 6],
@@ -43,30 +43,30 @@ model = dict(
     )
 )
 
-solver=dict(
+solver = dict(
     optim='SGD',
     lr_scheduler='Cosine',
-    lr0=0.01,
-    lrf=0.01,
-    momentum=0.937,
-    weight_decay=0.001,
-    warmup_epochs=3.0,
-    warmup_momentum=0.8,
-    warmup_bias_lr=0.1
+    lr0=0.0032,
+    lrf=0.12,
+    momentum=0.843,
+    weight_decay=0.00036,
+    warmup_epochs=2.0,
+    warmup_momentum=0.5,
+    warmup_bias_lr=0.05
 )
 
 data_aug = dict(
-    hsv_h=0.015,
-    hsv_s=0.7,
-    hsv_v=0.4,
-    degrees=0.0,
-    translate=0.1,
-    scale=0.9,
-    shear=0.0,
-    flipud=0.0,
+    hsv_h=0.0138,
+    hsv_s=0.664,
+    hsv_v=0.464,
+    degrees=0.373,
+    translate=0.245,
+    scale=0.898,
+    shear=0.602,
+    flipud=0.00856,
     fliplr=0.5,
     mosaic=1.0,
-    mixup=0.1,
+    mixup=0.243,
 )
 training_mode = "conv_silu"
 # use normal conv to speed up training and further improve accuracy.
