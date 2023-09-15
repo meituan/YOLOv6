@@ -252,7 +252,7 @@ class Detect(nn.Module):
                     reg_output_af = self.proj_conv(F.softmax(reg_output_af, dim=1))
 
                 cls_output_af = torch.sigmoid(cls_output_af)
-                proto_no = (torch.ones(b, 1, l) * i).cuda()
+                proto_no = (torch.ones(b, 1, l) * i).to(device)
                 
 
                 if self.export:

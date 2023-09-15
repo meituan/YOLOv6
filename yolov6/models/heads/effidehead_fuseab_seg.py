@@ -263,7 +263,7 @@ class Detect(nn.Module):
 
                 cls_output_af = torch.sigmoid(cls_output_af)
                 # seg_output_af = torch.sigmoid(seg_output_af)
-                proto_no = (torch.ones(b, 1, l) * i).cuda()
+                proto_no = (torch.ones(b, 1, l) * i).to(device)
                 
 
                 if self.export:
