@@ -8,26 +8,21 @@
 
 基于 [YOLOv6 v4.0 分支](https://github.com/meituan/YOLOv6/tree/main) 代码实现实例分割任务。
 
-新特性
-- 参考 YOLACT 和 SOLO 设计了两种不同的分割预测头
+<p align="left">
+  <img src="assets/speed_comparision_seg.png" align="center", width="500"/>
+  <br>
+</p>
 
 ## MSCOCO 模型指标
-| Model                                                        | Size | mAP<sup>box<br/>50-95 | mAP<sup>mask<br/>50-95 | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) |
-| :----------------------------------------------------------- | ---- | :-------------------- | ---------------------- | --------------------------------------- |
-| [**YOLOv6-N-seg**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6n_seg.pt) | 640  | 35.3                  | 31.2                   | 645                                     |
-| [**YOLOv6-S-seg**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6s_seg.pt) | 640  | 44.0                  | 38.0                   | 292                                     |
-| [**YOLOv6-M-seg**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6m_seg.pt) | 640  | 48.2                  | 41.3                   | 148                                     |
-| [**YOLOv6-L-seg**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6l_seg.pt) | 640  | 51.1                  | 43.7                   | 93                                      |
-| [**YOLOv6-X-seg**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6x_seg.pt) | 640  | 52.2                  | 44.8                   | 47                                      |
-|                                                              |      |                       |                        |                                         |
-| [**YOLOv6-N-solo**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6n_solo.pt) | 640  | 35.7                  | 31.3                   | 506                                     |
-| [**YOLOv6-S-solo**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6s_solo.pt) | 640  | 44.2                  | 39.0                   | 243                                     |
-| [**YOLOv6-M-solo**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6m_solo.pt) | 640  | 48.3                  | 42.2                   | 120                                     |
-| [**YOLOv6-L-solo**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6l_solo.pt) | 640  | 50.9                  | 44.4                   | 75                                      |
-| [**YOLOv6-X-solo**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6x_solo.pt) | 640  | 52.2                  | 45.0                   | 41                                      |
+| Model                                                        | Size | mAP<sup>box<br/>50-95 | mAP<sup>mask<br/>50-95 | Speed<sup>T4<br/>trt fp16 b1 <br/>(fps) | Params<br/><sup> (M) | FLOPs<br/><sup> (G) |
+| :----------------------------------------------------------- | ---- | :-------------------- | ---------------------- | --------------------------------------- | -------------------- | ------------------- |
+| [**YOLOv6-N**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6n_seg.pt) | 640  | 35.3                  | 31.2                   | 645                                     | 4.9                  | 7.0                 |
+| [**YOLOv6-S**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6s_seg.pt) | 640  | 44.0                  | 38.0                   | 292                                     | 19.6                 | 27.7                |
+| [**YOLOv6-M**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6m_seg.pt) | 640  | 48.2                  | 41.3                   | 148                                     | 37.1                 | 54.3                |
+| [**YOLOv6-L**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6l_seg.pt) | 640  | 51.1                  | 43.7                   | 93                                      | 63.6                 | 95.5                |
+| [**YOLOv6-X**](https://github.com/meituan/YOLOv6/releases/download/0.4.1/yolov6x_seg.pt) | 640  | 52.2                  | 44.8                   | 47                                      | 119.1                | 175.5               |
 
-#### Table Notes
-- YOLOv6-x-seg 模型采用 YOLACT 分割头, YOLOv6-x-solo 模型采用 SOLO 分割头.
+#### 表格笔记
 - 所有权重都经过 300 个 epoch 的训练，并且没有使用蒸馏技术.
 - mAP 和速度指标是在 COCO val2017 数据集上评估的，输入分辨率为640x640.
 - 速度是在 T4 上测试的，TensorRT 版本为 8.5，且不包括后处理部分.
@@ -35,7 +30,7 @@
 
 
 
-## Quick Start
+## 快速开启
 <details open>
 <summary> 安装 </summary>
 
@@ -43,7 +38,7 @@
 ```shell
 git clone https://github.com/meituan/YOLOv6
 cd YOLOv6
-git checkout yolov6-segss
+git checkout yolov6-seg
 pip install -r requirements.txt
 ```
 </details>
@@ -64,7 +59,7 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 ```
 - fuse_ab: 当前版本暂不支持
 - conf: 配置文件路径，里面包含网络结构、优化器配置、超参数信息。如果您是在自己的数据集训练，我们推荐您使用yolov6n/s/m/l_finetune.py配置文件
-- data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.1.0/coco2017labels.zip)；
+- data: 数据集配置文件，以 COCO 数据集为例，您可以在 [COCO](http://cocodataset.org) 下载数据, 在这里下载 [YOLO 格式标签](https://github.com/meituan/YOLOv6/releases/download/0.4.1/coco2017labels-segments.zip)；
 - 确保您的数据集按照下面这种格式来组织；
 ```
 ├── coco
@@ -81,7 +76,6 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/train.py --batch 64 
 │   ├── README.txt
 ```
 
-YOLOv6 支持不同的输入分辨率模式，详情请参见 [如何设置输入大小](./docs/About_training_size_cn.md).
 
 </details>
 
