@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
+#/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
+import time
 import glob
 from io import UnsupportedOperation
 import os
@@ -30,6 +31,12 @@ from .data_augment import (
     mosaic_augmentation,
 )
 from yolov6.utils.events import LOGGER
+import copy
+from loguru import logger
+from pycocotools.coco import COCO
+import psutil
+from multiprocessing.pool import ThreadPool
+from functools import partial
 
 
 # Parameters
@@ -81,6 +88,17 @@ class TrainValDataset(Dataset):
         self.specific_shape = specific_shape
         self.target_height = height
         self.target_width = width
+        self.cache = True
+        self.cache_type = "ram"
+        self.task_name = task
+        if self.cache and self.cache_type == "ram":
+            self.imgs = None
+            self.num_imgs = len(self.img_paths)
+        self.name = "train2017"
+        if self.cache and task == "train":
+            self.cache_images(
+                num_imgs=self.num_imgs
+            )
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -101,11 +119,95 @@ class TrainValDataset(Dataset):
         t2 = time.time()
         if self.main_process:
             LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
+    
+    def measure_time(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            end_time = time.time()
+            run_time = end_time - start_time
+            print(f"{func.__name__}的 运行时间：{run_time:.4f} 秒")
+            return result
+
+        return wrapper
+    
+    def cache_images(
+        self,
+        num_imgs=None,
+    ):
+        assert num_imgs is not None, "num_imgs must be specified as the size of the dataset"
+
+        mem = psutil.virtual_memory()
+        mem_required = self.cal_cache_occupy(num_imgs)
+        gb = 1 << 30
+
+        if self.cache_type == "ram":
+            if mem_required > mem.available:
+                self.cache = False
+            else:
+                logger.info(
+                    f"{mem_required / gb:.1f}GB RAM required, "
+                    f"{mem.available / gb:.1f}/{mem.total / gb:.1f}GB RAM available, "
+                    f"Since the first thing we do is cache, "
+                    f"there is no guarantee that the remaining memory space is sufficient"
+                )
+
+        if self.cache and self.imgs is None:
+            if self.cache_type == 'ram':
+                self.imgs = [None] * num_imgs
+                print(f"self.imgs: {len(self.imgs)}")
+                logger.info("You are using cached images in RAM to accelerate training!")
+                logger.info(
+                    "Caching images...\n"
+                    "This might take some time for your dataset"
+                )
+                num_threads = min(16, max(1, os.cpu_count() - 1))
+                load_imgs = ThreadPool(num_threads).imap(
+                     partial(self.read_img),
+                     range(num_imgs)
+                )
+                pbar = tqdm(enumerate(load_imgs), total=num_imgs)
+                for i, (x, (h0, w0), shape) in pbar:   # x = self.read_img(self, i, use_cache=False)
+                    if self.cache_type == 'ram':
+                        #print(f"index: {i}")
+                        self.imgs[i] = x
+            else:   # 'disk'
+                if not os.path.exists(self.cache_dir):
+                    os.mkdir(self.cache_dir)
+                    logger.warning(
+                        f"\n*******************************************************************\n"
+                        f"You are using cached images in DISK to accelerate training.\n"
+                        f"This requires large DISK space.\n"
+                        f"Make sure you have {mem_required / gb:.1f} "
+                        f"available DISK space for training your dataset.\n"
+                        f"*******************************************************************\\n"
+                    )
+                else:
+                    logger.info(f"Found disk cache at {self.cache_dir}")
+                    return
+
+    def __del__(self):
+        if self.cache and self.cache_type == "ram":
+            del self.imgs
+            
+    def read_img(self, index):
+        return self.load_image(index)
+            
+    def cal_cache_occupy(self, num_imgs):
+        cache_bytes = 0
+        num_imgs = len(self.img_paths)
+        num_samples = min(num_imgs, 32)
+        for _ in range(num_samples):
+            img, _, _ = self.read_img(index=random.randint(0, len(self.img_paths) - 1))
+            cache_bytes += img.nbytes
+        mem_required = cache_bytes * num_imgs / num_samples
+        return mem_required
 
     def __len__(self):
         """Get the length of dataset"""
         return len(self.img_paths)
-
+    
+    #@measure_time
     def __getitem__(self, index):
         """Fetching a data sample for a given key.
         This function applies mosaic and mixup augments during training.
@@ -196,7 +298,8 @@ class TrainValDataset(Dataset):
         img = np.ascontiguousarray(img)
 
         return torch.from_numpy(img), labels_out, self.img_paths[index], shapes
-
+    
+    #@measure_time
     def load_image(self, index, shrink_size=None):
         """Load image.
         This function loads image by cv2, resize original image to target shape(img_size) with keeping ratio.
@@ -205,13 +308,24 @@ class TrainValDataset(Dataset):
             Image, original shape of image, resized image shape
         """
         path = self.img_paths[index]
+        start_time = time.time()
         try:
-            im = cv2.imread(path)
+            if self.cache_type == "ram" and self.task_name == "train":
+                im = self.imgs[index]
+                im = copy.deepcopy(im)
+            else:
+                im = cv2.imread(path)
+            #im = cv2.imread(path)
             assert im is not None, f"opencv cannot read image correctly or {path} not exists"
+            imread_time = time.time()
+            #print(f"imread_time is {imread_time - start_time}")
         except:
             im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
-
+            pil_time = time.time()
+            #print(f"pil_time is {pil_time - start_time}")
+        load_image_time = time.time()
+        #print(f"load_image_time is {load_image_time - start_time}")
         h0, w0 = im.shape[:2]  # origin shape
         if self.specific_shape:
             # keep ratio resize
@@ -222,7 +336,8 @@ class TrainValDataset(Dataset):
 
         else:
             ratio = self.img_size / max(h0, w0)
-
+        resize_cal_time = time.time()
+        #print(f"resize calculate time is {resize_cal_time - load_image_time}")
         if ratio != 1:
                 im = cv2.resize(
                     im,
@@ -231,6 +346,8 @@ class TrainValDataset(Dataset):
                     if ratio < 1 and not self.augment
                     else cv2.INTER_LINEAR,
                 )
+        resize_end_time = time.time()
+        #print(f"resize time is {resize_end_time - resize_cal_time}")
         return im, (h0, w0), im.shape[:2]
 
     @staticmethod
@@ -241,6 +358,7 @@ class TrainValDataset(Dataset):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
+    #@measure_time
     def get_imgs_labels(self, img_dirs):
         if not isinstance(img_dirs, list):
             img_dirs = [img_dirs]
@@ -387,6 +505,7 @@ class TrainValDataset(Dataset):
         )
         return img_paths, labels
 
+    #@measure_time
     def get_mosaic(self, index, shape):
         """Gets images and labels after mosaic augments"""
         indices = [index] + random.choices(
@@ -394,16 +513,24 @@ class TrainValDataset(Dataset):
         )  # 3 additional image indices
         random.shuffle(indices)
         imgs, hs, ws, labels = [], [], [], []
+        start_time = time.time()
         for index in indices:
+            time_start_loop = time.time()
             img, _, (h, w) = self.load_image(index)
             labels_per_img = self.labels[index]
             imgs.append(img)
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
+            time_end_loop = time.time()
+            #print(f"1 loop 花费的时间: {time_end_loop - time_start_loop}")
+        end_time1 = time.time()
+        #print(f"数据加载时间: {end_time1 - start_time}")
         img, labels = mosaic_augmentation(shape, imgs, hs, ws, labels, self.hyp, self.specific_shape, self.target_height, self.target_width)
+        #print(f"mosaic时间: {time.time()-end_time1}")
         return img, labels
 
+    #@measure_time
     def general_augment(self, img, labels):
         """Gets images and labels after general augment
         This function applies hsv, random ud-flip and random lr-flips augments.
@@ -432,6 +559,7 @@ class TrainValDataset(Dataset):
 
         return img, labels
 
+    #@measure_time
     def sort_files_shapes(self):
         '''Sort by aspect ratio.'''
         batch_num = self.batch_indices[-1] + 1
