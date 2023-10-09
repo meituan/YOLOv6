@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
 import time
@@ -88,6 +88,10 @@ class TrainValDataset(Dataset):
         self.specific_shape = specific_shape
         self.target_height = height
         self.target_width = width
+        self.data_dir = "/opt/ai/YOLOv6/datasets/output"
+        self.json_file = "instances_train2017.json"
+        self.coco = COCO(os.path.join(self.data_dir, "annotations", self.json_file))
+        self.ids = self.coco.getImgIds()
         self.cache = True
         self.cache_type = "ram"
         self.task_name = task
