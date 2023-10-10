@@ -58,6 +58,7 @@ def get_args_parser(add_help=True):
     parser.add_argument('--specific-shape', action='store_true', help='rectangular training')
     parser.add_argument('--height', type=int, default=None, help='image height of model input')
     parser.add_argument('--width', type=int, default=None, help='image width of model input')
+    parser.add_argument('--cache-ram', action='store_true', help='whether to cache images into RAM to speed up training')
     return parser
 
 
