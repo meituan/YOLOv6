@@ -387,7 +387,8 @@ class Trainer:
                                          hyp=dict(cfg.data_aug), augment=True, rect=args.rect, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
                                          check_labels=args.check_labels, data_dict=data_dict, task='train',
-                                         specific_shape=args.specific_shape, height=args.height, width=args.width)[0]
+                                         specific_shape=args.specific_shape, height=args.height, width=args.width,
+                                         cache_ram=args.cache_ram)[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
@@ -396,7 +397,8 @@ class Trainer:
                                            hyp=dict(cfg.data_aug), rect=True, rank=-1, pad=0.5,
                                            workers=args.workers, check_images=args.check_images,
                                            check_labels=args.check_labels, data_dict=data_dict, task='val',
-                                           specific_shape=args.specific_shape, height=args.height, width=args.width)[0]
+                                           specific_shape=args.specific_shape, height=args.height, width=args.width,
+                                           cache_ram=args.cache_ram)[0]
 
         return train_loader, val_loader
 

@@ -30,6 +30,9 @@ from .data_augment import (
     mosaic_augmentation,
 )
 from yolov6.utils.events import LOGGER
+import copy
+import psutil
+from multiprocessing.pool import ThreadPool
 
 
 # Parameters
@@ -67,11 +70,11 @@ class TrainValDataset(Dataset):
         task="train",
         specific_shape = False,
         height=1088,
-        width=1920
-
+        width=1920,
+        cache_ram=False
     ):
         assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
-        t1 = time.time()
+        tik = time.time()
         self.__dict__.update(locals())
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
@@ -81,6 +84,12 @@ class TrainValDataset(Dataset):
         self.specific_shape = specific_shape
         self.target_height = height
         self.target_width = width
+        self.cache_ram = cache_ram
+        if self.cache_ram:
+            self.num_imgs = len(self.img_paths)
+            self.imgs = [None] * self.num_imgs
+            self.cache_images(num_imgs=self.num_imgs)
+
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -98,14 +107,61 @@ class TrainValDataset(Dataset):
 
             self.sort_files_shapes()
 
-        t2 = time.time()
+        tok = time.time()
+
         if self.main_process:
-            LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
+            LOGGER.info(f"%.1fs for dataset initialization." % (tok - tik))
+    
+    def cache_images(self, num_imgs=None):
+        assert num_imgs is not None, "num_imgs must be specified as the size of the dataset"
+
+        mem = psutil.virtual_memory()
+        mem_required = self.cal_cache_occupy(num_imgs)
+        gb = 1 << 30
+
+        if mem_required > mem.available:
+            self.cache_ram = False
+            LOGGER.warning("Not enough RAM to cache images, caching is disabled.")
+        else:
+            LOGGER.warning(
+                f"{mem_required / gb:.1f}GB RAM required, "
+                f"{mem.available / gb:.1f}/{mem.total / gb:.1f}GB RAM available, "
+                f"Since the first thing we do is cache, "
+                f"there is no guarantee that the remaining memory space is sufficient"
+            )
+
+        print(f"self.imgs: {len(self.imgs)}")
+        LOGGER.info("You are using cached images in RAM to accelerate training!")
+        LOGGER.info(
+            "Caching images...\n"
+            "This might take some time for your dataset"
+        )
+        num_threads = min(16, max(1, os.cpu_count() - 1))
+        load_imgs = ThreadPool(num_threads).imap(self.load_image, range(num_imgs))
+        pbar = tqdm(enumerate(load_imgs), total=num_imgs, disable=self.rank > 0)
+        for i, (x, (h0, w0), shape) in pbar:
+            self.imgs[i] = x
+
+    def __del__(self):
+        if self.cache_ram:
+            del self.imgs
+        
+    def cal_cache_occupy(self, num_imgs):
+        '''estimate the memory required to cache images in RAM.
+        '''
+        cache_bytes = 0
+        num_imgs = len(self.img_paths)
+        num_samples = min(num_imgs, 32)
+        for _ in range(num_samples):
+            img, _, _ = self.load_image(index=random.randint(0, len(self.img_paths) - 1))
+            cache_bytes += img.nbytes
+        mem_required = cache_bytes * num_imgs / num_samples
+        return mem_required
 
     def __len__(self):
         """Get the length of dataset"""
         return len(self.img_paths)
-
+ 
     def __getitem__(self, index):
         """Fetching a data sample for a given key.
         This function applies mosaic and mixup augments during training.
@@ -196,7 +252,7 @@ class TrainValDataset(Dataset):
         img = np.ascontiguousarray(img)
 
         return torch.from_numpy(img), labels_out, self.img_paths[index], shapes
-
+ 
     def load_image(self, index, shrink_size=None):
         """Load image.
         This function loads image by cv2, resize original image to target shape(img_size) with keeping ratio.
@@ -206,12 +262,16 @@ class TrainValDataset(Dataset):
         """
         path = self.img_paths[index]
         try:
-            im = cv2.imread(path)
+            if self.cache_ram and self.imgs[index] is not None:
+                im = self.imgs[index]
+                im = copy.deepcopy(im)
+            else:
+                im = cv2.imread(path)
             assert im is not None, f"opencv cannot read image correctly or {path} not exists"
-        except:
+        except Exception as e:
+            print(e)
             im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
-
         h0, w0 = im.shape[:2]  # origin shape
         if self.specific_shape:
             # keep ratio resize
@@ -222,7 +282,6 @@ class TrainValDataset(Dataset):
 
         else:
             ratio = self.img_size / max(h0, w0)
-
         if ratio != 1:
                 im = cv2.resize(
                     im,
