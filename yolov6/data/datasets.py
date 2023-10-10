@@ -138,7 +138,7 @@ class TrainValDataset(Dataset):
         )
         num_threads = min(16, max(1, os.cpu_count() - 1))
         load_imgs = ThreadPool(num_threads).imap(self.load_image, range(num_imgs))
-        pbar = tqdm(enumerate(load_imgs), total=num_imgs)
+        pbar = tqdm(enumerate(load_imgs), total=num_imgs,disable=self.rank > 0)
         for i, (x, (h0, w0), shape) in pbar:
             self.imgs[i] = x
 
