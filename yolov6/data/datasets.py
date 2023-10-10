@@ -31,11 +31,8 @@ from .data_augment import (
 )
 from yolov6.utils.events import LOGGER
 import copy
-from loguru import logger
-from pycocotools.coco import COCO
 import psutil
 from multiprocessing.pool import ThreadPool
-from functools import partial
 
 
 # Parameters
@@ -89,8 +86,8 @@ class TrainValDataset(Dataset):
         self.target_width = width
         self.cache_ram = cache_ram
         if self.cache_ram:
-            self.imgs = None
             self.num_imgs = len(self.img_paths)
+            self.imgs = [None] * self.num_imgs
             self.cache_images(num_imgs=self.num_imgs)
 
         if self.rect:
@@ -133,10 +130,9 @@ class TrainValDataset(Dataset):
                 f"there is no guarantee that the remaining memory space is sufficient"
             )
 
-        self.imgs = [None] * num_imgs
         print(f"self.imgs: {len(self.imgs)}")
-        logger.info("You are using cached images in RAM to accelerate training!")
-        logger.info(
+        LOGGER.info("You are using cached images in RAM to accelerate training!")
+        LOGGER.info(
             "Caching images...\n"
             "This might take some time for your dataset"
         )
@@ -266,14 +262,14 @@ class TrainValDataset(Dataset):
         """
         path = self.img_paths[index]
         try:
-            if self.cache_type == "ram" and self.task_name == "train":
+            if self.cache_ram and self.imgs[index] is not None:
                 im = self.imgs[index]
                 im = copy.deepcopy(im)
             else:
                 im = cv2.imread(path)
-            #im = cv2.imread(path)
             assert im is not None, f"opencv cannot read image correctly or {path} not exists"
-        except:
+        except Exception as e:
+            print(e)
             im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
             assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
         h0, w0 = im.shape[:2]  # origin shape
