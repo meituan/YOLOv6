@@ -14,7 +14,7 @@ from pycocotools.cocoeval import COCOeval
 from yolov6.data.data_load import create_dataloader
 from yolov6.utils.events import LOGGER, NCOLS
 from yolov6.utils.nms import non_max_suppression
-from yolov6.utils.general import download_ckpt
+from yolov6.utils.general import download_ckpt, filename2imgid
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
 
@@ -139,7 +139,7 @@ class Evaler:
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids, task))
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
@@ -234,6 +234,9 @@ class Evaler:
         For task val, this function evaluates the speed and mAP by pycocotools, and returns
         inference time and mAP value.
         '''
+        anno_path = self.data.get(task, False)
+        if anno_path:
+            file2img_dict = filename2imgid(task, anno_path)
         LOGGER.info(f'\nEvaluating speed.')
         self.eval_speed(task)
 
@@ -260,7 +263,7 @@ class Evaler:
             pred = anno.loadRes(pred_json)
             cocoEval = COCOeval(anno, pred, 'bbox')
             if self.is_coco:
-                imgIds = [int(os.path.basename(x).split(".")[0])
+                imgIds = [file2img_dict[(os.path.basename(x).split(".")[0]) + '.jpg']
                             for x in dataloader.dataset.img_paths]
                 cocoEval.params.imgIds = imgIds
             cocoEval.evaluate()
@@ -358,14 +361,18 @@ class Evaler:
             coords[:, [1, 3]] = coords[:, [1, 3]].clip(0, img0_shape[0])  # y1, y2
         return coords
 
-    def convert_to_coco_format(self, outputs, imgs, paths, shapes, ids):
+    def convert_to_coco_format(self, outputs, imgs, paths, shapes, ids, task):
+        anno_path = self.data.get(task, False)
+        if anno_path:
+            file2img_dict = filename2imgid(task, anno_path)
         pred_results = []
         for i, pred in enumerate(outputs):
             if len(pred) == 0:
                 continue
             path, shape = Path(paths[i]), shapes[i][0]
             self.scale_coords(imgs[i].shape[1:], pred[:, :4], shape, shapes[i][1])
-            image_id = int(path.stem) if self.is_coco else path.stem
+            filename = path.stem + '.jpg'
+            image_id = file2img_dict[filename]
             bboxes = self.box_convert(pred[:, 0:4])
             bboxes[:, :2] -= bboxes[:, 2:] / 2
             cls = pred[:, 5]

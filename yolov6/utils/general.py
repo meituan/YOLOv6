@@ -8,6 +8,7 @@ import requests
 import pkg_resources as pkg
 from pathlib import Path
 from yolov6.utils.events import LOGGER
+from pycocotools.coco import COCO
 
 def increment_name(path):
     '''increase save directory's id'''
@@ -125,3 +126,16 @@ def check_version(current='0.0.0', minimum='0.0.0', name='version ', pinned=Fals
         info = f'⚠️ {name}{minimum} is required by YOLOv6, but {name}{current} is currently installed'
         assert result, info  # assert minimum version requirement
     return result
+
+def filename2imgid(anno_path):
+    coco = COCO(anno_path)
+
+    # Create a mapping dictionary of file names to image_id
+    filename_to_image_id = {}
+    image_ids = coco.getImgIds()
+    for image_id in image_ids:
+        image_info = coco.loadImgs(image_id)[0]
+        filename = image_info['file_name']  # The file name of image
+        filename_to_image_id[filename] = image_id
+        
+    return filename_to_image_id
