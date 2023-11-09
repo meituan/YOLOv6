@@ -85,10 +85,6 @@ class TrainValDataset(Dataset):
         self.target_height = height
         self.target_width = width
         self.cache_ram = cache_ram
-        if self.cache_ram:
-            self.num_imgs = len(self.img_paths)
-            self.imgs = [None] * self.num_imgs
-            self.cache_images(num_imgs=self.num_imgs)
 
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -106,6 +102,11 @@ class TrainValDataset(Dataset):
             )  # batch indices of each image
 
             self.sort_files_shapes()
+
+        if self.cache_ram:
+            self.num_imgs = len(self.img_paths)
+            self.imgs = [None] * self.num_imgs
+            self.cache_images(num_imgs=self.num_imgs)
 
         tok = time.time()
 
