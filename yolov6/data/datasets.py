@@ -102,7 +102,7 @@ class TrainValDataset(Dataset):
             )  # batch indices of each image
 
             self.sort_files_shapes()
-
+ 
         if self.cache_ram:
             self.num_imgs = len(self.img_paths)
             self.imgs, self.imgs_hw0, self.imgs_hw = [None] * self.num_imgs, [None] * self.num_imgs, [None] * self.num_imgs
@@ -261,8 +261,13 @@ class TrainValDataset(Dataset):
         Returns:
             Image, original shape of image, resized image shape
         """
-        im, path = self.imgs[index], self.img_paths[index]
-        if im is None or not self.cache_ram:
+        path = self.img_paths[index]
+        
+        if self.cache_ram and self.imgs[index] is not None:
+            im = self.imgs[index]
+            # im = copy.deepcopy(im)
+            return self.imgs[index], self.imgs_hw0[index], self.imgs_hw[index]
+        else:
             try:
                 im = cv2.imread(path)
                 assert im is not None, f"opencv cannot read image correctly or {path} not exists"
@@ -289,8 +294,7 @@ class TrainValDataset(Dataset):
                         else cv2.INTER_LINEAR,
                     )
             return im, (h0, w0), im.shape[:2]
-        return self.imgs[index], self.imgs_hw0[index], self.imgs_hw[index]
-
+        
     @staticmethod
     def collate_fn(batch):
         """Merges a list of samples to form a mini-batch of Tensor(s)"""
