@@ -479,6 +479,12 @@ class Inferer:
         # Add one xyxy box to image with label
         p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
         common_color = [[128,0,0], [255,0,0],[255,0,255],[255,102,0],[51,51,0],[0,51,0],[51,204,204],[0,128,128],[0,204,255]]
+        if segment is not None:
+            import random
+            # ii=random.randint(0, len(common_color)-1)
+            colr = np.asarray(color)
+            colr = colr.reshape(1,3).repeat((image.shape[0] * image.shape[1]), axis = 0).reshape(image.shape[0], image.shape[1], 3)
+            image = cv2.addWeighted(image, 1, (colr * segment.reshape(*segment.shape[:2], 1)).astype(image.dtype), 0.8, 1)
         cv2.rectangle(image, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
         if label:
             tf = max(lw - 1, 1)  # font thickness
@@ -488,12 +494,6 @@ class Inferer:
             cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
             cv2.putText(image, label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2), font, lw / 3, txt_color,
                         thickness=tf, lineType=cv2.LINE_AA)
-        if segment is not None:
-            import random
-            # ii=random.randint(0, len(common_color)-1)
-            colr = np.asarray(color)
-            colr = colr.reshape(1,3).repeat((image.shape[0] * image.shape[1]), axis = 0).reshape(image.shape[0], image.shape[1], 3)
-            image = cv2.addWeighted(image, 1, (colr * segment.reshape(*segment.shape[:2], 1)).astype(image.dtype), 0.8, 1)
         return image
 
     @staticmethod
