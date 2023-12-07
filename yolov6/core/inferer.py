@@ -123,7 +123,7 @@ class Inferer:
                 det[:, :4] = self.rescale(img.shape[2:], det[:, :4], img_src.shape).round()
                 
                 
-                ii = 0
+                ii = len(det) - 1
                 segments = self.rescale_mask(img.shape[2:], segments.cpu().numpy(), img_src.shape)
                 print(segments.shape)
                 segments = segments.transpose(2, 0, 1)
@@ -140,7 +140,7 @@ class Inferer:
                         label = None if hide_labels else (self.class_names[class_num] if hide_conf else f'{self.class_names[class_num]} {conf:.2f}')
 
                         img_ori = self.plot_box_and_label(img_ori, max(round(sum(img_ori.shape) / 2 * 0.003), 2), xyxy, label, color=self.generate_colors(class_num, True), segment=segments[ii])
-                    ii += 1
+                    ii -= 1
 
                 img_src = np.asarray(img_ori)
 
@@ -490,8 +490,8 @@ class Inferer:
                         thickness=tf, lineType=cv2.LINE_AA)
         if segment is not None:
             import random
-            ii=random.randint(0, len(common_color)-1)
-            colr = np.asarray(common_color[ii])
+            # ii=random.randint(0, len(common_color)-1)
+            colr = np.asarray(color)
             colr = colr.reshape(1,3).repeat((image.shape[0] * image.shape[1]), axis = 0).reshape(image.shape[0], image.shape[1], 3)
             image = cv2.addWeighted(image, 1, (colr * segment.reshape(*segment.shape[:2], 1)).astype(image.dtype), 0.8, 1)
         return image
