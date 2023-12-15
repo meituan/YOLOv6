@@ -198,7 +198,7 @@ class Trainer:
             is_val_epoch = (remaining_epochs == 0) or ((not self.args.eval_final_only) and ((self.epoch + 1) % eval_interval == 0))
             if is_val_epoch:
                 self.eval_model()
-                self.ap = self.evaluate_results[3]
+                self.ap = self.evaluate_results[-1]
                 self.best_ap = max(self.ap, self.best_ap)
             # save ckpt
             ckpt = {
