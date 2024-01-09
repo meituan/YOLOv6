@@ -326,6 +326,7 @@ class Trainer:
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
             self.cfg.data_aug.mixup = 0.0
+            self.args.cache_ram = False # disable cache ram when stop strong augmentation.
             self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
         self.model.train()
         if self.rank != -1:
