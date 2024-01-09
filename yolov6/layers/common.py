@@ -555,6 +555,8 @@ class DetectBackend(nn.Module):
             download_ckpt(weights) # try to download model from github automatically.
         assert isinstance(weights, str) and Path(weights).suffix == '.pt', f'{Path(weights).suffix} format is not supported.'
         from yolov6.utils.checkpoint import load_checkpoint
+        from yolov6.utils.downloads import attempt_download
+        attempt_download(weights)
         model = load_checkpoint(weights, map_location=device)
         stride = int(model.stride.max())
         self.__dict__.update(locals())  # assign all variables to self
