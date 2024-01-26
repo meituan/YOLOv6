@@ -76,7 +76,6 @@ def get_args_parser(add_help=True):
         args.shrink_size = eval_params[eval_model_name]["shrink_size"]
         args.infer_on_rect = eval_params[eval_model_name]["infer_on_rect"]
         #force params
-        #args.img_size = 640
         args.conf_thres = 0.03
         args.iou_thres = 0.65
         args.task = "val"
@@ -138,7 +137,7 @@ def run(data,
     half = device.type != 'cpu' and half
     data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
 
-    # # verify imgsz is gs-multiple
+    # verify imgsz is gs-multiple
     if specific_shape:
         height = check_img_size(height, 32, floor=256)
         width = check_img_size(width, 32, floor=256)
