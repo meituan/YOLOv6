@@ -85,10 +85,6 @@ class TrainValDataset(Dataset):
         self.target_height = height
         self.target_width = width
         self.cache_ram = cache_ram
-        if self.cache_ram:
-            self.num_imgs = len(self.img_paths)
-            self.imgs = [None] * self.num_imgs
-            self.cache_images(num_imgs=self.num_imgs)
 
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -106,6 +102,11 @@ class TrainValDataset(Dataset):
             )  # batch indices of each image
 
             self.sort_files_shapes()
+ 
+        if self.cache_ram:
+            self.num_imgs = len(self.img_paths)
+            self.imgs, self.imgs_hw0, self.imgs_hw = [None] * self.num_imgs, [None] * self.num_imgs, [None] * self.num_imgs
+            self.cache_images(num_imgs=self.num_imgs)
 
         tok = time.time()
 
@@ -140,7 +141,7 @@ class TrainValDataset(Dataset):
         load_imgs = ThreadPool(num_threads).imap(self.load_image, range(num_imgs))
         pbar = tqdm(enumerate(load_imgs), total=num_imgs, disable=self.rank > 0)
         for i, (x, (h0, w0), shape) in pbar:
-            self.imgs[i] = x
+            self.imgs[i], self.imgs_hw0[i], self.imgs_hw[i] = x, (h0, w0), shape
 
     def __del__(self):
         if self.cache_ram:
@@ -261,37 +262,39 @@ class TrainValDataset(Dataset):
             Image, original shape of image, resized image shape
         """
         path = self.img_paths[index]
-        try:
-            if self.cache_ram and self.imgs[index] is not None:
-                im = self.imgs[index]
-                im = copy.deepcopy(im)
-            else:
-                im = cv2.imread(path)
-            assert im is not None, f"opencv cannot read image correctly or {path} not exists"
-        except Exception as e:
-            print(e)
-            im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
-            assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
-        h0, w0 = im.shape[:2]  # origin shape
-        if self.specific_shape:
-            # keep ratio resize
-            ratio = min(self.target_width / w0, self.target_height / h0)
-
-        elif shrink_size:
-            ratio = (self.img_size - shrink_size) / max(h0, w0)
-
+        
+        if self.cache_ram and self.imgs[index] is not None:
+            im = self.imgs[index]
+            # im = copy.deepcopy(im)
+            return self.imgs[index], self.imgs_hw0[index], self.imgs_hw[index]
         else:
-            ratio = self.img_size / max(h0, w0)
-        if ratio != 1:
-                im = cv2.resize(
-                    im,
-                    (int(w0 * ratio), int(h0 * ratio)),
-                    interpolation=cv2.INTER_AREA
-                    if ratio < 1 and not self.augment
-                    else cv2.INTER_LINEAR,
-                )
-        return im, (h0, w0), im.shape[:2]
+            try:
+                im = cv2.imread(path)
+                assert im is not None, f"opencv cannot read image correctly or {path} not exists"
+            except Exception as e:
+                print(e)
+                im = cv2.cvtColor(np.asarray(Image.open(path)), cv2.COLOR_RGB2BGR)
+                assert im is not None, f"Image Not Found {path}, workdir: {os.getcwd()}"
+            h0, w0 = im.shape[:2]  # origin shape
+            if self.specific_shape:
+                # keep ratio resize
+                ratio = min(self.target_width / w0, self.target_height / h0)
 
+            elif shrink_size:
+                ratio = (self.img_size - shrink_size) / max(h0, w0)
+
+            else:
+                ratio = self.img_size / max(h0, w0)
+            if ratio != 1:
+                    im = cv2.resize(
+                        im,
+                        (int(w0 * ratio), int(h0 * ratio)),
+                        interpolation=cv2.INTER_AREA
+                        if ratio < 1 and not self.augment
+                        else cv2.INTER_LINEAR,
+                    )
+            return im, (h0, w0), im.shape[:2]
+        
     @staticmethod
     def collate_fn(batch):
         """Merges a list of samples to form a mini-batch of Tensor(s)"""

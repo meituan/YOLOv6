@@ -1,4 +1,10 @@
 # COCO 2017 dataset http://cocodataset.org
+
+# If you are using Windows system,
+# the dataset path should be like this:
+# train: d:\dataset\coco\images\train2017
+# because windows use "\" as separator, linux use "/" as separator.
+
 train: ../coco/images/train2017 # 118287 images
 val: ../coco/images/val2017  # 5000 images
 test: ../coco/images/test2017
