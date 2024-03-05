@@ -19,6 +19,7 @@ from yolov6.data.data_augment import letterbox
 from yolov6.data.datasets import LoadData
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
+from urllib.parse import urlparse
 
 class Inferer:
     def __init__(self, source, webcam, webcam_addr, weights, device, yaml, img_size, half):
@@ -83,8 +84,12 @@ class Inferer:
             t2 = time.time()
 
             if self.webcam:
-                save_path = osp.join(save_dir, self.webcam_addr)
-                txt_path = osp.join(save_dir, self.webcam_addr)
+                parsed_url = urlparse(self.webcam_addr)
+                #filter : and / and query parameters that we don't want in the folder
+                webcamfolder = f"{parsed_url.netloc.replace(':', '-')}"
+                save_path = osp.join(save_dir, webcamfolder)
+                txt_path = osp.join(save_dir,'labels', webcamfolder )
+                os.makedirs(txt_path, exist_ok=True)
             else:
                 # Create output files in nested dirs that mirrors the structure of the images' dirs
                 rel_path = osp.relpath(osp.dirname(img_path), osp.dirname(self.source))
