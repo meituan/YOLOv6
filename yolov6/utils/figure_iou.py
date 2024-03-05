@@ -96,6 +96,8 @@ class IOUloss:
             loss = loss.sum()
         elif self.reduction == 'mean':
             loss = loss.mean()
+            
+        loss = torch.nan_to_num(loss)
 
         return loss
 
