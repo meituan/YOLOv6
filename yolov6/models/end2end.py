@@ -171,7 +171,7 @@ class ONNX_ORT(nn.Module):
         batched_dets = batched_dets.where((batch_inds == batch_template.unsqueeze(1)).unsqueeze(-1),batched_dets.new_zeros(1))
 
         batched_labels = cls_inds.unsqueeze(0).repeat(batch, 1)
-        batched_labels = batched_labels.where((batch_inds == batch_template.unsqueeze(1)),batched_labels.new_ones(1) * -1)
+        batched_labels = batched_labels.where((batch_inds == batch_template.unsqueeze(1)),batched_labels.new_ones(1, dtype=batched_labels.dtype) * -1)
 
         N = batched_dets.shape[0]
 
