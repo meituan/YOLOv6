@@ -205,7 +205,7 @@ class VarifocalLoss(nn.Module):
     def forward(self, pred_score,gt_score, label, alpha=0.75, gamma=2.0):
 
         weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        with torch.cuda.amp.autocast(enabled=False):
+        with torch.amp.autocast('cuda', enabled=False):
             loss = (F.binary_cross_entropy(pred_score.float(), gt_score.float(), reduction='none') * weight).sum()
 
         return loss
