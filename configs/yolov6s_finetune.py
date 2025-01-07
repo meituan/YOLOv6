@@ -50,6 +50,24 @@ solver = dict(
     warmup_bias_lr=0.05
 )
 
+
+# I highly recommend using these aug settings
+
+data_aug = dict(
+    hsv_h=0.0138,
+    hsv_s=0.364,
+    hsv_v=0.364,
+    degrees=30,
+    translate=0.245,
+    scale=0.18,
+    shear=10,
+    flipud=0,
+    fliplr=0.5,
+    mosaic=0.95,
+    mixup=0.243,
+)
+
+'''
 data_aug = dict(
     hsv_h=0.0138,
     hsv_s=0.664,
@@ -63,3 +81,4 @@ data_aug = dict(
     mosaic=1.0,
     mixup=0.243,
 )
+'''

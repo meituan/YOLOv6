@@ -1,0 +1,12 @@
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+#train: /home/jupyter/data/crowdhuman/human_01_65k/images/train # train images
+train: /home/jupyter/data/human_detection/training_sets/images/train # train images
+val: /home/jupyter/data/human_detection/training_sets/images/val # train images
+#val: /home/jupyter/data/crowdhuman/human_01_65k/images/val # val images
+#test: ../custom_dataset/images/test # test images (optional)
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+# Classes
+nc: 1  # number of classes
+names: ['human']
