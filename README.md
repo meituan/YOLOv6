@@ -38,7 +38,7 @@ data_aug = dict(
 
 ## Human detection:
 
-Simply run chmod +x train_yolov6.sh to add permission to run human_yolov6_trainer_bash.sh and run it.
+Simply run chmod +x human_yolov6_trainer_bash.sh to add permission to run human_yolov6_trainer_bash.sh and run it.
 
 
 
