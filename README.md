@@ -2,13 +2,14 @@
 
 Step 1: The first step is to clean and prepare datasets as the folder structure below:
 
-
+```
 │   ├── images
 │   │   ├── train
 │   │   └── val
 │   ├── labels
 │   │   ├── train
 │   │   ├── val
+```
 
 Step 2: for every dataset this folder is zipped and stored in S3 in that object category. For every new round of training download all zip files, unzip them in a folder.
 
