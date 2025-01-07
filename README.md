@@ -38,8 +38,7 @@ data_aug = dict(
 
 ## Human detection:
 
-Download cleaned datasets from [here](https://appsignal-training-data.s3.us-east-1.amazonaws.com/cleaned_version_human/) and follow the above routine. 
-
+Simply run chmod +x train_yolov6.sh to add permission to run human_yolov6_trainer_bash.sh and run it.
 
 
 
