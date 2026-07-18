@@ -43,7 +43,7 @@ class Trainer:
         self.max_epoch = args.epochs
 
         if args.resume:
-            self.ckpt = torch.load(args.resume, map_location='cpu')
+            self.ckpt = torch.load(args.resume, map_location='cpu', weights_only=False)
 
         self.rank = args.rank
         self.local_rank = args.local_rank
