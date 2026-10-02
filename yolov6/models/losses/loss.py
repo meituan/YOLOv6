@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 
 import torch
+from yolov6.utils.amp import autocast
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
@@ -205,7 +206,7 @@ class VarifocalLoss(nn.Module):
     def forward(self, pred_score,gt_score, label, alpha=0.75, gamma=2.0):
 
         weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        with torch.amp.autocast('cuda', enabled=False):
+        with autocast(enabled=False):
             loss = (F.binary_cross_entropy(pred_score.float(), gt_score.float(), reduction='none') * weight).sum()
 
         return loss
